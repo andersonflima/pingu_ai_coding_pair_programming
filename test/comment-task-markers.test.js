@@ -72,3 +72,31 @@ test('comment_task routes ::: to context blueprint generation', () => {
   assert.equal(calls.length, 1);
   assert.equal(calls[0][3], 'bff para crud de usuario');
 });
+
+test('comment_task ignores escaped slash markers', () => {
+  const { checkCommentTask } = createCommentTaskTools(buildCommentTaskDeps());
+  const issues = checkCommentTask([
+    '//\\s:: criar funcao soma',
+    '// \\s: criar funcao soma',
+    '//\\s* rodar testes',
+    '//\\s::: bff para crud de usuario',
+  ], '/tmp/example.js');
+
+  assert.deepEqual(issues, []);
+});
+
+test('comment_task ignores escaped hash markers', () => {
+  const { checkCommentTask } = createCommentTaskTools(buildCommentTaskDeps({
+    analysisExtension: () => '.py',
+    supportsHashComments: () => true,
+    supportsSlashComments: () => false,
+  }));
+  const issues = checkCommentTask([
+    '#\\s:: criar funcao soma',
+    '# \\s: criar funcao soma',
+    '#\\s* rodar testes',
+    '#\\s::: contexto de arquitetura',
+  ], '/tmp/example.py');
+
+  assert.deepEqual(issues, []);
+});
