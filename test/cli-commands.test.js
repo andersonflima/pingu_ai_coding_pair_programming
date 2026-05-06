@@ -22,6 +22,15 @@ function runCli(args, input = '') {
   });
 }
 
+function runCliInCwd(args, cwd, input = '') {
+  return execFileSync(process.execPath, [cliPath, ...args], {
+    cwd,
+    encoding: 'utf8',
+    env: cliEnv,
+    input,
+  });
+}
+
 function spawnCli(args, input = '') {
   return spawnSync(process.execPath, [cliPath, ...args], {
     cwd: path.join(__dirname, '..'),
@@ -76,6 +85,28 @@ test('CLI offline reports full offline coverage for active languages', () => {
   assert.equal(payload.ok, true);
   assert.equal(payload.percent, 100);
   assert.ok(payload.languages.some((language) => language.id === 'elixir'));
+});
+
+test('CLI profile reports analyzer timing cases', () => {
+  const output = runCli(['profile', '--lines', '12', '--json']);
+  const payload = JSON.parse(output);
+
+  assert.equal(payload.ok, true);
+  assert.equal(payload.caseCount, 2);
+  assert.ok(payload.results.every((result) => result.durationMs >= 0));
+});
+
+test('CLI init writes conservative project configuration', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-cli-init-'));
+  const output = runCliInCwd(['init', '--json'], tempDir);
+  const payload = JSON.parse(output);
+  const configFile = path.join(fs.realpathSync(tempDir), '.pingu', 'config.json');
+  const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+
+  assert.equal(payload.created, true);
+  assert.equal(payload.file, configFile);
+  assert.equal(config.targetScope, 'current_file');
+  assert.equal(config.terminal.riskMode, 'safe');
 });
 
 test('CLI fix previews candidates without writing by default', () => {

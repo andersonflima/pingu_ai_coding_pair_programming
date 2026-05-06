@@ -81,6 +81,12 @@ Esse fluxo define:
 - manifesto versionado de labels em `.github/labels.json`
 - workflow manual `sync-issue-labels` para sincronizar labels no GitHub
 
+## Release, contribuicao e seguranca
+
+- Release rastreavel: [docs/release.md](./docs/release.md)
+- Contrato de seguranca operacional: [SECURITY.md](./SECURITY.md)
+- Validacao local e sincronizacao do runtime Vim: [CONTRIBUTING.md](./CONTRIBUTING.md)
+
 ## O que o Pingu nao e
 
 - Nao e um chat generico de perguntas soltas.
@@ -111,7 +117,7 @@ Para desenvolvimento local:
 ```bash
 git clone git@github.com:andersonflima/pingu_ai_codding_pair_programming.git
 cd pingu_ai_codding_pair_programming
-npm install --ignore-scripts
+npm ci --ignore-scripts
 npm link
 pingu doctor
 ```
@@ -560,6 +566,8 @@ pingu prompts src --check
 pingu comments src/app.js --write
 pingu prompts lib/calculator.ex --write
 pingu analyze lib/calculator.ex test/calculator_test.exs --json
+pingu init --json
+pingu profile --lines 180 --json
 pingu offline --json
 pingu taxonomy
 pingu doctor
@@ -571,6 +579,8 @@ Equivalentes pelo entrypoint direto:
 node realtime_dev_agent.js analyze src/app.js --json
 node realtime_dev_agent.js fix src/app.js --write --json
 node realtime_dev_agent.js prompts src/app.js --write --json
+node realtime_dev_agent.js init --json
+node realtime_dev_agent.js profile --json
 node realtime_dev_agent.js taxonomy --json
 node realtime_dev_agent.js doctor --json
 ```
@@ -587,6 +597,8 @@ Contratos:
 - `prompts --check` nao escreve e retorna exit code `1` quando existir prompt acionavel pendente; use em CI/pre-commit quando quiser bloquear comentarios `//::`, `#:` ou equivalentes nao aplicados.
 - `comments` e alias de `prompts`.
 - `offline` mostra a cobertura offline das linguagens ativas para `comment_task`, `context_file`, `unit_test` e `terminal_task`.
+- `init` cria `.pingu/config.json` com defaults conservadores para o projeto.
+- `profile` mede latencia de analise em fixtures sinteticas com IA desligada por padrao; use `--with-ai` para medir o caminho assistido.
 - `taxonomy` lista as familias de erro e os `issue kinds` mapeados.
 - `doctor` valida ambiente local, runtime, linguagens ativas e presenca opcional de `OPENAI_API_KEY`.
 - `--serve`, `--stdin`, `--analyze` e `--autofix-guard` continuam preservados para a integracao da IDE.
@@ -805,15 +817,31 @@ Importante:
 
 ## Como funciona internamente
 
-- `realtime_dev_agent.js`: CLI do runtime principal
+- `realtime_dev_agent.js`: entrypoint executavel do runtime
+- `lib/cli.js`: comandos CLI, compatibilidade legada da IDE e servidor residente
 - `lib/analyzer.js`: analise e emissao de issues
+- `lib/analyzer-profile.js`: perfil sintetico de latencia da analise
 - `lib/generation*.js`: geracao de snippets, blueprints, testes, dependencias e terminal tasks
 - `lib/language-capabilities.js`: contrato declarativo de linguagem
 - `vim/`, `plugin/`, `autoload/`: runtime do plugin Vim / Neovim
 
+## Validacao de desenvolvimento
+
+```bash
+npm run check
+npm run smoke:vim
+npm run profile
+npm run pack:check
+npm run release:check
+```
+
+- `check:vim-runtime` garante que `plugin/` e `autoload/` continuam sincronizados com `vim/`.
+- `sync:vim-runtime` atualiza as copias publicas depois de alterar o runtime canonico em `vim/`.
+- `ci:release` combina testes, pacote e validacao de versao npm antes do publish.
+
 ## Estrutura principal
 
-- `realtime_dev_agent.js`: entrada CLI do agente
+- `realtime_dev_agent.js`: entrada executavel do agente
 - `lib/`: analise, geracao e suporte
 - `vim/`: implementacao principal do plugin Vim
 - `plugin/` e `autoload/`: wrappers para instalacao direta no Vim

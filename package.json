@@ -1,7 +1,7 @@
 {
   "name": "pingu-dev-agent",
   "description": "Pingu - Dev Agent: agente de pair programming em tempo real para Vim, Neovim e LazyVim.",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "license": "MIT",
   "keywords": [
     "pingu",
@@ -24,14 +24,25 @@
     "pingu": "realtime_dev_agent.js"
   },
   "scripts": {
-    "check": "npm run lint && npm test",
+    "check": "npm run lint && npm run check:vim-runtime && npm test",
+    "check:vim-runtime": "node scripts/sync-vim-runtime.js --check",
+    "ci:release": "npm run check && npm run pack:check && npm run release:check",
+    "pack:check": "npm pack --dry-run --json",
+    "profile": "node scripts/profile-analyzer.js",
+    "release:check": "node scripts/check-release-version.js",
+    "smoke:vim": "node scripts/smoke-vim-runtime.js",
+    "sync:vim-runtime": "node scripts/sync-vim-runtime.js --write",
     "lint": "node scripts/check-syntax.js",
     "test": "node --test"
   },
   "files": [
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
     "assets/",
     "autoload/",
     "config/",
+    "docs/",
     "lib/",
     "plugin/",
     "realtime_dev_agent.js",
