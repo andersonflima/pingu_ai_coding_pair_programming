@@ -1,0 +1,9 @@
+/**
+ * Orquestra o comportamento principal de soma
+ * @param {number} a Valor numerico usado na regra principal da funcao.
+ * @param {number} b Valor numerico usado na regra principal da funcao.
+ * @returns {number} Valor numerico calculado conforme a regra principal da funcao.
+ */
+function soma(a, b) {
+  return a + b
+}

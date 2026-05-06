@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - main
-      - codex/lazyvim-runtime-hardening
 
 permissions:
   contents: read
@@ -24,13 +23,47 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install Elixir runtime
+      - name: Install Vim runtimes
         run: |
           sudo apt-get update
-          sudo apt-get install -y elixir
+          sudo apt-get install -y elixir neovim vim
 
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
+
+      - name: Run Vim smoke
+        run: npm run smoke:vim
 
       - name: Run checks
         run: npm run check
+
+      - name: Validate npm package contents
+        run: npm run pack:check
+
+  test-node-24:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Vim runtimes
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y elixir neovim vim
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run Vim smoke
+        run: npm run smoke:vim
+
+      - name: Run checks
+        run: npm run check
+
+      - name: Validate npm package contents
+        run: npm run pack:check

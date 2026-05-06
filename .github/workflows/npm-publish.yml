@@ -34,65 +34,10 @@ jobs:
           sudo apt-get install -y elixir
 
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
-      - name: Test
-        run: npm run check
-
-      - name: Resolve publish version
-        id: package
-        shell: bash
-        run: |
-          name="$(node -p "require('./package.json').name")"
-          published_versions="$(npm view "${name}" versions --json 2>/dev/null || echo '[]')"
-          version="$(PUBLISHED_VERSIONS="${published_versions}" node <<'NODE'
-          const fs = require('fs');
-
-          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const publishedVersions = JSON.parse(process.env.PUBLISHED_VERSIONS || '[]');
-          const published = new Set((Array.isArray(publishedVersions) ? publishedVersions : [publishedVersions])
-            .map((version) => String(version || '').trim())
-            .filter(Boolean));
-
-          const parseVersion = (version) => {
-            const match = String(version || '').trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
-            return match
-              ? { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) }
-              : null;
-          };
-
-          const formatVersion = ({ major, minor, patch }) => `${major}.${minor}.${patch}`;
-          const compareVersions = (left, right) =>
-            left.major - right.major || left.minor - right.minor || left.patch - right.patch;
-          const incrementPatch = ({ major, minor, patch }) => ({ major, minor, patch: patch + 1 });
-
-          const declaredVersion = parseVersion(manifest.version);
-          const latestPublished = [...published]
-            .map(parseVersion)
-            .filter(Boolean)
-            .sort(compareVersions)
-            .at(-1);
-
-          if (!declaredVersion && !latestPublished) {
-            throw new Error(`Invalid package.json version: ${manifest.version}`);
-          }
-
-          let candidate = declaredVersion && (!latestPublished || compareVersions(declaredVersion, latestPublished) > 0)
-            ? declaredVersion
-            : incrementPatch(latestPublished || declaredVersion);
-
-          while (published.has(formatVersion(candidate))) {
-            candidate = incrementPatch(candidate);
-          }
-
-          process.stdout.write(formatVersion(candidate));
-          NODE
-          )"
-          echo "name=${name}" >> "$GITHUB_OUTPUT"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          npm version "${version}" --no-git-tag-version --allow-same-version
-
-          echo "Publishing ${name}@${version}"
+      - name: Validate release candidate
+        run: npm run ci:release
 
       - name: Publish to npm with Trusted Publisher
         if: env.HAS_NPM_TOKEN != 'true'
