@@ -47,7 +47,7 @@
     {
       "id": "architecture_and_tests",
       "description": "Contexto arquitetural ausente, scaffolds solicitados, cobertura de testes e contratos de arquivos estruturados.",
-      "mappedIssueKinds": ["comment_task", "context_file", "context_contract", "unit_test"],
+      "mappedIssueKinds": ["comment_task", "context_file", "context_contract", "unit_test", "unit_test_signature"],
       "safeAutoFix": true,
       "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c", "terraform", "yaml", "markdown", "mermaid", "dockerfile", "shell", "toml"]
     },
