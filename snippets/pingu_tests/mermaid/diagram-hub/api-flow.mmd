@@ -1,0 +1,5 @@
+flowchart LR
+  A[Cliente] -->|HTTP| B(API)
+  B --> C{Validação}
+  C -->|OK| D[Dominio]
+  C -->|Erro| E[Retorno consistente]

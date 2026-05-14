@@ -30,6 +30,7 @@
     "pack:check": "npm pack --dry-run --json",
     "profile": "node scripts/profile-analyzer.js",
     "release:check": "node scripts/check-release-version.js",
+    "release:prepare": "node scripts/check-release-version.js --prepare",
     "smoke:vim": "node scripts/smoke-vim-runtime.js",
     "sync:vim-runtime": "node scripts/sync-vim-runtime.js --write",
     "lint": "node scripts/check-syntax.js",
