@@ -1,7 +1,0 @@
-[service]
-name = "pingu-toml-sample"
-environment = "dev"
-
-[features]
-observability = true
-strict_mode = true

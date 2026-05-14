@@ -1,4 +1,0 @@
-[tool.poetry]
-name = "pingu-toml-smoke"
-version = "1.0.0"
-description = "Toml config smoke sample"
