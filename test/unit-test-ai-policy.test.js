@@ -141,3 +141,57 @@ test('unit test coverage does not emit ai_required when offline fallback covers 
   assert.equal(issues[0].action.target_file, path.join(projectRoot, 'test', 'src', 'sum.test.js'));
   assert.notEqual(issues[0].kind, 'ai_required');
 });
+
+test('unit test coverage updates stale calls when function signature changes', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-unit-test-signature-'));
+  const sourceFile = path.join(projectRoot, 'src', 'greet.js');
+  const testFile = path.join(projectRoot, 'test', 'src', 'greet.test.js');
+  fs.mkdirSync(path.dirname(sourceFile), { recursive: true });
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(sourceFile, 'export function greet(name, title) { return `${title} ${name}`; }\n');
+  fs.writeFileSync(testFile, [
+    'const subject = require("../../src/greet");',
+    'test("greet", () => {',
+    '  expect(subject.greet("Ada")).toBe("Dr Ada");',
+    '});',
+  ].join('\n'));
+
+  const checkUnitTestCoverage = createJavaScriptUnitTestChecker(projectRoot, () => null);
+  const issues = checkUnitTestCoverage(
+    ['export function greet(name, title) { return `${title} ${name}`; }'],
+    sourceFile,
+  );
+
+  const signatureIssue = issues.find((issue) => issue.kind === 'unit_test_signature');
+  assert.ok(signatureIssue);
+  assert.equal(signatureIssue.action.target_file, testFile);
+  assert.equal(signatureIssue.snippet, '"Ada", title');
+});
+
+test('unit test coverage finds stale calls when invocation parenthesis starts on next line', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-unit-test-multiline-signature-'));
+  const sourceFile = path.join(projectRoot, 'src', 'greet.js');
+  const testFile = path.join(projectRoot, 'test', 'src', 'greet.test.js');
+  fs.mkdirSync(path.dirname(sourceFile), { recursive: true });
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(sourceFile, 'export function greet(name, title) { return `${title} ${name}`; }\n');
+  fs.writeFileSync(testFile, [
+    'const subject = require("../../src/greet");',
+    'test("greet", () => {',
+    '  expect(subject.greet',
+    '  (',
+    '    "Ada"',
+    '  )).toBe("Dr Ada");',
+    '});',
+  ].join('\n'));
+
+  const checkUnitTestCoverage = createJavaScriptUnitTestChecker(projectRoot, () => null);
+  const issues = checkUnitTestCoverage(
+    ['export function greet(name, title) { return `${title} ${name}`; }'],
+    sourceFile,
+  );
+
+  const signatureIssue = issues.find((issue) => issue.kind === 'unit_test_signature');
+  assert.ok(signatureIssue);
+  assert.equal(signatureIssue.snippet, '"Ada", title');
+});

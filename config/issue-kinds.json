@@ -243,5 +243,12 @@
     "autoFixPriority": 140,
     "supportsQuickFix": true,
     "supportsFollowUp": true
+  },
+  "unit_test_signature": {
+    "defaultAction": { "op": "replace_range" },
+    "autoFixDefault": true,
+    "autoFixPriority": 75,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
   }
 }
