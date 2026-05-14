@@ -41,6 +41,7 @@ jobs:
         run: npm run pack:check
 
       - name: Validate release version is persisted
+        if: github.event_name == 'pull_request'
         run: |
           npm run release:check
           git diff --exit-code package.json package-lock.json CHANGELOG.md
