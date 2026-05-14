@@ -67,11 +67,9 @@ jobs:
           echo "release_version_bumped=true" >> "$GITHUB_OUTPUT"
           echo "release_version=${current_version}" >> "$GITHUB_OUTPUT"
           echo "Bump de versão detectado localmente: ${current_version}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json CHANGELOG.md
-          git commit -m "chore(release): bump package version to ${current_version} [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "A versão de release precisa ser persistida via PR antes do publish em main protegida."
+          echo "Execute npm run release:check na branch de trabalho, commite package.json/package-lock.json/CHANGELOG.md e faça merge por PR."
+          exit 1
 
       - name: Publish to npm with Trusted Publisher
         if: env.HAS_NPM_TOKEN != 'true'

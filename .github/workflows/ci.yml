@@ -40,6 +40,11 @@ jobs:
       - name: Validate npm package contents
         run: npm run pack:check
 
+      - name: Validate release version is persisted
+        run: |
+          npm run release:check
+          git diff --exit-code package.json package-lock.json CHANGELOG.md
+
   test-node-24:
     runs-on: ubuntu-latest
     steps:
