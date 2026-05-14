@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Pingu Elixir API",
+    "version": "1.0.0",
+    "description": "API de teste para Pingu em Elixir."
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Status da API",
+        "responses": {
+          "200": { "description": "healthy" }
+        }
+      }
+    }
+  }
+}
