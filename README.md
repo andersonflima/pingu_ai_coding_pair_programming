@@ -124,7 +124,7 @@ pingu doctor
 
 ### IDE
 
-Para Vim, Neovim e LazyVim, instale o plugin pelo GitHub conforme a secao [Instalacao via GitHub no Vim](#instalacao-via-github-no-vim). A IDE usa o mesmo runtime do CLI, entao `pingu doctor` tambem ajuda a validar Node.js, runtime local, linguagens ativas e chave OpenAI opcional.
+Para Vim, Neovim e LazyVim, instale o plugin pelo GitHub conforme a secao [Instalacao via GitHub no Vim](#instalacao-via-github-no-vim). A IDE usa o mesmo runtime do CLI, entao `pingu doctor` tambem ajuda a validar Node.js, runtime local e linguagens ativas.
 
 ## Como o loop funciona
 
@@ -598,14 +598,14 @@ Contratos:
 - `comments` e alias de `prompts`.
 - `offline` mostra a cobertura offline das linguagens ativas para `comment_task`, `context_file`, `unit_test` e `terminal_task`.
 - `init` cria `.pingu/config.json` com defaults conservadores para o projeto.
-- `profile` mede latencia de analise em fixtures sinteticas com IA desligada por padrao; use `--with-ai` para medir o caminho assistido.
+- `profile` mede latencia de analise em fixtures sinteticas em modo offline-only.
 - `taxonomy` lista as familias de erro e os `issue kinds` mapeados.
-- `doctor` valida ambiente local, runtime, linguagens ativas e presenca opcional de `OPENAI_API_KEY`.
+- `doctor` valida ambiente local, runtime, linguagens ativas e cobertura offline.
 - `--serve`, `--stdin`, `--analyze` e `--autofix-guard` continuam preservados para a integracao da IDE.
 
-## Contrato da IA
+## Contrato de execução offline
 
-Quando o Pingu usa IA, o payload enviado inclui:
+Quando uma acao e gerada no fluxo offline-first, o contexto interno inclui:
 
 - buffer completo do arquivo atual
 - janela de foco em torno do comentario ou issue
@@ -614,7 +614,7 @@ Quando o Pingu usa IA, o payload enviado inclui:
 - perfil da linguagem e boas praticas ativas
 - mapa de simbolos do arquivo, incluindo funcoes, metodos, classes, tipos e modulos ja existentes
 
-Esse contrato existe para reduzir chute e evitar regressao. A IA deve complementar o codigo existente, preservar contratos observaveis, nao duplicar simbolos e retornar o menor trecho aplicavel. No CLI, prompts e fixes so escrevem com `--write`; na IDE, o auto-fix reanalisa e passa pelo guard antes de considerar o lote concluido.
+Esse contrato existe para reduzir variacao e evitar regressao. No CLI, prompts e fixes so escrevem com `--write`; na IDE, o auto-fix reanalisa e passa pelo guard antes de considerar o lote concluido.
 
 ## Cobertura Offline
 
@@ -633,7 +633,7 @@ pingu offline --json
 
 O resultado esperado para o registry atual e `percent: 100`.
 
-Quando a IA esta em modo `prefer`, ela pode melhorar a resposta, mas nao e requisito para concluir o fluxo. Se a IA falhar, o Pingu cai para o gerador offline. Apenas modo `force` bloqueia fallback e pode emitir `ai_required`.
+O fluxo atual e offline-first por design: cobertura integral das capacidades mapeadas para os cenarios suportados sem chamadas externas.
 
 Correcoes offline tambem rodam pelo analisador e pelo CLI:
 
@@ -706,8 +706,8 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
     vim.g.realtime_dev_agent_auto_fix_visual_mode = "preserve"
     vim.g.realtime_dev_agent_review_on_open = 1
     vim.g.realtime_dev_agent_realtime_on_change = 1
-    vim.g.realtime_dev_agent_realtime_on_cursor_hold = 1
-    vim.g.realtime_dev_agent_realtime_on_buf_enter = 1
+    vim.g.realtime_dev_agent_realtime_on_cursor_hold = 0
+    vim.g.realtime_dev_agent_realtime_on_buf_enter = 0
     vim.g.realtime_dev_agent_realtime_insert_mode = 1
     vim.g.realtime_dev_agent_realtime_async = 1
     vim.g.realtime_dev_agent_realtime_use_daemon = 1
@@ -744,8 +744,8 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_auto_fix_scope = 'cursor_only'` restringe ao cursor imediato
 - `let g:realtime_dev_agent_auto_fix_near_cursor_radius = 24` controla a distancia maxima entre cursor e trecho elegivel
 - `let g:realtime_dev_agent_auto_fix_cluster_gap = 8` controla a distancia maxima entre issues do mesmo trecho
-- `let g:realtime_dev_agent_realtime_on_cursor_hold = 1` faz o agente agir sozinho quando o cursor para sobre um bloco sem exigir edicao manual
-- `let g:realtime_dev_agent_realtime_on_buf_enter = 1` reanalisa o contexto assim que voce entra no arquivo
+- `let g:realtime_dev_agent_realtime_on_cursor_hold = 0` faz o agente agir sozinho quando o cursor para sobre um bloco sem exigir edicao manual (ative só se desejar)
+- `let g:realtime_dev_agent_realtime_on_buf_enter = 0` reanalisa o contexto assim que voce entra no arquivo (ative apenas se quiser)
 - `let g:realtime_dev_agent_auto_on_save = 1` consolida comentarios, fixes locais, blueprint seguro e testes adjacentes automaticamente no save
 - `let g:realtime_dev_agent_auto_fix_visual_mode = 'preserve'` reduz ruido visual durante o batch
 - `let g:realtime_dev_agent_realtime_insert_mode = 1` mantem analise tambem no meio da digitacao
@@ -773,37 +773,27 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_terminal_strategy = 'toggleterm'`
 - `let g:realtime_dev_agent_terminal_strategy = 'native'`
 
-## Credenciais e variaveis de ambiente
+## Credenciais e variáveis de ambiente
 
-Os fluxos orientados por IA usam OpenAI Codex por padrao. O contrato principal agora e `OPENAI_API_KEY`.
+O runtime opera em modo offline-first e não depende de chaves externas para as capacidades mapeadas.
 
 Linguagens ativas por padrao no runtime:
 
 - todas as linguagens mapeadas no registry, exceto o fallback `default`
 - hoje isso inclui `javascript`, `python`, `elixir`, `go`, `rust`, `ruby`, `lua`, `vim`, `c`, `terraform`, `yaml`, `markdown`, `mermaid`, `dockerfile`, `shell` e `toml`
 
-Variaveis comuns:
+Variáveis comuns:
 
-- `OPENAI_API_KEY`
-- `PINGU_OPENAI_MODEL`
-- `PINGU_OPENAI_TIMEOUT_MS`
 - `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES`
 - `PINGU_FLOW_COMMENT_MAX_LINES`
 - `PINGU_LIGHT_ANALYSIS_DEEP_PASS_MAX_LINES`
-
-Exemplo:
-
-```bash
-export OPENAI_API_KEY="sua_chave_aqui"
-export PINGU_OPENAI_MODEL="gpt-5-codex"
-```
 
 Importante:
 
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
 - nunca commite credenciais
-- `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de comentario/documentacao podem subir para IA por ciclo automatico; use `0` para remover o limite
+- `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de `comment_task` entram no ciclo automático por execução; use `0` para remover o limite
 - `PINGU_DOCUMENTATION_AUTO_FIX_MIN_CONFIDENCE=0.60` controla o limiar minimo de confianca para comentario automatico documental; valores menores deixam o lote mais agressivo
 - `PINGU_DOCUMENTATION_MAX_LINES=420` evita `function_doc`, `class_doc`, `variable_doc` e `flow_comment` automaticos em arquivos grandes; use `0` para remover o corte
 - `PINGU_FLOW_COMMENT_MAX_LINES=260` evita `flow_comment` automatico em arquivos grandes; use `0` para remover o corte
@@ -811,7 +801,6 @@ Importante:
 - `PINGU_AUTOFIX_LARGE_FILE_LINE_THRESHOLD=260` define a partir de quantas linhas o runtime encolhe o lote automatico
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS=0` limita quantas issues documentais sobem por ciclo; `0` remove o corte
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS_LARGE_FILE=4` limita docstrings/comentarios por ciclo em arquivo grande
-- com `OPENAI_API_KEY` configurada, o agente pode usar OpenAI Codex nos fluxos assistidos por IA
 - no LazyVim, os equivalentes sao `g:realtime_dev_agent_auto_fix_large_file_line_threshold`, `g:realtime_dev_agent_auto_fix_large_file_radius` e `g:realtime_dev_agent_auto_fix_doc_max_per_check_large_file`
 - no LazyVim, `debug_output` e `function_spec` cursor-local entram no lote automatico seguro sem depender da trilha live
 

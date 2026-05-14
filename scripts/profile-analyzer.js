@@ -13,7 +13,7 @@ function parseLineCount(args) {
 
 function renderText(report) {
   process.stdout.write('Pingu analyzer profile\n');
-  process.stdout.write(`- ia: ${report.aiMode}\n`);
+  process.stdout.write(`- modo: ${report.aiMode}\n`);
   process.stdout.write(`- casos: ${report.caseCount}\n`);
   process.stdout.write(`- duracao total: ${report.totalDurationMs}ms\n`);
   report.results.forEach((result) => {
@@ -27,7 +27,6 @@ function run() {
   const args = process.argv.slice(2);
   const report = buildAnalyzerProfileReport({
     lineCount: parseLineCount(args),
-    withAi: args.includes('--with-ai'),
   });
 
   if (args.includes('--json')) {
