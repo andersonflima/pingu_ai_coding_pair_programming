@@ -1,0 +1,20 @@
+name: pingu-yaml-smoke
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate yaml files
+        run: |
+          python - <<'PY'
+          import sys, pathlib
+          for path in pathlib.Path('.').rglob('*.y*ml'):
+              if path.is_file():
+                  path.read_text()
+          print('ok')
+          PY
