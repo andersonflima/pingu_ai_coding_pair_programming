@@ -84,6 +84,7 @@ Esse fluxo define:
 ## Release, contribuicao e seguranca
 
 - Release rastreavel: [docs/release.md](./docs/release.md)
+- Instrucoes operacionais do agente: [AGENTS.md](./AGENTS.md)
 - Contrato de seguranca operacional: [SECURITY.md](./SECURITY.md)
 - Validacao local e sincronizacao do runtime Vim: [CONTRIBUTING.md](./CONTRIBUTING.md)
 
@@ -505,6 +506,15 @@ Maturidade automatica atual do core:
 | Shell | forte | parcial | forte | cobre `function_doc`, `context_contract` textual e testes de contrato em shell |
 | Terraform / YAML / Markdown / Mermaid / Dockerfile / TOML | forte | estrutural | forte | foco em `comment_task`, `context_file`, testes de contrato e terminal acionavel |
 
+## Sincronismo automático em alteração de assinatura
+
+- O Pingu trata mudança de assinatura como um contrato de manutenção, não apenas como mudança de texto.
+- Para funções/métodos públicos detectáveis, ele pode:
+  - ajustar `function_doc` para refletir a assinatura atual;
+  - ajustar `function_spec` em Elixir quando a aridade diverge;
+  - registrar `unit_test_signature` quando chamadas em testes não combinam mais com a nova aridade.
+- Esse comportamento ocorre em modo offline e por heurística de linguagem já mapeada; quando não há confiança suficiente, não altera e mantém a ação para revisão.
+
 ## Regras de testes automaticos
 
 - O agente cria automaticamente `tests/` ou `test/` pelo convenio da linguagem quando a pasta ainda nao existir.
@@ -512,6 +522,7 @@ Maturidade automatica atual do core:
 - Quando o arquivo ja tem teste base, ele tenta gerar testes complementares para simbolos publicos ainda sem cobertura.
 - Em linguagens com classe ou tipo publico, o agente tambem gera teste de disponibilidade para essas estruturas, nao so para funcoes.
 - Para `Dockerfile`, `compose`, `Markdown` e `Mermaid`, o agente gera testes de contrato em shell dentro de `tests/`.
+- Em `function_doc` e `unit_test_signature`, a revisão automática é aplicada a partir da assinatura atual detectada: se a função muda de parâmetros, chamadas de teste e documentação mínima de contrato podem ser atualizadas no mesmo ciclo.
 
 ## Como o terminal e inferido
 
