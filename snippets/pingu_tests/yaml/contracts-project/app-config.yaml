@@ -1,7 +1,0 @@
-app:
-  name: pingu-yaml-smoke
-  version: 1.0.0
-  features:
-    - lint
-    - unit-test
-    - contract-test

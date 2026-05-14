@@ -1,7 +1,0 @@
-[build]
-opt_level = 2
-warn = true
-
-[runtime]
-max_workers = 4
-retry = 2
