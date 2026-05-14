@@ -33,7 +33,7 @@
     "smoke:vim": "node scripts/smoke-vim-runtime.js",
     "sync:vim-runtime": "node scripts/sync-vim-runtime.js --write",
     "lint": "node scripts/check-syntax.js",
-    "test": "node --test test"
+    "test": "node --test test/*.js test/**/*.js"
   },
   "files": [
     "CHANGELOG.md",
