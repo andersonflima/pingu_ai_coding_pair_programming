@@ -1,5 +1,5 @@
 /**
- * Orquestra o comportamento principal de soma
+ * Executa a etapa principal de soma preservando o contrato esperado
  * @param {number} a Valor numerico usado na regra principal da funcao.
  * @param {number} b Valor numerico usado na regra principal da funcao.
  * @returns {number} Valor numerico calculado conforme a regra principal da funcao.

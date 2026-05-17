@@ -5192,6 +5192,9 @@ if g:realtime_dev_agent_realtime_on_change
     if get(g:, 'realtime_dev_agent_realtime_insert_mode', 0)
       autocmd TextChangedI * call s:realtime_dev_agent_schedule_check()
     endif
+    if has('nvim') && exists('##DiagnosticChanged')
+      autocmd DiagnosticChanged * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_schedule_check('lsp_diagnostic') | endif
+    endif
     autocmd InsertLeave * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_drain_pending_auto_fixes() | call s:realtime_dev_agent_schedule_check() | endif
     if get(g:, 'realtime_dev_agent_realtime_on_cursor_hold', 1)
       autocmd CursorHold * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_schedule_check('cursor_context') | endif
