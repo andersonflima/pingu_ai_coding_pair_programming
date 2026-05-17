@@ -4318,7 +4318,7 @@ function! s:build_auto_fix_state(qf, file, opts) abort
     if l:item_kind ==# 'todo_fixme' && l:apply_all_kinds
       continue
     endif
-    if !l:apply_all_kinds && index(l:kinds, l:item_kind) == -1
+    if !l:apply_all_kinds && index(l:kinds, l:item_kind) == -1 && l:item_kind !=# 'lsp_code_action'
       continue
     endif
     let l:item_action = s:issue_effective_action(l:item)
