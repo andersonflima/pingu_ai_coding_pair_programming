@@ -4969,6 +4969,27 @@ function! s:realtime_dev_agent_window_check() abort
   endtry
 endfunction
 
+function! s:set_global_normal_map(lhs, rhs, desc) abort
+  if empty(a:lhs) || empty(a:rhs)
+    return
+  endif
+
+  if has('nvim') && exists('*nvim_set_keymap')
+    try
+      call nvim_set_keymap('n', a:lhs, a:rhs, {
+            \ 'noremap': v:true,
+            \ 'silent': v:true,
+            \ 'desc': a:desc,
+            \ })
+      return
+    catch
+      " Fallback para map tradicional quando a API de desc nao estiver disponível.
+    endtry
+  endif
+
+  execute 'nnoremap <silent> ' . a:lhs . ' ' . a:rhs
+endfunction
+
 command! RealtimeDevAgentCheck call s:realtime_dev_agent_check()
 command! RealtimeDevAgentWindowCheck call s:realtime_dev_agent_window_check()
 command! RealtimeDevAgentWindowClose call s:window_close()
@@ -4978,12 +4999,20 @@ command! RealtimeDevAgentAutoFixDisable let g:realtime_dev_agent_auto_fix_enable
 
 if !empty(g:realtime_dev_agent_map_key)
   " Atalho de analise rapida do arquivo atual.
-  execute 'nnoremap <silent> ' . g:realtime_dev_agent_map_key . ' :RealtimeDevAgentCheck<CR>'
+  call s:set_global_normal_map(
+        \ g:realtime_dev_agent_map_key,
+        \ ':RealtimeDevAgentCheck<CR>',
+        \ 'Pingu: analisar arquivo atual',
+        \ )
 endif
 
 if !empty(g:realtime_dev_agent_window_key)
   " Atalho para executar analise no modo janela de interacao em tempo real.
-  execute 'nnoremap <silent> ' . g:realtime_dev_agent_window_key . ' :RealtimeDevAgentWindowCheck<CR>'
+  call s:set_global_normal_map(
+        \ g:realtime_dev_agent_window_key,
+        \ ':RealtimeDevAgentWindowCheck<CR>',
+        \ 'Pingu: abrir painel e analisar',
+        \ )
 endif
 
 if g:realtime_dev_agent_start_on_editor_enter
