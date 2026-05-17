@@ -616,7 +616,7 @@ Contratos:
 
 ## Contrato de execução offline
 
-Quando uma acao e gerada no fluxo offline-first, o contexto interno inclui:
+Quando uma acao e gerada no fluxo offline-only, o contexto interno inclui:
 
 - buffer completo do arquivo atual
 - janela de foco em torno do comentario ou issue
@@ -629,7 +629,7 @@ Esse contrato existe para reduzir variacao e evitar regressao. No CLI, prompts e
 
 ## Cobertura Offline
 
-O Pingu deve continuar util sem IA. O contrato offline versionado cobre todas as linguagens ativas do registry para:
+O Pingu opera sem dependencias online e sem IA externa. O contrato offline versionado cobre todas as linguagens ativas do registry para:
 
 - comentarios acionaveis: `comment_task`
 - contexto persistente: `context_file`
@@ -644,7 +644,7 @@ pingu offline --json
 
 O resultado esperado para o registry atual e `percent: 100`.
 
-O fluxo atual e offline-first por design: cobertura integral das capacidades mapeadas para os cenarios suportados sem chamadas externas.
+O fluxo atual e offline-only por design: cobertura integral das capacidades mapeadas para os cenarios suportados sem chamadas externas.
 
 Correcoes offline tambem rodam pelo analisador e pelo CLI:
 
@@ -784,9 +784,9 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_terminal_strategy = 'toggleterm'`
 - `let g:realtime_dev_agent_terminal_strategy = 'native'`
 
-## Credenciais e variáveis de ambiente
+## Variáveis de ambiente
 
-O runtime opera em modo offline-first e não depende de chaves externas para as capacidades mapeadas.
+O runtime opera em modo offline-only e não depende de chaves externas para as capacidades mapeadas.
 
 Linguagens ativas por padrao no runtime:
 
@@ -803,7 +803,7 @@ Importante:
 
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
-- nunca commite credenciais
+- variaveis `PINGU_AI_*`, `PINGU_FORCE_AI_*` e `PINGU_PREFER_AI_*` sao ignoradas no runtime atual
 - `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de `comment_task` entram no ciclo automático por execução; use `0` para remover o limite
 - `PINGU_DOCUMENTATION_AUTO_FIX_MIN_CONFIDENCE=0.60` controla o limiar minimo de confianca para comentario automatico documental; valores menores deixam o lote mais agressivo
 - `PINGU_DOCUMENTATION_MAX_LINES=420` evita `function_doc`, `class_doc`, `variable_doc` e `flow_comment` automaticos em arquivos grandes; use `0` para remover o corte

@@ -18,10 +18,10 @@ test('normalizeAiResolutionMode understands prefer, force and off aliases', () =
 
 test('readAiFeatureMode mantém modo offline como padrão e respeita ambiente online', () => {
   assert.equal(readAiFeatureMode('comment_task', {}), 'off');
-  assert.equal(readAiFeatureMode('comment_task', { PINGU_OFFLINE_FIRST: 'false' }), 'prefer');
+  assert.equal(readAiFeatureMode('comment_task', { PINGU_OFFLINE_FIRST: 'false' }), 'off');
 });
 
-test('readAiFeatureMode respeita configurações quando online', () => {
+test('readAiFeatureMode ignora configurações de IA externas', () => {
   assert.equal(readAiFeatureMode('comment_task', {
     PINGU_OFFLINE_FIRST: 'false',
     PINGU_AI_COMMENT_TASK_MODE: 'off',
@@ -29,14 +29,14 @@ test('readAiFeatureMode respeita configurações quando online', () => {
   assert.equal(readAiFeatureMode('unit_test', {
     PINGU_OFFLINE_FIRST: 'false',
     PINGU_FORCE_AI_UNIT_TEST: '1',
-  }), 'force');
+  }), 'off');
   assert.equal(readAiFeatureMode('automatic_fix', {
     PINGU_OFFLINE_FIRST: 'false',
     PINGU_AUTOMATIC_AI_RESOLUTION: 'true',
-  }), 'prefer');
+  }), 'off');
 });
 
-test('resolveAiFeaturePolicy mantém comportamento offline-first e alterna em ambiente online', () => {
+test('resolveAiFeaturePolicy mantém comportamento offline-only em qualquer ambiente', () => {
   const offline = resolveAiFeaturePolicy('comment_task', {}, { hasOpenAiConfiguration: false });
   const onlineWithoutKey = resolveAiFeaturePolicy('comment_task', { PINGU_OFFLINE_FIRST: 'false' }, {
     hasOpenAiConfiguration: false,
@@ -56,16 +56,16 @@ test('resolveAiFeaturePolicy mantém comportamento offline-first e alterna em am
   assert.equal(offline.offlineFirst, true);
   assert.equal(offline.mode, 'off');
   assert.equal(offline.shouldUseAi, false);
-  assert.equal(onlineWithoutKey.mode, 'prefer');
+  assert.equal(onlineWithoutKey.mode, 'off');
   assert.equal(onlineWithoutKey.shouldUseAi, false);
-  assert.equal(onlineWithKey.mode, 'prefer');
-  assert.equal(onlineWithKey.shouldUseAi, true);
-  assert.equal(forced.mode, 'force');
-  assert.equal(forced.mustUseAi, true);
-  assert.equal(forced.canFallBack, false);
+  assert.equal(onlineWithKey.mode, 'off');
+  assert.equal(onlineWithKey.shouldUseAi, false);
+  assert.equal(forced.mode, 'off');
+  assert.equal(forced.mustUseAi, false);
+  assert.equal(forced.canFallBack, true);
 });
 
-test('resolveAiFeaturePolicy pode alternar modo offline via PINGU_OFFLINE_FIRST', () => {
+test('resolveAiFeaturePolicy não alterna modo offline via PINGU_OFFLINE_FIRST', () => {
   const envOnline = {
     PINGU_OFFLINE_FIRST: 'false',
     PINGU_AI_COMMENT_TASK_MODE: 'force',
@@ -74,15 +74,15 @@ test('resolveAiFeaturePolicy pode alternar modo offline via PINGU_OFFLINE_FIRST'
   const policy = resolveAiFeaturePolicy('comment_task', envOnline, { hasOpenAiConfiguration: false });
   const fallback = readAiFeatureMode('comment_task', envOnline);
 
-  assert.equal(isOfflineFirstMode(envOnline), false);
-  assert.equal(fallback, 'force');
-  assert.equal(policy.mode, 'force');
-  assert.equal(policy.mustUseAi, true);
-  assert.equal(policy.canFallBack, false);
-  assert.equal(policy.offlineFirst, false);
+  assert.equal(isOfflineFirstMode(envOnline), true);
+  assert.equal(fallback, 'off');
+  assert.equal(policy.mode, 'off');
+  assert.equal(policy.mustUseAi, false);
+  assert.equal(policy.canFallBack, true);
+  assert.equal(policy.offlineFirst, true);
 });
 
-test('readAiFeatureMode respeita modo off desativando offline-first', () => {
+test('readAiFeatureMode mantém off independentemente de PINGU_OFFLINE_FIRST', () => {
   const envOnline = {
     PINGU_OFFLINE_FIRST: '0',
     PINGU_AI_UNIT_TEST_MODE: 'off',
