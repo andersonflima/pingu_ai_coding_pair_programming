@@ -148,3 +148,18 @@ test('analyzer detecta token isolado inesperado em bloco Elixir', () => {
   assert.ok(issue);
   assert.equal(issue.line, 4);
 });
+
+test('analyzer detecta identificador isolado inesperado em bloco Elixir', () => {
+  const issues = analyzeText('/tmp/example.ex', [
+    'defmodule Example do',
+    '  def start(_type, _args) do',
+    '    Supervisor.start_link([], strategy: :one_for_one)',
+    '    UnexpectedToken',
+    '  end',
+    'end',
+  ].join('\n'), { analysisMode: 'light' });
+
+  const issue = issueByKind(issues, 'syntax_unexpected_token');
+  assert.ok(issue);
+  assert.equal(issue.line, 4);
+});
