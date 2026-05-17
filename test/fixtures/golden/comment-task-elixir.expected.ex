@@ -1,6 +1,6 @@
 defmodule Calculator do
   @doc """
-    Orquestra o comportamento principal de soma
+    Executa a etapa principal de soma preservando o contrato esperado
 
     ## Argumentos
     - a: Valor numerico usado na regra principal da funcao.
