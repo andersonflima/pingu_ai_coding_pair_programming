@@ -829,6 +829,7 @@ Importante:
 - `:RealtimeDevAgentWindowCheck` (e o atalho `g:realtime_dev_agent_window_key`) mantem o painel aberto durante e apos a analise assincrona
 - `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote
 - Elixir ganhou deteccao adicional de bloco `do/end` pendente, cobrindo erros como `syntax error before: 'Logger'` quando faltam `end`s
+- Elixir agora detecta keyword de fechamento malformada (`eend`, `ennd`, `endd`) como `syntax_malformed_keyword` com auto-fix por `replace_line`
 - `function_doc` agora evita ciclo de atualização quando a doc já corresponde ao snippet gerado (inclusive em parametros opcionais/variadicos de TypeScript e defaults de Python)
 - `function_spec` em Elixir evita duplicacao em funcoes com multiplas clausulas da mesma aridade, reduzindo oscilacao de add/remove de `@spec`
 - atualizacoes de `function_spec` com `replace_range` agora substituem o bloco de `@spec` corretamente no runtime Vim/Neovim, evitando insercao paralela e oscilacao

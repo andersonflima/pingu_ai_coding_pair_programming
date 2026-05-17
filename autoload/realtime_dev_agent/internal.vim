@@ -986,6 +986,7 @@ function! s:is_local_cursor_context_issue(item) abort
         \ 'syntax_extra_delimiter',
         \ 'syntax_missing_comma',
         \ 'syntax_missing_delimiter',
+        \ 'syntax_malformed_keyword',
         \ 'syntax_missing_quote',
         \ 'terraform_required_version',
         \ 'trailing_whitespace'

@@ -387,6 +387,7 @@ if !exists('g:realtime_dev_agent_auto_fix_kinds')
           \ 'syntax_extra_delimiter',
           \ 'syntax_missing_delimiter',
           \ 'syntax_missing_comma',
+          \ 'syntax_malformed_keyword',
           \ 'undefined_variable',
           \ 'comment_task',
           \ 'context_file',
