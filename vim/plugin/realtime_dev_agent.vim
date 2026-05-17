@@ -345,6 +345,16 @@ if !exists('g:realtime_dev_agent_lsp_auto_fix_max_severity')
   let g:realtime_dev_agent_lsp_auto_fix_max_severity = 'warning'
 endif
 
+if !exists('g:realtime_dev_agent_lsp_auto_fix_only')
+  " Ordem de prioridade para code actions do LSP no lote automatico.
+  let g:realtime_dev_agent_lsp_auto_fix_only = ['source.fixAll', 'source.organizeImports', 'quickfix']
+endif
+
+if !exists('g:realtime_dev_agent_lsp_auto_fix_prefer_global')
+  " 1 tenta fixAll/organizeImports no escopo do arquivo antes do quickfix local.
+  let g:realtime_dev_agent_lsp_auto_fix_prefer_global = 1
+endif
+
 if !exists('g:realtime_dev_agent_terminal_actions_enabled')
   " 1 permite executar acoes de terminal inferidas a partir de comentarios com *.
   let g:realtime_dev_agent_terminal_actions_enabled = 1

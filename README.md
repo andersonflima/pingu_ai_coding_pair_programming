@@ -809,7 +809,7 @@ Importante:
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
-- no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `quickfix`/`source.fixAll` preferencial sem abrir prompt
+- no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `source.fixAll`, `source.organizeImports` e `quickfix` sem abrir prompt
 - `function_doc` agora evita ciclo de atualização quando a doc já corresponde ao snippet gerado (inclusive em parametros opcionais/variadicos de TypeScript e defaults de Python)
 - `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de `comment_task` entram no ciclo automático por execução; use `0` para remover o limite
 - `PINGU_COPILOT_FAILURE_COOLDOWN_MS=30000` ajusta o cooldown de falha do provider (default: 30000ms)
@@ -826,6 +826,8 @@ Importante:
 - `g:realtime_dev_agent_lsp_auto_fix_max_per_check=3` limita quantos diagnosticos do LSP entram por ciclo
 - `g:realtime_dev_agent_lsp_auto_fix_timeout_ms=400` define timeout da busca `textDocument/codeAction` por item
 - `g:realtime_dev_agent_lsp_auto_fix_max_severity='warning'` limita severidade elegivel (`error`, `warning`, `info`, `hint` ou `1..4`)
+- `g:realtime_dev_agent_lsp_auto_fix_only=['source.fixAll','source.organizeImports','quickfix']` controla a ordem/tipos de code action elegiveis
+- `g:realtime_dev_agent_lsp_auto_fix_prefer_global=1` prioriza tentativa de `fixAll`/`organizeImports` no escopo do arquivo antes do quickfix local
 
 ## Como funciona internamente
 
