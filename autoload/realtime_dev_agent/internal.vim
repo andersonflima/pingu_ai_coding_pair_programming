@@ -3158,6 +3158,37 @@ function! s:apply_issue_range_replacement(target_buf, action, lnum, current_line
   return v:true
 endfunction
 
+function! s:apply_issue_replace_range(target_buf, action, fallback_lines) abort
+  let l:range = s:issue_action_range(a:action)
+  if empty(l:range)
+    return v:false
+  endif
+
+  let l:start_zero = get(get(l:range, 'start', {}), 'line', -1)
+  let l:end_zero = get(get(l:range, 'end', {}), 'line', -1)
+  if l:start_zero < 0 || l:end_zero < 0
+    return v:false
+  endif
+
+  let l:start_lnum = l:start_zero + 1
+  let l:end_lnum = max([l:start_lnum, l:end_zero])
+  let l:new_lines = empty(a:fallback_lines) ? [''] : copy(a:fallback_lines)
+  let l:current_lines = getbufline(a:target_buf, l:start_lnum, l:end_lnum)
+  if join(l:current_lines, "\n") ==# join(l:new_lines, "\n")
+    return v:false
+  endif
+
+  noautocmd call setbufline(a:target_buf, l:start_lnum, l:new_lines[0])
+  if l:end_lnum > l:start_lnum
+    noautocmd call deletebufline(a:target_buf, l:start_lnum + 1, l:end_lnum)
+  endif
+  if len(l:new_lines) > 1
+    noautocmd call appendbufline(a:target_buf, l:start_lnum, l:new_lines[1:])
+  endif
+  call setbufvar(a:target_buf, '&modified', 1)
+  return v:true
+endfunction
+
 function! s:preserve_issue_snippet_indentation(issue, action) abort
   if get(a:action, 'op', '') !=# 'replace_line'
     return v:false
@@ -3273,7 +3304,19 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   endif
   let l:snippet_text = join(l:snippet_lines, "\n")
 
-  if l:op ==# 'replace_line'
+  if l:op ==# 'replace_range'
+    if s:apply_issue_replace_range(l:target_buf, l:action, l:snippet_lines)
+      if l:kind ==# 'comment_task' && !empty(get(l:issue, '_trigger_line', ''))
+        call s:remove_issue_trigger_residue(l:issue, a:keep_focus_code)
+      endif
+      if !a:keep_focus_code && !empty(l:restore_view)
+        call winrestview(l:restore_view)
+      endif
+      call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
+      return v:true
+    endif
+    return v:false
+  elseif l:op ==# 'replace_line'
     if s:apply_issue_range_replacement(l:target_buf, l:action, l:lnum, l:line_content, l:snippet_text)
       if l:kind ==# 'comment_task' && !empty(get(l:issue, '_trigger_line', ''))
         call s:remove_issue_trigger_residue(l:issue, a:keep_focus_code)
@@ -3478,6 +3521,9 @@ function! s:realtime_issue_still_relevant(item, target_buf, lnum, line_content) 
       endif
     endfor
     if empty(l:expected)
+      return v:true
+    endif
+    if l:kind =~# '^syntax_'
       return v:true
     endif
 
