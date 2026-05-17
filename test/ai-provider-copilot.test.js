@@ -104,3 +104,70 @@ test('resolveAiGeneratedTask handles fenced json payload', () => {
   assert.equal(result.action.op, 'run_command');
   assert.equal(result.action.command, 'echo ok');
 });
+
+test('hasOpenAiConfiguration enters temporary cooldown after runtime failure', () => {
+  let versionCalls = 0;
+  let promptCalls = 0;
+  const provider = buildProvider({
+    spawnSync: (_command, args) => {
+      if (args[0] === '--version') {
+        versionCalls += 1;
+        return { status: 0, stdout: 'copilot 1.0.0', stderr: '' };
+      }
+      promptCalls += 1;
+      return { status: 1, stdout: '', stderr: 'not authenticated' };
+    },
+  });
+
+  const env = { PINGU_COPILOT_FAILURE_COOLDOWN_MS: '30000' };
+
+  assert.equal(provider.resolveAiGeneratedTask({ instruction: 'criar funcao' }, env), null);
+  assert.equal(promptCalls, 1);
+  assert.equal(provider.hasOpenAiConfiguration(env), false);
+  assert.equal(versionCalls, 1);
+});
+
+test('provider retries after cooldown expires', async () => {
+  let versionCalls = 0;
+  let promptCalls = 0;
+  const provider = buildProvider({
+    spawnSync: (_command, args) => {
+      if (args[0] === '--version') {
+        versionCalls += 1;
+        return { status: 0, stdout: 'copilot 1.0.0', stderr: '' };
+      }
+      promptCalls += 1;
+      if (promptCalls === 1) {
+        return { status: 1, stdout: '', stderr: 'temporary error' };
+      }
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          snippet: 'const ok = true;',
+          message: '',
+          suggestion: '',
+          dependencies: [],
+          action: {
+            op: '',
+            target_file: '',
+            mkdir_p: false,
+            remove_trigger: false,
+            command: '',
+            description: '',
+          },
+        }),
+        stderr: '',
+      };
+    },
+  });
+
+  const env = { PINGU_COPILOT_FAILURE_COOLDOWN_MS: '5' };
+
+  assert.equal(provider.resolveAiGeneratedTask({ instruction: 'primeira tentativa' }, env), null);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const second = provider.resolveAiGeneratedTask({ instruction: 'segunda tentativa' }, env);
+  assert.ok(second);
+  assert.equal(second.snippet, 'const ok = true;');
+  assert.equal(promptCalls, 2);
+  assert.equal(versionCalls >= 1, true);
+});
