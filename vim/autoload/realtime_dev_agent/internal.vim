@@ -2091,10 +2091,15 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ ], "\n")
 
   try
-    return luaeval(l:script, l:payload) ? v:true : v:false
+    let l:applied = luaeval(l:script, l:payload) ? v:true : v:false
   catch
     return v:false
   endtry
+
+  if l:applied
+    call s:auto_save_buffer_if_modified(l:target_buf, l:filename)
+  endif
+  return l:applied
 endfunction
 
 function! s:extract_extra_delimiter_char(text) abort
@@ -2312,6 +2317,37 @@ function! s:persist_buffer_contents(bufnr, file) abort
   call writefile(getbufline(a:bufnr, 1, '$'), l:target_file, 'b')
   call setbufvar(a:bufnr, '&modified', 0)
   return v:true
+endfunction
+
+function! s:auto_save_buffer_if_modified(bufnr, file) abort
+  if a:bufnr <= 0 || !bufexists(a:bufnr) || !bufloaded(a:bufnr)
+    return v:false
+  endif
+  if !getbufvar(a:bufnr, '&modified', 0)
+    return v:true
+  endif
+  if !getbufvar(a:bufnr, '&modifiable', 0) || getbufvar(a:bufnr, '&readonly', 0)
+    return v:false
+  endif
+  if getbufvar(a:bufnr, '&buftype', '') !=# ''
+    return v:false
+  endif
+
+  let l:target_file = trim('' . a:file)
+  if empty(l:target_file)
+    let l:target_file = bufname(a:bufnr)
+  endif
+  let l:target_file = fnamemodify(l:target_file, ':p')
+  if empty(l:target_file)
+    return v:false
+  endif
+
+  try
+    return s:persist_buffer_contents(a:bufnr, l:target_file)
+  catch
+    echomsg '[RealtimeDevAgent] Auto-save falhou para ' . l:target_file
+    return v:false
+  endtry
 endfunction
 
 function! s:collect_affected_files(file, items) abort
@@ -3245,6 +3281,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
       if !a:keep_focus_code && !empty(l:restore_view)
         call winrestview(l:restore_view)
       endif
+      call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
       return v:true
     endif
     let l:normalized_current = substitute(l:line_content, '^\s*', '', '')
@@ -3276,6 +3313,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
       call winrestview(l:restore_view)
     endif
   endif
+  call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
   return v:true
 endfunction
 
