@@ -606,6 +606,24 @@ function! s:realtime_dev_agent_open_review() abort
   call s:start_async_realtime_check_with_fallback(l:bufnr, g:realtime_dev_agent_realtime_open_qf, 0, l:analysis_mode, v:true)
 endfunction
 
+function! s:notify_operational_noot() abort
+  let l:message = 'Noot noot!'
+  if has('nvim') && exists('*luaeval')
+    try
+      call luaeval('vim.notify(_A[1], vim.log.levels.INFO, { title = _A[2] })', [l:message, 'Pingu'])
+      return
+    catch
+    endtry
+  endif
+
+  if exists('*popup_notification')
+    call popup_notification(l:message, {'title': 'Pingu'})
+    return
+  endif
+
+  echomsg '[RealtimeDevAgent] ' . l:message
+endfunction
+
 function! s:realtime_dev_agent_start_current_buffer() abort
   if s:realtime_dev_agent_started
     return v:false
@@ -634,6 +652,7 @@ function! s:realtime_dev_agent_start_current_buffer() abort
 
   let s:realtime_dev_agent_started = v:true
   call s:remember_code_window(win_getid())
+  call s:notify_operational_noot()
 
   if get(g:, 'realtime_dev_agent_open_window_on_start', 1)
     let g:realtime_dev_agent_show_window = 1
