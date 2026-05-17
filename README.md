@@ -609,14 +609,14 @@ Contratos:
 - `comments` e alias de `prompts`.
 - `offline` mostra a cobertura offline das linguagens ativas para `comment_task`, `context_file`, `unit_test` e `terminal_task`.
 - `init` cria `.pingu/config.json` com defaults conservadores para o projeto.
-- `profile` mede latencia de analise em fixtures sinteticas em modo offline-only.
+- `profile` mede latencia de analise em fixtures sinteticas no modo local padrão.
 - `taxonomy` lista as familias de erro e os `issue kinds` mapeados.
 - `doctor` valida ambiente local, runtime, linguagens ativas e cobertura offline.
 - `--serve`, `--stdin`, `--analyze` e `--autofix-guard` continuam preservados para a integracao da IDE.
 
 ## Contrato de execução offline
 
-Quando uma acao e gerada no fluxo offline-only, o contexto interno inclui:
+Quando uma acao e gerada no fluxo local com fallback offline, o contexto interno inclui:
 
 - buffer completo do arquivo atual
 - janela de foco em torno do comentario ou issue
@@ -644,7 +644,7 @@ pingu offline --json
 
 O resultado esperado para o registry atual e `percent: 100`.
 
-O fluxo atual e offline-only por design: cobertura integral das capacidades mapeadas para os cenarios suportados sem chamadas externas.
+O fluxo atual prioriza cobertura local e fallback offline. Quando um provider externo compatível estiver disponível, o runtime pode aproveitá-lo para enriquecer gerações sem tornar o fluxo dependente disso.
 
 Correcoes offline tambem rodam pelo analisador e pelo CLI:
 
@@ -786,7 +786,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 
 ## Variáveis de ambiente
 
-O runtime opera em modo offline-only e não depende de chaves externas para as capacidades mapeadas.
+O runtime opera com fallback offline e pode usar provider externo quando disponível, sem exigir configuração obrigatória para os fluxos mapeados.
 
 Linguagens ativas por padrao no runtime:
 
@@ -803,7 +803,8 @@ Importante:
 
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
-- variaveis `PINGU_AI_*`, `PINGU_FORCE_AI_*` e `PINGU_PREFER_AI_*` sao ignoradas no runtime atual
+- se o comando `copilot` estiver disponível no ambiente, o runtime pode usar geração assistida automaticamente
+- se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de `comment_task` entram no ciclo automático por execução; use `0` para remover o limite
 - `PINGU_DOCUMENTATION_AUTO_FIX_MIN_CONFIDENCE=0.60` controla o limiar minimo de confianca para comentario automatico documental; valores menores deixam o lote mais agressivo
 - `PINGU_DOCUMENTATION_MAX_LINES=420` evita `function_doc`, `class_doc`, `variable_doc` e `flow_comment` automaticos em arquivos grandes; use `0` para remover o corte
