@@ -104,6 +104,13 @@
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
+  "lsp_code_action": {
+    "defaultAction": { "op": "lsp_code_action" },
+    "autoFixDefault": true,
+    "autoFixPriority": 15,
+    "supportsQuickFix": true,
+    "supportsFollowUp": false
+  },
   "loose_equality": {
     "defaultAction": { "op": "replace_line" },
     "autoFixDefault": true,
