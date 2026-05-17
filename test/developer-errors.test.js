@@ -89,3 +89,18 @@ test('analyzer does not treat equal trimmed lines with different indentation as 
 
   assert.equal(issues.some((issue) => issue.kind === 'duplicate_line'), false);
 });
+
+test('analyzer detecta bloco do/end pendente em Elixir e sugere fechamento', () => {
+  const issues = analyzeText('/tmp/example.ex', [
+    'defmodule Example do',
+    '  def run do',
+    '    if true do',
+    '      Logger.debug("Hello from another Task!")',
+    '  end',
+  ].join('\n'), { analysisMode: 'light' });
+
+  const issue = issueByKind(issues, 'syntax_missing_delimiter');
+  assert.ok(issue);
+  assert.equal(issue.line, 5);
+  assert.equal(issue.snippet.includes('end'), true);
+});
