@@ -115,3 +115,36 @@ test('analyzer nao gera syntax_missing_delimiter para Elixir com do: inline vali
 
   assert.equal(issues.some((issue) => issue.kind === 'syntax_missing_delimiter'), false);
 });
+
+test('analyzer detecta virgula ausente entre itens de lista Elixir', () => {
+  const issues = analyzeText('/tmp/example.ex', [
+    'defmodule Example do',
+    '  def start(_type, _args) do',
+    '    children = [',
+    '      Logger.debug("Hello from a Task!")',
+    '      Logger.debug("Hello from another Task!")',
+    '    ]',
+    '  end',
+    'end',
+  ].join('\n'), { analysisMode: 'light' });
+
+  const issue = issueByKind(issues, 'syntax_missing_comma');
+  assert.ok(issue);
+  assert.equal(issue.line, 4);
+  assert.equal(issue.snippet.includes(','), true);
+});
+
+test('analyzer detecta token isolado inesperado em bloco Elixir', () => {
+  const issues = analyzeText('/tmp/example.ex', [
+    'defmodule Example do',
+    '  def start(_type, _args) do',
+    '    Supervisor.start_link([], strategy: :one_for_one)',
+    '    E',
+    '  end',
+    'end',
+  ].join('\n'), { analysisMode: 'light' });
+
+  const issue = issueByKind(issues, 'syntax_unexpected_token');
+  assert.ok(issue);
+  assert.equal(issue.line, 4);
+});
