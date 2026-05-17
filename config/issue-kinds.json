@@ -188,6 +188,13 @@
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
+  "syntax_malformed_keyword": {
+    "defaultAction": { "op": "replace_line" },
+    "autoFixDefault": true,
+    "autoFixPriority": 22,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
+  },
   "syntax_missing_quote": {
     "defaultAction": { "op": "replace_line" },
     "autoFixDefault": true,

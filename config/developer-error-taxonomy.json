@@ -5,7 +5,7 @@
     {
       "id": "syntax_structure",
       "description": "Aspas, delimitadores, virgulas, blocos e fences quebrados.",
-      "mappedIssueKinds": ["syntax_missing_quote", "syntax_missing_delimiter", "syntax_missing_comma", "syntax_extra_delimiter"],
+      "mappedIssueKinds": ["syntax_missing_quote", "syntax_missing_delimiter", "syntax_missing_comma", "syntax_extra_delimiter", "syntax_malformed_keyword"],
       "safeAutoFix": true,
       "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c", "terraform", "yaml", "markdown", "mermaid", "dockerfile", "shell", "toml"]
     },

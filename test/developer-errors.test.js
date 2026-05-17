@@ -16,6 +16,7 @@ test('developer error taxonomy maps correction families for active languages', (
   assert.ok(developerErrorKinds().includes('loose_equality'));
   assert.ok(developerErrorKinds().includes('none_comparison'));
   assert.ok(developerErrorKinds().includes('nil_comparison'));
+  assert.ok(developerErrorKinds().includes('syntax_malformed_keyword'));
   assert.ok(developerErrorFamiliesForLanguage('javascript').some((family) => family.id === 'nullability_and_equality'));
   assert.ok(developerErrorFamiliesForLanguage('python').some((family) => family.id === 'error_handling'));
 });
@@ -162,4 +163,19 @@ test('analyzer detecta identificador isolado inesperado em bloco Elixir', () => 
   const issue = issueByKind(issues, 'syntax_unexpected_token');
   assert.ok(issue);
   assert.equal(issue.line, 4);
+});
+
+test("analyzer detecta keyword 'end' malformada em Elixir", () => {
+  const issues = analyzeText('/tmp/example.ex', [
+    'defmodule Example do',
+    '  def hello do',
+    '    :world',
+    '  eend',
+    'end',
+  ].join('\n'), { analysisMode: 'light' });
+
+  const malformed = issueByKind(issues, 'syntax_malformed_keyword');
+  assert.ok(malformed);
+  assert.equal(malformed.line, 4);
+  assert.equal(malformed.snippet.trim(), 'end');
 });
