@@ -127,6 +127,8 @@ pingu doctor
 
 Para Vim, Neovim e LazyVim, instale o plugin pelo GitHub conforme a secao [Instalacao via GitHub no Vim](#instalacao-via-github-no-vim). A IDE usa o mesmo runtime do CLI, entao `pingu doctor` tambem ajuda a validar Node.js, runtime local e linguagens ativas.
 
+Quando o runtime inicia com sucesso no editor, o plugin emite notificacao operacional com a mensagem `Noot noot!`.
+
 ## Como o loop funciona
 
 1. Voce abre um arquivo suportado em `Vim/Neovim`.
@@ -804,6 +806,7 @@ Importante:
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
 - se o comando `copilot` estiver disponível no ambiente, o runtime pode usar geração assistida automaticamente
+- para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de `comment_task` entram no ciclo automático por execução; use `0` para remover o limite
 - `PINGU_DOCUMENTATION_AUTO_FIX_MIN_CONFIDENCE=0.60` controla o limiar minimo de confianca para comentario automatico documental; valores menores deixam o lote mais agressivo

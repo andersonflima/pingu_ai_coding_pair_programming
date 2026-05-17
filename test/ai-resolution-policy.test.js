@@ -33,7 +33,7 @@ test('readAiFeatureMode ignora configurações de IA externas', () => {
   assert.equal(readAiFeatureMode('automatic_fix', {
     PINGU_OFFLINE_FIRST: 'false',
     PINGU_AUTOMATIC_AI_RESOLUTION: 'true',
-  }), 'off');
+  }), 'prefer');
 });
 
 test('resolveAiFeaturePolicy usa provider quando disponível e mantém fallback local', () => {
