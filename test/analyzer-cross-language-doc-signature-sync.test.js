@@ -11,6 +11,10 @@ function functionDocIssues(text, file = 'module.c') {
   return analyzeText(file, text).filter((issue) => issue.kind === 'function_doc');
 }
 
+function issuesByKind(text, file, kind) {
+  return analyzeText(file, text).filter((issue) => issue.kind === kind);
+}
+
 function applyIssueSnippet(source, issue) {
   const lines = String(source || '').split('\n');
   const snippetLines = String(issue && issue.snippet || '').split('\n');
@@ -196,4 +200,48 @@ test('mantem function_doc estavel em Python com parametro default', () => {
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+});
+
+test('nao replica function_spec em Elixir quando funcao possui multiplas clausulas', () => {
+  const source = [
+    'defmodule Multi do',
+    '  @spec normalize(term(), term()) :: term()',
+    '  def normalize(value, nil), do: value',
+    '  def normalize(value, opts) when is_map(opts), do: Map.get(opts, :value, value)',
+    'end',
+  ].join('\n');
+
+  const specIssues = issuesByKind(source, 'multi.ex', 'function_spec');
+  assert.equal(specIssues.length, 0);
+});
+
+test('reporta apenas uma function_spec desatualizada em Elixir com multiplas clausulas', () => {
+  const source = [
+    'defmodule Multi do',
+    '  @spec normalize(term()) :: term()',
+    '  def normalize(value, nil), do: value',
+    '  def normalize(value, opts) when is_map(opts), do: Map.get(opts, :value, value)',
+    'end',
+  ].join('\n');
+
+  const specIssues = issuesByKind(source, 'multi.ex', 'function_spec');
+  assert.equal(specIssues.length, 1);
+  assert.equal(specIssues[0].message.includes('desatualizada'), true);
+});
+
+test('aplicacao de function_spec em Elixir com multiplas clausulas e idempotente', () => {
+  const source = [
+    'defmodule Multi do',
+    '  @spec normalize(term()) :: term()',
+    '  def normalize(value, nil), do: value',
+    '  def normalize(value, opts) when is_map(opts), do: Map.get(opts, :value, value)',
+    'end',
+  ].join('\n');
+
+  const initial = issuesByKind(source, 'multi.ex', 'function_spec');
+  assert.equal(initial.length, 1);
+
+  const patched = applyIssueSnippet(source, initial[0]);
+  const after = issuesByKind(patched, 'multi.ex', 'function_spec');
+  assert.equal(after.length, 0);
 });
