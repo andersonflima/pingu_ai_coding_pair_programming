@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## 0.1.25 - Em desenvolvimento
+
+### Antes
+
+- pingu-dev-agent@0.1.24 já estava publicada.
+
+### Depois
+
+- A versão foi avançada para `0.1.25` com bump patch.
+
+### Motivo
+
+- Evitar falha de publicação por versão duplicada e manter rastreabilidade da decisão.
+
+### Impacto
+
+- A publicação passa a refletir a versão versionada no repositório, sem inconsistência entre source e npm.
+
+
 ## 0.1.24 - Em desenvolvimento
 
 ### Antes
