@@ -819,6 +819,8 @@ Importante:
 - Elixir ganhou deteccao adicional de bloco `do/end` pendente, cobrindo erros como `syntax error before: 'Logger'` quando faltam `end`s
 - `function_doc` agora evita ciclo de atualização quando a doc já corresponde ao snippet gerado (inclusive em parametros opcionais/variadicos de TypeScript e defaults de Python)
 - `function_spec` em Elixir evita duplicacao em funcoes com multiplas clausulas da mesma aridade, reduzindo oscilacao de add/remove de `@spec`
+- atualizacoes de `function_spec` com `replace_range` agora substituem o bloco de `@spec` corretamente no runtime Vim/Neovim, evitando insercao paralela e oscilacao
+- `syntax_*` com acao de insercao (`insert_after`/`insert_before`) nao sao mais bloqueadas por dedupe simplista da linha ancora
 - respostas assistidas para comentarios/documentacao receberam instrucoes mais restritivas para reduzir texto generico quando o provider estiver operacional
 - `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de `comment_task` entram no ciclo automático por execução; use `0` para remover o limite
 - `PINGU_COPILOT_FAILURE_COOLDOWN_MS=30000` ajusta o cooldown de falha do provider (default: 30000ms)
