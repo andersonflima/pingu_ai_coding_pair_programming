@@ -325,6 +325,36 @@ if !exists('g:realtime_dev_agent_auto_fix_enabled')
   let g:realtime_dev_agent_auto_fix_enabled = 1
 endif
 
+if !exists('g:realtime_dev_agent_lsp_auto_fix_enabled')
+  " 1 tenta aplicar code actions de diagnosticos do LSP durante o lote automatico.
+  let g:realtime_dev_agent_lsp_auto_fix_enabled = has('nvim') ? 1 : 0
+endif
+
+if !exists('g:realtime_dev_agent_lsp_auto_fix_max_per_check')
+  " Limita quantos diagnosticos do LSP entram por ciclo de analise.
+  let g:realtime_dev_agent_lsp_auto_fix_max_per_check = 3
+endif
+
+if !exists('g:realtime_dev_agent_lsp_auto_fix_timeout_ms')
+  " Timeout da busca de code actions no LSP (ms).
+  let g:realtime_dev_agent_lsp_auto_fix_timeout_ms = 400
+endif
+
+if !exists('g:realtime_dev_agent_lsp_auto_fix_max_severity')
+  " Severidade maxima elegivel: error(1), warning(2), info(3), hint(4).
+  let g:realtime_dev_agent_lsp_auto_fix_max_severity = 'warning'
+endif
+
+if !exists('g:realtime_dev_agent_lsp_auto_fix_only')
+  " Ordem de prioridade para code actions do LSP no lote automatico.
+  let g:realtime_dev_agent_lsp_auto_fix_only = ['source.fixAll', 'source.organizeImports', 'quickfix']
+endif
+
+if !exists('g:realtime_dev_agent_lsp_auto_fix_prefer_global')
+  " 1 tenta fixAll/organizeImports no escopo do arquivo antes do quickfix local.
+  let g:realtime_dev_agent_lsp_auto_fix_prefer_global = 1
+endif
+
 if !exists('g:realtime_dev_agent_terminal_actions_enabled')
   " 1 permite executar acoes de terminal inferidas a partir de comentarios com *.
   let g:realtime_dev_agent_terminal_actions_enabled = 1

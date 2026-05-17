@@ -1602,6 +1602,9 @@ function! s:issue_auto_fix_noop_reason(item) abort
   if l:kind ==# 'large_file'
     return 'diagnostico consultivo sem auto-fix'
   endif
+  if l:kind ==# 'lsp_code_action' && !s:lsp_auto_fix_enabled()
+    return 'code action do LSP indisponivel no editor atual'
+  endif
   if l:kind ==# 'terminal_task' && get(s:, 'realtime_dev_agent_is_realtime_check', v:false)
     return 'execucao automatica de terminal fica para save e checagens de consolidacao'
   endif
@@ -1632,6 +1635,411 @@ function! s:issue_effective_action(item) abort
   return s:issue_default_action(l:kind)
 endfunction
 
+function! s:lsp_auto_fix_enabled() abort
+  if !has('nvim') || !exists('*luaeval')
+    return v:false
+  endif
+  return str2nr(string(get(g:, 'realtime_dev_agent_lsp_auto_fix_enabled', has('nvim') ? 1 : 0))) > 0
+endfunction
+
+function! s:lsp_auto_fix_max_per_check() abort
+  let l:max_items = get(g:, 'realtime_dev_agent_lsp_auto_fix_max_per_check', 3)
+  if type(l:max_items) != v:t_number
+    let l:max_items = str2nr(string(l:max_items))
+  endif
+  return max([0, l:max_items])
+endfunction
+
+function! s:lsp_auto_fix_timeout_ms() abort
+  let l:timeout_ms = get(g:, 'realtime_dev_agent_lsp_auto_fix_timeout_ms', 400)
+  if type(l:timeout_ms) != v:t_number
+    let l:timeout_ms = str2nr(string(l:timeout_ms))
+  endif
+  return max([100, l:timeout_ms])
+endfunction
+
+function! s:lsp_auto_fix_max_severity() abort
+  let l:raw = get(g:, 'realtime_dev_agent_lsp_auto_fix_max_severity', 'warning')
+  if type(l:raw) == v:t_number
+    return min([4, max([1, l:raw])])
+  endif
+
+  let l:value = tolower(trim('' . l:raw))
+  if l:value ==# 'error' || l:value ==# 'err'
+    return 1
+  endif
+  if l:value ==# 'warning' || l:value ==# 'warn'
+    return 2
+  endif
+  if l:value ==# 'info' || l:value ==# 'information'
+    return 3
+  endif
+  if l:value ==# 'hint'
+    return 4
+  endif
+
+  let l:parsed = str2nr(l:value)
+  if l:parsed <= 0
+    return 2
+  endif
+  return min([4, max([1, l:parsed])])
+endfunction
+
+function! s:normalize_lsp_code_action_kind(kind) abort
+  let l:value = trim('' . a:kind)
+  if empty(l:value)
+    return ''
+  endif
+  let l:value = substitute(l:value, '\s\+', '', 'g')
+  return l:value
+endfunction
+
+function! s:lsp_auto_fix_only_kinds() abort
+  let l:raw = get(g:, 'realtime_dev_agent_lsp_auto_fix_only', ['source.fixAll', 'source.organizeImports', 'quickfix'])
+  let l:items = []
+  if type(l:raw) == v:t_list
+    let l:items = copy(l:raw)
+  elseif type(l:raw) == v:t_string
+    let l:items = split(l:raw, ',')
+  endif
+
+  let l:normalized = []
+  let l:seen = {}
+  for l:item in l:items
+    let l:kind = s:normalize_lsp_code_action_kind(l:item)
+    if empty(l:kind) || has_key(l:seen, l:kind)
+      continue
+    endif
+    let l:seen[l:kind] = 1
+    call add(l:normalized, l:kind)
+  endfor
+
+  if empty(l:normalized)
+    return ['source.fixAll', 'source.organizeImports', 'quickfix']
+  endif
+  return l:normalized
+endfunction
+
+function! s:lsp_auto_fix_prefer_global() abort
+  return str2nr(string(get(g:, 'realtime_dev_agent_lsp_auto_fix_prefer_global', 1))) > 0
+endfunction
+
+function! s:lsp_source_fixall_kind(source) abort
+  let l:source = tolower(trim('' . a:source))
+  if empty(l:source)
+    return ''
+  endif
+  let l:source = substitute(l:source, '[^a-z0-9._-]', '', 'g')
+  if empty(l:source)
+    return ''
+  endif
+  return 'source.fixAll.' . l:source
+endfunction
+
+function! s:lsp_only_kinds_for_diagnostic(source) abort
+  let l:base = s:lsp_auto_fix_only_kinds()
+  let l:source_kind = s:lsp_source_fixall_kind(a:source)
+  if empty(l:source_kind)
+    return l:base
+  endif
+
+  let l:result = [l:source_kind]
+  for l:kind in l:base
+    if l:kind ==# l:source_kind
+      continue
+    endif
+    call add(l:result, l:kind)
+  endfor
+  return l:result
+endfunction
+
+function! s:lsp_severity_label(severity) abort
+  if a:severity == 1
+    return 'ERROR'
+  endif
+  if a:severity == 2
+    return 'WARNING'
+  endif
+  if a:severity == 3
+    return 'INFO'
+  endif
+  if a:severity == 4
+    return 'HINT'
+  endif
+  return 'INFO'
+endfunction
+
+function! s:lsp_diagnostics_for_buffer(bufnr) abort
+  if !s:lsp_auto_fix_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return []
+  endif
+
+  let l:payload = {
+        \ 'bufnr': a:bufnr,
+        \ 'maxSeverity': s:lsp_auto_fix_max_severity(),
+        \ }
+  let l:script = join([
+        \ 'local input = _A or {}',
+        \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
+        \ 'local maxSeverity = tonumber(input.maxSeverity or 2) or 2',
+        \ 'if type(vim) ~= "table" or type(vim.diagnostic) ~= "table" or type(vim.diagnostic.get) ~= "function" then',
+        \ '  return {}',
+        \ 'end',
+        \ 'local ok, diagnostics = pcall(vim.diagnostic.get, bufnr)',
+        \ 'if not ok or type(diagnostics) ~= "table" then',
+        \ '  return {}',
+        \ 'end',
+        \ 'local items = {}',
+        \ 'for _, diag in ipairs(diagnostics) do',
+        \ '  local sev = tonumber(diag.severity or 0) or 0',
+        \ '  if sev > 0 and sev <= maxSeverity then',
+        \ '    table.insert(items, {',
+        \ '      lnum = (tonumber(diag.lnum or 0) or 0) + 1,',
+        \ '      col = (tonumber(diag.col or 0) or 0) + 1,',
+        \ '      severity = sev,',
+        \ '      message = tostring(diag.message or ""),',
+        \ '      code = diag.code ~= nil and tostring(diag.code) or "",',
+        \ '      source = diag.source ~= nil and tostring(diag.source) or "",',
+        \ '    })',
+        \ '  end',
+        \ 'end',
+        \ 'table.sort(items, function(a, b)',
+        \ '  if a.lnum == b.lnum then',
+        \ '    return (a.col or 1) < (b.col or 1)',
+        \ '  end',
+        \ '  return (a.lnum or 1) < (b.lnum or 1)',
+        \ 'end)',
+        \ 'return items',
+        \ ], "\n")
+
+  try
+    let l:items = luaeval(l:script, l:payload)
+  catch
+    return []
+  endtry
+  return type(l:items) == v:t_list ? l:items : []
+endfunction
+
+function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
+  if !s:lsp_auto_fix_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return a:qf
+  endif
+
+  let l:max_items = s:lsp_auto_fix_max_per_check()
+  if l:max_items <= 0
+    return a:qf
+  endif
+
+  let l:diagnostics = s:lsp_diagnostics_for_buffer(a:bufnr)
+  if empty(l:diagnostics)
+    return a:qf
+  endif
+
+  let l:target_file = fnamemodify(a:file, ':p')
+  let l:synthetic = []
+  let l:seen = {}
+  let l:added = 0
+  for l:diag in l:diagnostics
+    if l:added >= l:max_items
+      break
+    endif
+    let l:lnum = max([1, str2nr(string(get(l:diag, 'lnum', 1)))])
+    let l:col = max([1, str2nr(string(get(l:diag, 'col', 1)))])
+    let l:message = trim('' . get(l:diag, 'message', 'Diagnostico do LSP'))
+    let l:severity = str2nr(string(get(l:diag, 'severity', 2)))
+    let l:source = trim('' . get(l:diag, 'source', ''))
+    let l:code = trim('' . get(l:diag, 'code', ''))
+    let l:key = printf('%d|%d|%s|%s|%s', l:lnum, l:col, string(l:severity), l:source, l:code)
+    if has_key(l:seen, l:key)
+      continue
+    endif
+    let l:seen[l:key] = 1
+
+    let l:parts = [printf('[%s] lsp_code_action: %s', s:lsp_severity_label(l:severity), l:message)]
+    if !empty(l:source)
+      call add(l:parts, 'source=' . l:source)
+    endif
+    if !empty(l:code)
+      call add(l:parts, 'code=' . l:code)
+    endif
+    call add(l:parts, 'Tenta aplicar fixAll/organizeImports/quickfix do LSP.')
+
+    call add(l:synthetic, {
+          \ 'filename': l:target_file,
+          \ 'lnum': l:lnum,
+          \ 'col': l:col,
+          \ 'text': join(l:parts, ' | '),
+          \ 'kind': 'lsp_code_action',
+          \ 'lsp_source': l:source,
+          \ 'lsp_code': l:code,
+          \ 'snippet': '',
+          \ 'action': {
+          \   'op': 'lsp_code_action',
+          \   'only': s:lsp_only_kinds_for_diagnostic(l:source),
+          \   'timeout_ms': s:lsp_auto_fix_timeout_ms(),
+          \   'prefer_preferred': v:true,
+          \   'prefer_global': s:lsp_auto_fix_prefer_global(),
+          \   'scope': 'line',
+          \   'line': l:lnum,
+          \ },
+          \ })
+    let l:added += 1
+  endfor
+
+  if empty(l:synthetic)
+    return a:qf
+  endif
+
+  return l:synthetic + a:qf
+endfunction
+
+function! s:apply_issue_lsp_code_action(issue) abort
+  if !s:lsp_auto_fix_enabled()
+    return v:false
+  endif
+
+  let l:filename = fnamemodify(get(a:issue, 'filename', ''), ':p')
+  let l:target_buf = s:issue_target_buffer(l:filename)
+  if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    return v:false
+  endif
+
+  let l:action = s:issue_effective_action(a:issue)
+  let l:payload = {
+        \ 'bufnr': l:target_buf,
+        \ 'lnum': max([1, str2nr(string(get(a:issue, 'lnum', get(l:action, 'line', 1))))]),
+        \ 'timeoutMs': max([100, str2nr(string(get(l:action, 'timeout_ms', s:lsp_auto_fix_timeout_ms())))]),
+        \ 'only': type(get(l:action, 'only', [])) == v:t_list ? copy(get(l:action, 'only', [])) : s:lsp_auto_fix_only_kinds(),
+        \ 'preferPreferred': get(l:action, 'prefer_preferred', v:true) ? v:true : v:false,
+        \ 'preferGlobal': get(l:action, 'prefer_global', s:lsp_auto_fix_prefer_global()) ? v:true : v:false,
+        \ 'scope': trim('' . get(l:action, 'scope', 'line')),
+        \ }
+  let l:script = join([
+        \ 'local input = _A or {}',
+        \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
+        \ 'local lnum = math.max(1, tonumber(input.lnum or 1) or 1)',
+        \ 'local timeoutMs = math.max(100, tonumber(input.timeoutMs or 400) or 400)',
+        \ 'local only = type(input.only) == "table" and input.only or {"source.fixAll", "source.organizeImports", "quickfix"}',
+        \ 'local preferPreferred = input.preferPreferred ~= false',
+        \ 'local preferGlobal = input.preferGlobal ~= false',
+        \ 'local scope = tostring(input.scope or "line")',
+        \ 'if type(vim) ~= "table" or type(vim.lsp) ~= "table" then',
+        \ '  return false',
+        \ 'end',
+        \ 'if type(vim.diagnostic) ~= "table" or type(vim.diagnostic.get) ~= "function" then',
+        \ '  return false',
+        \ 'end',
+        \ 'if type(vim.lsp.buf_request_sync) ~= "function" or type(vim.lsp.util) ~= "table" then',
+        \ '  return false',
+        \ 'end',
+        \ 'local function action_kind(action)',
+        \ '  if type(action) ~= "table" then',
+        \ '    return ""',
+        \ '  end',
+        \ '  return tostring(action.kind or (type(action.command) == "table" and action.command.command) or (type(action.command) == "string" and action.command) or "")',
+        \ 'end',
+        \ 'local function action_rank(action)',
+        \ '  local kind = action_kind(action)',
+        \ '  if kind:match("^source%.fixAll") then',
+        \ '    return 1',
+        \ '  end',
+        \ '  if kind == "source.organizeImports" then',
+        \ '    return 2',
+        \ '  end',
+        \ '  if kind == "quickfix" then',
+        \ '    return 3',
+        \ '  end',
+        \ '  return 10',
+        \ 'end',
+        \ 'local function execute_action(clientId, action)',
+        \ '  if type(action) ~= "table" then',
+        \ '    return false',
+        \ '  end',
+        \ '  local client = vim.lsp.get_client_by_id(clientId)',
+        \ '  local encoding = (client and client.offset_encoding) or "utf-16"',
+        \ '  if action.edit then',
+        \ '    pcall(vim.lsp.util.apply_workspace_edit, action.edit, encoding)',
+        \ '  end',
+        \ '  local command = nil',
+        \ '  if type(action.command) == "table" and action.command.command then',
+        \ '    command = action.command',
+        \ '  elseif type(action.command) == "string" and action.command ~= "" then',
+        \ '    command = { command = action.command, arguments = action.arguments }',
+        \ '  end',
+        \ '  if command then',
+        \ '    local okExec = pcall(vim.lsp.buf.execute_command, command)',
+        \ '    if not okExec and type(vim.lsp.commands) == "table" and type(vim.lsp.commands[command.command]) == "function" then',
+        \ '      pcall(vim.lsp.commands[command.command], command, { client_id = clientId, bufnr = bufnr })',
+        \ '    end',
+        \ '  end',
+        \ '  return action.edit ~= nil or command ~= nil',
+        \ 'end',
+        \ 'local function pick_action(results)',
+        \ '  if type(results) ~= "table" or vim.tbl_isempty(results) then',
+        \ '    return nil',
+        \ '  end',
+        \ '  local best = nil',
+        \ '  for clientId, payload in pairs(results) do',
+        \ '    local actions = type(payload) == "table" and payload.result or nil',
+        \ '    if type(actions) == "table" then',
+        \ '      for _, action in ipairs(actions) do',
+        \ '        if type(action) == "table" and action.disabled == nil then',
+        \ '          local rank = action_rank(action)',
+        \ '          local preferredBoost = (preferPreferred and action.isPreferred) and -1 or 0',
+        \ '          local score = (rank * 10) + preferredBoost',
+        \ '          if best == nil or score < best.score then',
+        \ '            best = { score = score, clientId = clientId, action = action }',
+        \ '          end',
+        \ '        end',
+        \ '      end',
+        \ '    end',
+        \ '  end',
+        \ '  return best',
+        \ 'end',
+        \ 'local function request_actions(diagnostics, rangeStartLine, rangeEndLine)',
+        \ '  if type(diagnostics) ~= "table" or vim.tbl_isempty(diagnostics) then',
+        \ '    return nil',
+        \ '  end',
+        \ '  local params = {',
+        \ '    textDocument = vim.lsp.util.make_text_document_params(bufnr),',
+        \ '    range = {',
+        \ '      start = { line = math.max(0, rangeStartLine), character = 0 },',
+        \ '      ["end"] = { line = math.max(0, rangeEndLine), character = 0 },',
+        \ '    },',
+        \ '    context = { diagnostics = diagnostics, only = only },',
+        \ '  }',
+        \ '  local results = vim.lsp.buf_request_sync(bufnr, "textDocument/codeAction", params, timeoutMs)',
+        \ '  return pick_action(results)',
+        \ 'end',
+        \ 'local totalLines = vim.api.nvim_buf_line_count(bufnr)',
+        \ 'if totalLines <= 0 then',
+        \ '  return false',
+        \ 'end',
+        \ 'local allDiagnostics = vim.diagnostic.get(bufnr)',
+        \ 'local lineDiagnostics = vim.diagnostic.get(bufnr, { lnum = lnum - 1 })',
+        \ 'local best = nil',
+        \ 'if scope == "buffer" or preferGlobal then',
+        \ '  best = request_actions(allDiagnostics, 0, totalLines - 1)',
+        \ 'end',
+        \ 'if best == nil then',
+        \ '  best = request_actions(lineDiagnostics, lnum - 1, lnum - 1)',
+        \ 'end',
+        \ 'if best == nil and scope ~= "buffer" and not preferGlobal then',
+        \ '  best = request_actions(allDiagnostics, 0, totalLines - 1)',
+        \ 'end',
+        \ 'if best == nil then',
+        \ '  return false',
+        \ 'end',
+        \ 'return execute_action(best.clientId, best.action)',
+        \ ], "\n")
+
+  try
+    return luaeval(l:script, l:payload) ? v:true : v:false
+  catch
+    return v:false
+  endtry
+endfunction
+
 function! s:extract_extra_delimiter_char(text) abort
   let l:match = matchlist(a:text, "Delimitador '\\(.\\)' sem abertura correspondente")
   if empty(l:match)
@@ -1652,6 +2060,17 @@ function! s:issue_action_identity(item) abort
   endif
   if l:op ==# 'run_command'
     return get(l:action, 'command', '')
+  endif
+  if l:op ==# 'lsp_code_action'
+    let l:source = trim('' . get(a:item, 'lsp_source', ''))
+    let l:code = trim('' . get(a:item, 'lsp_code', ''))
+    return printf(
+          \ '%d|%s|%s|%s',
+          \ get(a:item, 'lnum', 0),
+          \ join(type(get(l:action, 'only', [])) == v:t_list ? get(l:action, 'only', []) : [], ','),
+          \ l:source,
+          \ l:code
+          \ )
   endif
   if index(['insert_before', 'insert_after', 'replace_line', 'delete_line'], l:op) != -1
     let l:snippet = get(a:item, 'snippet', '')
@@ -2672,6 +3091,9 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   if l:op ==# 'run_command'
     return s:apply_issue_run_command(l:issue, a:keep_focus_code)
   endif
+  if l:op ==# 'lsp_code_action'
+    return s:apply_issue_lsp_code_action(l:issue)
+  endif
   if empty(l:snippet_raw)
     if l:kind ==# 'trailing_whitespace' || l:kind ==# 'syntax_extra_delimiter' || l:op ==# 'delete_line'
       let l:snippet_lines = ['']
@@ -3370,6 +3792,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
   endif
 
   let l:qf = deepcopy(get(a:analysis, 'qf', []))
+  let l:qf = s:merge_lsp_diagnostic_auto_fix_candidates(a:bufnr, l:file, l:qf)
   if a:open_qf || g:realtime_dev_agent_show_window || !a:realtime_mode
     call setqflist([], 'r', {'title': 'Realtime Dev Agent'})
     call setqflist(l:qf, 'a')
@@ -3899,7 +4322,11 @@ function! s:build_auto_fix_state(qf, file, opts) abort
       continue
     endif
     let l:item_action = s:issue_effective_action(l:item)
-    if empty(get(l:item, 'snippet', '')) && l:item_kind !=# 'trailing_whitespace' && get(l:item_action, 'op', '') !=# 'run_command'
+    let l:item_op = get(l:item_action, 'op', '')
+    if empty(get(l:item, 'snippet', ''))
+          \ && l:item_kind !=# 'trailing_whitespace'
+          \ && l:item_op !=# 'run_command'
+          \ && l:item_op !=# 'lsp_code_action'
       continue
     endif
     if !empty(s:issue_auto_fix_noop_reason(l:item))
