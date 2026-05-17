@@ -245,3 +245,24 @@ test('aplicacao de function_spec em Elixir com multiplas clausulas e idempotente
   const after = issuesByKind(patched, 'multi.ex', 'function_spec');
   assert.equal(after.length, 0);
 });
+
+test('nao sobrescreve @spec de outra funcao ao corrigir assinatura Elixir', () => {
+  const source = [
+    'defmodule Multi do',
+    '  @spec run(term()) :: term()',
+    '  def run(value), do: value',
+    '',
+    '  @spec normalize(term()) :: term()',
+    '  def normalize(value, opts), do: {value, opts}',
+    'end',
+  ].join('\n');
+
+  const issues = issuesByKind(source, 'multi.ex', 'function_spec');
+  const normalizeIssue = issues.find((issue) => String(issue.message || '').includes('normalize'));
+  assert.ok(normalizeIssue);
+
+  const patched = applyIssueSnippet(source, normalizeIssue);
+  assert.equal(patched.includes('@spec run(term()) :: term()'), true);
+  const after = issuesByKind(patched, 'multi.ex', 'function_spec');
+  assert.equal(after.length, 0);
+});

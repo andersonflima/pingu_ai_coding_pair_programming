@@ -992,7 +992,21 @@ function! s:is_local_cursor_context_issue(item) abort
         \ ], l:kind) != -1
 endfunction
 
+function! s:is_scope_agnostic_issue(item) abort
+  let l:kind = trim('' . get(a:item, 'kind', ''))
+  if empty(l:kind)
+    return v:false
+  endif
+  if l:kind ==# 'lsp_code_action'
+    return v:true
+  endif
+  return l:kind =~# '^syntax_'
+endfunction
+
 function! s:should_limit_issue_to_cursor_context(item) abort
+  if s:is_scope_agnostic_issue(a:item)
+    return v:false
+  endif
   if s:is_documentation_issue(a:item)
     return s:auto_fix_doc_cursor_context_only()
   endif
@@ -1225,13 +1239,14 @@ function! s:select_auto_fix_candidates_by_scope(items, ...) abort
     return a:items
   endif
 
+  let l:scope_agnostic_items = filter(copy(a:items), {_, item -> s:is_scope_agnostic_issue(item)})
   let l:documentation_items = []
-  let l:items_to_scope = copy(a:items)
+  let l:items_to_scope = filter(copy(a:items), {_, item -> !s:is_scope_agnostic_issue(item)})
   if !s:auto_fix_doc_cursor_context_only()
-    let l:documentation_items = filter(copy(a:items), {_, item -> s:is_documentation_issue(item)})
-    let l:items_to_scope = filter(copy(a:items), {_, item -> !s:is_documentation_issue(item)})
+    let l:documentation_items = filter(copy(l:items_to_scope), {_, item -> s:is_documentation_issue(item)})
+    let l:items_to_scope = filter(copy(l:items_to_scope), {_, item -> !s:is_documentation_issue(item)})
     if empty(l:items_to_scope)
-      return l:documentation_items
+      return extend(l:documentation_items, l:scope_agnostic_items)
     endif
   endif
 
@@ -1239,6 +1254,7 @@ function! s:select_auto_fix_candidates_by_scope(items, ...) abort
   let l:cursor_line = s:buffer_cursor_line(l:target_buf)
   if l:scope ==# 'cursor_only'
     let l:selected_items = filter(copy(l:items_to_scope), {_, item -> abs(get(item, 'lnum', 0) - l:cursor_line) <= 1})
+    let l:selected_items = extend(l:selected_items, l:scope_agnostic_items)
     return extend(l:documentation_items, l:selected_items)
   endif
 
@@ -1266,7 +1282,8 @@ function! s:select_auto_fix_candidates_by_scope(items, ...) abort
     endif
   endfor
 
-  return extend(l:documentation_items, l:best_cluster)
+  let l:selected = extend(l:best_cluster, l:scope_agnostic_items)
+  return extend(l:documentation_items, l:selected)
 endfunction
 
 function! s:is_auto_fix_visual_batch_active() abort

@@ -813,8 +813,11 @@ Importante:
 - quando o servidor exigir `codeAction/resolve`, o runtime resolve e executa a acao automaticamente antes de aplicar edits/comandos
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
+- `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote
+- Elixir ganhou deteccao adicional de bloco `do/end` pendente, cobrindo erros como `syntax error before: 'Logger'` quando faltam `end`s
 - `function_doc` agora evita ciclo de atualização quando a doc já corresponde ao snippet gerado (inclusive em parametros opcionais/variadicos de TypeScript e defaults de Python)
 - `function_spec` em Elixir evita duplicacao em funcoes com multiplas clausulas da mesma aridade, reduzindo oscilacao de add/remove de `@spec`
+- respostas assistidas para comentarios/documentacao receberam instrucoes mais restritivas para reduzir texto generico quando o provider estiver operacional
 - `PINGU_AUTOMATIC_AI_COMMENT_MAX_ISSUES=8` limita quantas issues de `comment_task` entram no ciclo automático por execução; use `0` para remover o limite
 - `PINGU_COPILOT_FAILURE_COOLDOWN_MS=30000` ajusta o cooldown de falha do provider (default: 30000ms)
 - `PINGU_DOCUMENTATION_AUTO_FIX_MIN_CONFIDENCE=0.60` controla o limiar minimo de confianca para comentario automatico documental; valores menores deixam o lote mais agressivo
