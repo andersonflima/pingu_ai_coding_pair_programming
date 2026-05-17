@@ -814,6 +814,7 @@ Importante:
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
 - quando uma correcao automatica (snippet local ou `lsp_code_action`) eh aplicada com sucesso, o buffer alvo eh salvo automaticamente no disco
+- `:RealtimeDevAgentWindowCheck` (e o atalho `g:realtime_dev_agent_window_key`) mantem o painel aberto durante e apos a analise assincrona
 - `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote
 - Elixir ganhou deteccao adicional de bloco `do/end` pendente, cobrindo erros como `syntax error before: 'Logger'` quando faltam `end`s
 - `function_doc` agora evita ciclo de atualização quando a doc já corresponde ao snippet gerado (inclusive em parametros opcionais/variadicos de TypeScript e defaults de Python)

@@ -3482,12 +3482,12 @@ function! s:realtime_issue_still_relevant(item, target_buf, lnum, line_content) 
     endif
 
     let l:lookahead = get(l:action, 'lookahead', get(l:action, 'dedupeLookahead', len(l:snippet_lines) + 4))
-    let l:start = l:line_no
+    let l:start = l:line_no + 1
     let l:end = l:line_no + l:lookahead
     if l:op ==# 'insert_before'
       let l:lookbehind = get(l:action, 'lookbehind', get(l:action, 'dedupeLookbehind', len(l:snippet_lines) + 4))
       let l:start = max([1, l:line_no - l:lookbehind])
-      let l:end = l:line_no
+      let l:end = max([l:start, l:line_no - 1])
     endif
     let l:scope = getbufline(l:target_buf, l:start, l:end)
     for l:scope_line in l:scope
@@ -5051,7 +5051,6 @@ endfunction
 function! s:realtime_dev_agent_window_check() abort
   let l:bufnr = bufnr('%')
   let l:analysis_mode = s:analysis_mode_for_request(v:false)
-  let l:prev_show_window = g:realtime_dev_agent_show_window
   let l:prev_mode = get(s:, 'realtime_dev_agent_is_realtime_check', v:false)
   let g:realtime_dev_agent_show_window = 1
   let s:realtime_dev_agent_is_realtime_check = v:false
@@ -5059,7 +5058,6 @@ function! s:realtime_dev_agent_window_check() abort
   try
     call s:start_async_realtime_check_with_fallback(l:bufnr, 0, 1, l:analysis_mode, v:false)
   finally
-    call s:realtime_dev_agent_restore_show_window(l:prev_show_window)
     let s:realtime_dev_agent_is_realtime_check = l:prev_mode
   endtry
 endfunction
