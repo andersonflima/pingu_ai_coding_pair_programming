@@ -1,11 +1,45 @@
 'use strict';
 
 const assert = require('assert/strict');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const test = require('node:test');
 const { analyzeText } = require('../lib/analyzer');
 
 function functionDocIssues(text, file = 'module.c') {
   return analyzeText(file, text).filter((issue) => issue.kind === 'function_doc');
+}
+
+function applyIssueSnippet(source, issue) {
+  const lines = String(source || '').split('\n');
+  const snippetLines = String(issue && issue.snippet || '').split('\n');
+  const action = issue && issue.action && typeof issue.action === 'object'
+    ? issue.action
+    : { op: 'insert_before' };
+  const lineIndex = Math.max(0, Number(issue && issue.line || 1) - 1);
+
+  if (action.op === 'insert_before') {
+    lines.splice(lineIndex, 0, ...snippetLines);
+    return lines.join('\n');
+  }
+  if (action.op === 'insert_after') {
+    lines.splice(lineIndex + 1, 0, ...snippetLines);
+    return lines.join('\n');
+  }
+  if (action.op === 'replace_line') {
+    lines.splice(lineIndex, 1, ...snippetLines);
+    return lines.join('\n');
+  }
+  if (action.op === 'replace_range') {
+    const range = action.range && typeof action.range === 'object' ? action.range : {};
+    const start = Math.max(0, Number(range.start && range.start.line || lineIndex));
+    const end = Math.max(start, Number(range.end && range.end.line || (lineIndex + 1)));
+    lines.splice(start, end - start, ...snippetLines);
+    return lines.join('\n');
+  }
+
+  return String(source || '');
 }
 
 test('detecta contrato desatualizado em doc em bloco de C', () => {
@@ -126,4 +160,40 @@ test('mantem doc alinhada quando parametro opcional esta documentado', () => {
 
   const issues = functionDocIssues(source, 'sample.js');
   assert.equal(issues.length, 0);
+});
+
+test('mantem function_doc estavel em TypeScript com parametros opcionais e variadicos', () => {
+  const source = [
+    'export function greet(name: string, title?: string, ...tags: string[]): string {',
+    '  return `${title ?? ""}${name}:${tags.join(",")}`;',
+    '}',
+  ].join('\n');
+
+  const initialIssues = functionDocIssues(source, 'sample.ts');
+  assert.equal(initialIssues.length > 0, true);
+  const patched = applyIssueSnippet(source, initialIssues[0]);
+  const secondIssues = functionDocIssues(patched, 'sample.ts');
+  assert.equal(secondIssues.length, 0);
+});
+
+test('mantem function_doc estavel em Python com parametro default', () => {
+  const source = [
+    'def run(name: str, count: int = 1) -> str:',
+    '    return name * count',
+  ].join('\n');
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-doc-idempotency-py-'));
+  const sourceFile = path.join(tempDir, 'sample.py');
+  fs.writeFileSync(sourceFile, source, 'utf8');
+
+  try {
+    const initialIssues = functionDocIssues(source, sourceFile);
+    assert.equal(initialIssues.length > 0, true);
+    const patched = applyIssueSnippet(source, initialIssues[0]);
+    fs.writeFileSync(sourceFile, patched, 'utf8');
+    const secondIssues = functionDocIssues(patched, sourceFile);
+    assert.equal(secondIssues.length, 0);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });
