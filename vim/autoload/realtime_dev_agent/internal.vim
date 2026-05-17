@@ -1685,6 +1685,74 @@ function! s:lsp_auto_fix_max_severity() abort
   return min([4, max([1, l:parsed])])
 endfunction
 
+function! s:normalize_lsp_code_action_kind(kind) abort
+  let l:value = trim('' . a:kind)
+  if empty(l:value)
+    return ''
+  endif
+  let l:value = substitute(l:value, '\s\+', '', 'g')
+  return l:value
+endfunction
+
+function! s:lsp_auto_fix_only_kinds() abort
+  let l:raw = get(g:, 'realtime_dev_agent_lsp_auto_fix_only', ['source.fixAll', 'source.organizeImports', 'quickfix'])
+  let l:items = []
+  if type(l:raw) == v:t_list
+    let l:items = copy(l:raw)
+  elseif type(l:raw) == v:t_string
+    let l:items = split(l:raw, ',')
+  endif
+
+  let l:normalized = []
+  let l:seen = {}
+  for l:item in l:items
+    let l:kind = s:normalize_lsp_code_action_kind(l:item)
+    if empty(l:kind) || has_key(l:seen, l:kind)
+      continue
+    endif
+    let l:seen[l:kind] = 1
+    call add(l:normalized, l:kind)
+  endfor
+
+  if empty(l:normalized)
+    return ['source.fixAll', 'source.organizeImports', 'quickfix']
+  endif
+  return l:normalized
+endfunction
+
+function! s:lsp_auto_fix_prefer_global() abort
+  return str2nr(string(get(g:, 'realtime_dev_agent_lsp_auto_fix_prefer_global', 1))) > 0
+endfunction
+
+function! s:lsp_source_fixall_kind(source) abort
+  let l:source = tolower(trim('' . a:source))
+  if empty(l:source)
+    return ''
+  endif
+  let l:source = substitute(l:source, '[^a-z0-9._-]', '', 'g')
+  if empty(l:source)
+    return ''
+  endif
+  return 'source.fixAll.' . l:source
+endfunction
+
+function! s:lsp_only_kinds_for_diagnostic(source) abort
+  let l:base = s:lsp_auto_fix_only_kinds()
+  let l:source_kind = s:lsp_source_fixall_kind(a:source)
+  if empty(l:source_kind)
+    return l:base
+  endif
+
+  let l:result = [l:source_kind]
+  for l:kind in l:base
+    if l:kind ==# l:source_kind
+      continue
+    endif
+    call add(l:result, l:kind)
+  endfor
+  return l:result
+endfunction
+
 function! s:lsp_severity_label(severity) abort
   if a:severity == 1
     return 'ERROR'
@@ -1794,7 +1862,7 @@ function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
     if !empty(l:code)
       call add(l:parts, 'code=' . l:code)
     endif
-    call add(l:parts, 'Tenta aplicar quickfix/fixAll preferencial do LSP.')
+    call add(l:parts, 'Tenta aplicar fixAll/organizeImports/quickfix do LSP.')
 
     call add(l:synthetic, {
           \ 'filename': l:target_file,
@@ -1807,9 +1875,11 @@ function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
           \ 'snippet': '',
           \ 'action': {
           \   'op': 'lsp_code_action',
-          \   'only': ['quickfix', 'source.fixAll'],
+          \   'only': s:lsp_only_kinds_for_diagnostic(l:source),
           \   'timeout_ms': s:lsp_auto_fix_timeout_ms(),
           \   'prefer_preferred': v:true,
+          \   'prefer_global': s:lsp_auto_fix_prefer_global(),
+          \   'scope': 'line',
           \   'line': l:lnum,
           \ },
           \ })
@@ -1839,16 +1909,20 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ 'bufnr': l:target_buf,
         \ 'lnum': max([1, str2nr(string(get(a:issue, 'lnum', get(l:action, 'line', 1))))]),
         \ 'timeoutMs': max([100, str2nr(string(get(l:action, 'timeout_ms', s:lsp_auto_fix_timeout_ms())))]),
-        \ 'only': type(get(l:action, 'only', [])) == v:t_list ? copy(get(l:action, 'only', [])) : ['quickfix', 'source.fixAll'],
+        \ 'only': type(get(l:action, 'only', [])) == v:t_list ? copy(get(l:action, 'only', [])) : s:lsp_auto_fix_only_kinds(),
         \ 'preferPreferred': get(l:action, 'prefer_preferred', v:true) ? v:true : v:false,
+        \ 'preferGlobal': get(l:action, 'prefer_global', s:lsp_auto_fix_prefer_global()) ? v:true : v:false,
+        \ 'scope': trim('' . get(l:action, 'scope', 'line')),
         \ }
   let l:script = join([
         \ 'local input = _A or {}',
         \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
         \ 'local lnum = math.max(1, tonumber(input.lnum or 1) or 1)',
         \ 'local timeoutMs = math.max(100, tonumber(input.timeoutMs or 400) or 400)',
-        \ 'local only = type(input.only) == "table" and input.only or {"quickfix", "source.fixAll"}',
+        \ 'local only = type(input.only) == "table" and input.only or {"source.fixAll", "source.organizeImports", "quickfix"}',
         \ 'local preferPreferred = input.preferPreferred ~= false',
+        \ 'local preferGlobal = input.preferGlobal ~= false',
+        \ 'local scope = tostring(input.scope or "line")',
         \ 'if type(vim) ~= "table" or type(vim.lsp) ~= "table" then',
         \ '  return false',
         \ 'end',
@@ -1858,22 +1932,24 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ 'if type(vim.lsp.buf_request_sync) ~= "function" or type(vim.lsp.util) ~= "table" then',
         \ '  return false',
         \ 'end',
-        \ 'local diagnostics = vim.diagnostic.get(bufnr, { lnum = lnum - 1 })',
-        \ 'if type(diagnostics) ~= "table" or vim.tbl_isempty(diagnostics) then',
-        \ '  return false',
+        \ 'local function action_kind(action)',
+        \ '  if type(action) ~= "table" then',
+        \ '    return ""',
+        \ '  end',
+        \ '  return tostring(action.kind or (type(action.command) == "table" and action.command.command) or (type(action.command) == "string" and action.command) or "")',
         \ 'end',
-        \ 'local lineText = (vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, false) or {""})[1] or ""',
-        \ 'local params = {',
-        \ '  textDocument = vim.lsp.util.make_text_document_params(bufnr),',
-        \ '  range = {',
-        \ '    start = { line = lnum - 1, character = 0 },',
-        \ '    ["end"] = { line = lnum - 1, character = #lineText },',
-        \ '  },',
-        \ '  context = { diagnostics = diagnostics, only = only },',
-        \ '}',
-        \ 'local results = vim.lsp.buf_request_sync(bufnr, "textDocument/codeAction", params, timeoutMs)',
-        \ 'if type(results) ~= "table" or vim.tbl_isempty(results) then',
-        \ '  return false',
+        \ 'local function action_rank(action)',
+        \ '  local kind = action_kind(action)',
+        \ '  if kind:match("^source%.fixAll") then',
+        \ '    return 1',
+        \ '  end',
+        \ '  if kind == "source.organizeImports" then',
+        \ '    return 2',
+        \ '  end',
+        \ '  if kind == "quickfix" then',
+        \ '    return 3',
+        \ '  end',
+        \ '  return 10',
         \ 'end',
         \ 'local function execute_action(clientId, action)',
         \ '  if type(action) ~= "table" then',
@@ -1898,26 +1974,63 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ '  end',
         \ '  return action.edit ~= nil or command ~= nil',
         \ 'end',
-        \ 'local fallbackAction = nil',
-        \ 'for clientId, payload in pairs(results) do',
-        \ '  local actions = type(payload) == "table" and payload.result or nil',
-        \ '  if type(actions) == "table" then',
-        \ '    for _, action in ipairs(actions) do',
-        \ '      if type(action) == "table" and action.disabled == nil then',
-        \ '        if preferPreferred and action.isPreferred then',
-        \ '          return execute_action(clientId, action)',
-        \ '        end',
-        \ '        if fallbackAction == nil then',
-        \ '          fallbackAction = { clientId = clientId, action = action }',
+        \ 'local function pick_action(results)',
+        \ '  if type(results) ~= "table" or vim.tbl_isempty(results) then',
+        \ '    return nil',
+        \ '  end',
+        \ '  local best = nil',
+        \ '  for clientId, payload in pairs(results) do',
+        \ '    local actions = type(payload) == "table" and payload.result or nil',
+        \ '    if type(actions) == "table" then',
+        \ '      for _, action in ipairs(actions) do',
+        \ '        if type(action) == "table" and action.disabled == nil then',
+        \ '          local rank = action_rank(action)',
+        \ '          local preferredBoost = (preferPreferred and action.isPreferred) and -1 or 0',
+        \ '          local score = (rank * 10) + preferredBoost',
+        \ '          if best == nil or score < best.score then',
+        \ '            best = { score = score, clientId = clientId, action = action }',
+        \ '          end',
         \ '        end',
         \ '      end',
         \ '    end',
         \ '  end',
+        \ '  return best',
         \ 'end',
-        \ 'if fallbackAction == nil then',
+        \ 'local function request_actions(diagnostics, rangeStartLine, rangeEndLine)',
+        \ '  if type(diagnostics) ~= "table" or vim.tbl_isempty(diagnostics) then',
+        \ '    return nil',
+        \ '  end',
+        \ '  local params = {',
+        \ '    textDocument = vim.lsp.util.make_text_document_params(bufnr),',
+        \ '    range = {',
+        \ '      start = { line = math.max(0, rangeStartLine), character = 0 },',
+        \ '      ["end"] = { line = math.max(0, rangeEndLine), character = 0 },',
+        \ '    },',
+        \ '    context = { diagnostics = diagnostics, only = only },',
+        \ '  }',
+        \ '  local results = vim.lsp.buf_request_sync(bufnr, "textDocument/codeAction", params, timeoutMs)',
+        \ '  return pick_action(results)',
+        \ 'end',
+        \ 'local totalLines = vim.api.nvim_buf_line_count(bufnr)',
+        \ 'if totalLines <= 0 then',
         \ '  return false',
         \ 'end',
-        \ 'return execute_action(fallbackAction.clientId, fallbackAction.action)',
+        \ 'local allDiagnostics = vim.diagnostic.get(bufnr)',
+        \ 'local lineDiagnostics = vim.diagnostic.get(bufnr, { lnum = lnum - 1 })',
+        \ 'local best = nil',
+        \ 'if scope == "buffer" or preferGlobal then',
+        \ '  best = request_actions(allDiagnostics, 0, totalLines - 1)',
+        \ 'end',
+        \ 'if best == nil then',
+        \ '  best = request_actions(lineDiagnostics, lnum - 1, lnum - 1)',
+        \ 'end',
+        \ 'if best == nil and scope ~= "buffer" and not preferGlobal then',
+        \ '  best = request_actions(allDiagnostics, 0, totalLines - 1)',
+        \ 'end',
+        \ 'if best == nil then',
+        \ '  return false',
+        \ 'end',
+        \ 'return execute_action(best.clientId, best.action)',
         \ ], "\n")
 
   try
