@@ -104,3 +104,14 @@ test('analyzer detecta bloco do/end pendente em Elixir e sugere fechamento', () 
   assert.equal(issue.line, 5);
   assert.equal(issue.snippet.includes('end'), true);
 });
+
+test('analyzer nao gera syntax_missing_delimiter para Elixir com do: inline valido', () => {
+  const issues = analyzeText('/tmp/inline.ex', [
+    'defmodule Demo do',
+    '  def normalize(value) when is_binary(value), do: String.trim(value)',
+    '  def normalize(value), do: value',
+    'end',
+  ].join('\n'), { analysisMode: 'light' });
+
+  assert.equal(issues.some((issue) => issue.kind === 'syntax_missing_delimiter'), false);
+});
