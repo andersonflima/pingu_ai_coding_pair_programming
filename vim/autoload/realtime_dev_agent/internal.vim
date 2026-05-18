@@ -5057,7 +5057,15 @@ function! s:build_auto_fix_state(qf, file, opts) abort
   endif
 
   if mode() =~# '^i'
-    let s:realtime_dev_agent_pending_auto_fixes = l:auto_candidates
+    let s:realtime_dev_agent_pending_auto_fixes = {
+          \ 'items': l:auto_candidates,
+          \ 'file': l:target_file,
+          \ 'bufnr': l:target_buf,
+          \ 'changedtick': getbufvar(l:target_buf, 'changedtick', -1),
+          \ 'open_qf': get(a:opts, 'open_qf', 0),
+          \ 'show_echo': get(a:opts, 'show_echo', 0),
+          \ 'realtime_mode': l:realtime_mode ? v:true : v:false,
+          \ }
     return {}
   endif
 
@@ -5456,15 +5464,29 @@ function! s:realtime_dev_agent_drain_pending_auto_fixes() abort
     return
   endif
 
-  let l:items = copy(s:realtime_dev_agent_pending_auto_fixes)
+  let l:pending = type(s:realtime_dev_agent_pending_auto_fixes) == v:t_dict
+        \ ? deepcopy(s:realtime_dev_agent_pending_auto_fixes)
+        \ : {'items': copy(s:realtime_dev_agent_pending_auto_fixes)}
   let s:realtime_dev_agent_pending_auto_fixes = []
+  let l:target_buf = get(l:pending, 'bufnr', bufnr('%'))
+  if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    return
+  endif
+  let l:pending_tick = get(l:pending, 'changedtick', -1)
+  if l:pending_tick >= 0 && getbufvar(l:target_buf, 'changedtick', -1) !=# l:pending_tick
+    return
+  endif
 
-  let l:file = fnamemodify(bufname('%'), ':p')
+  let l:items = get(l:pending, 'items', [])
+  if empty(l:items)
+    return
+  endif
+  let l:file = get(l:pending, 'file', fnamemodify(bufname(l:target_buf), ':p'))
   call s:realtime_dev_agent_apply_auto_fixes(l:items, l:file, {
-        \ 'bufnr': bufnr('%'),
-        \ 'open_qf': g:realtime_dev_agent_realtime_open_qf,
-        \ 'show_echo': 0,
-        \ 'realtime_mode': v:true,
+        \ 'bufnr': l:target_buf,
+        \ 'open_qf': get(l:pending, 'open_qf', g:realtime_dev_agent_realtime_open_qf),
+        \ 'show_echo': get(l:pending, 'show_echo', 0),
+        \ 'realtime_mode': get(l:pending, 'realtime_mode', v:true),
         \ })
 endfunction
 
