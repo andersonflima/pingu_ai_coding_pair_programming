@@ -486,6 +486,11 @@ if !exists('g:realtime_dev_agent_auto_fix_doc_cursor_context_only')
   let g:realtime_dev_agent_auto_fix_doc_cursor_context_only = 0
 endif
 
+if !exists('g:realtime_dev_agent_realtime_doc_cursor_context_only')
+  " No realtime, comentarios automaticos ficam no bloco do cursor para evitar edicao fora de foco.
+  let g:realtime_dev_agent_realtime_doc_cursor_context_only = 1
+endif
+
 if !exists('g:realtime_dev_agent_auto_fix_local_cursor_context_only')
   " Restringe syntax/debug/higiene/specs leves ao bloco textual atual do cursor.
   let g:realtime_dev_agent_auto_fix_local_cursor_context_only = 1
