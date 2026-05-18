@@ -4929,7 +4929,7 @@ function! s:realtime_dev_agent_schedule_check(...) abort
       return
     endif
     let s:realtime_dev_agent_last_cursor_context_key = l:context_key
-  elseif l:reason ==# 'change'
+  elseif l:reason ==# 'change' || l:reason ==# 'buffer_load'
     let s:realtime_dev_agent_last_cursor_context_key = ''
   endif
 
@@ -5189,6 +5189,9 @@ if g:realtime_dev_agent_realtime_on_change
   " Checagem em tempo real com debounce enquanto edita texto.
   augroup realtime_dev_agent_realtime
     autocmd!
+    if get(g:, 'realtime_dev_agent_realtime_on_buffer_load', 1)
+      autocmd BufReadPost,BufNewFile * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_schedule_check('buffer_load') | endif
+    endif
     autocmd TextChanged * call s:realtime_dev_agent_schedule_check()
     if get(g:, 'realtime_dev_agent_realtime_insert_mode', 0)
       autocmd TextChangedI * call s:realtime_dev_agent_schedule_check()

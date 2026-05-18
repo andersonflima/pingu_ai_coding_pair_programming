@@ -226,6 +226,11 @@ if !exists('g:realtime_dev_agent_realtime_on_buf_enter')
   let g:realtime_dev_agent_realtime_on_buf_enter = 1
 endif
 
+if !exists('g:realtime_dev_agent_realtime_on_buffer_load')
+  " Dispara analise assim que o buffer e carregado (arquivo aberto/criado).
+  let g:realtime_dev_agent_realtime_on_buffer_load = 1
+endif
+
 if !exists('g:realtime_dev_agent_realtime_insert_mode')
   " 1 analisa tambem durante Insert mode; 0 concentra a checagem ao sair da insercao.
   let g:realtime_dev_agent_realtime_insert_mode = 1
