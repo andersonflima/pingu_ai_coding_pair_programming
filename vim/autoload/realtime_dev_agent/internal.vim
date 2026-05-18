@@ -3422,19 +3422,14 @@ function! s:extract_symbol_name_from_snippet_lines(snippet_lines) abort
       continue
     endif
 
-    let l:match = matchlist(l:source, '\v@spec\s+([A-Za-z_][A-Za-z0-9_?!:#]*)\s*\(')
+    let l:match = matchlist(l:source, '^\s*`*\s*@spec\s\+\([A-Za-z_][A-Za-z0-9_?!:#]*\)\s*(')
     if !empty(l:match)
       return l:match[1]
     endif
 
-    let l:match = matchlist(l:source, '\v`@spec\s+([A-Za-z_][A-Za-z0-9_?!:#]*)\s*\(')
+    let l:match = matchlist(l:source, '\c\<\(funcao\|function\|method\|m[eé]todo\)\>\s*[:-]\s*`*\([A-Za-z_][A-Za-z0-9_?!:#]*\)`*')
     if !empty(l:match)
-      return l:match[1]
-    endif
-
-    let l:match = matchlist(l:source, '\v\c(?:funcao|funcão|function|method|m[eé]todo)\s*[:\-]\s*`?([A-Za-z_][A-Za-z0-9_?!:#]*)`?')
-    if !empty(l:match)
-      return l:match[1]
+      return l:match[2]
     endif
   endfor
 
@@ -3451,14 +3446,14 @@ function! s:extract_declaration_symbol_name(line) abort
   endif
 
   let l:patterns = [
-        \ '\v^\s*defp?\s+([a-z_][A-Za-z0-9_?!]*)\b',
-        \ '\v^\s*(async\s+)?def\s+([A-Za-z_][A-Za-z0-9_?!]*)\b',
-        \ '\v^\s*(export\s+)?(default\s+)?(async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)\b',
-        \ '\v^\s*(export\s+)?(const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=',
-        \ '\v^\s*(local\s+)?function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(',
-        \ '\v^\s*function!?\s+((?:[gswbtlav]:)?[A-Za-z_#][A-Za-z0-9_:#]*)\s*\(',
-        \ '\v^\s*func\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(',
-        \ '\v^\s*(pub\s+)?(async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(',
+        \ '^\s*defp\=\s\+\([a-z_][A-Za-z0-9_?!]*\)\>',
+        \ '^\s*\(async\s\+\)\=def\s\+\([A-Za-z_][A-Za-z0-9_?!]*\)\>',
+        \ '^\s*\(export\s\+\)\=\(default\s\+\)\=\(async\s\+\)\=function\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\>',
+        \ '^\s*\(export\s\+\)\=\(const\|let\|var\)\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\s*=',
+        \ '^\s*\(local\s\+\)\=function\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
+        \ '^\s*function!\=\s\+\(\([gswbtlav]:\)\=[A-Za-z_#][A-Za-z0-9_:#]*\)\s*(',
+        \ '^\s*func\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
+        \ '^\s*\(pub\s\+\)\=\(async\s\+\)\=fn\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
         \ ]
 
   for l:pattern in l:patterns
