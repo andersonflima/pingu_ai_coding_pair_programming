@@ -1,9 +1,12 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { resolveCliTargetFiles } = require('../lib/cli-targets');
 
 const root = path.join(__dirname, '..');
 const internalRuntime = fs.readFileSync(
@@ -14,6 +17,21 @@ const pluginRuntime = fs.readFileSync(
   path.join(root, 'vim/plugin/realtime_dev_agent.vim'),
   'utf8',
 );
+
+function commandExists(command) {
+  const result = spawnSync('sh', ['-lc', `command -v ${shellQuote(command)}`], {
+    encoding: 'utf8',
+  });
+  return result.status === 0;
+}
+
+function shellQuote(value) {
+  return `'${String(value || '').replace(/'/g, `'\\''`)}'`;
+}
+
+function vimString(value) {
+  return `'${String(value || '').replace(/'/g, "''")}'`;
+}
 
 test('runtime realtime limita comentarios automaticos ao contexto do cursor', () => {
   assert.match(pluginRuntime, /realtime_dev_agent_realtime_doc_cursor_context_only/);
@@ -35,4 +53,97 @@ test('runtime realtime guarda comentarios por identidade para evitar reaplicacao
   assert.match(internalRuntime, /function! s:issue_realtime_loop_guard_key\(item\) abort/);
   assert.match(internalRuntime, /let l:loop_guard_key = 'loop\|' \. s:issue_realtime_loop_guard_key\(l:item\)/);
   assert.match(internalRuntime, /let l:state\.fix_guard\[l:loop_guard_key\] = 1/);
+});
+
+test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', { skip: !commandExists('nvim') }, () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-vim-cursor-'));
+  const sourceFile = path.join(tempDir, 'sample.py');
+  const scriptFile = path.join(tempDir, 'cursor.vim');
+  const outputFile = path.join(tempDir, 'result.json');
+  const source = [
+    'class Example:',
+    '    def start(self, kind, args):',
+    '        result = kind + args',
+    '        return result',
+    '',
+  ].join('\n');
+  fs.writeFileSync(sourceFile, source, 'utf8');
+  fs.writeFileSync(scriptFile, [
+    'set nomore',
+    'set hidden',
+    'let g:realtime_dev_agent_start_on_editor_enter = 0',
+    'let g:realtime_dev_agent_open_window_on_start = 0',
+    'let g:realtime_dev_agent_show_window = 0',
+    'let g:realtime_dev_agent_review_on_open = 0',
+    'let g:realtime_dev_agent_realtime_on_change = 0',
+    'let g:realtime_dev_agent_realtime_on_buffer_load = 0',
+    'let g:realtime_dev_agent_realtime_async = 0',
+    'let g:realtime_dev_agent_non_blocking_mode = 0',
+    'let g:realtime_dev_agent_auto_fix_enabled = 1',
+    'let g:realtime_dev_agent_auto_fix_max_per_check = 1',
+    "let g:realtime_dev_agent_auto_fix_kinds = ['function_doc']",
+    `execute 'set runtimepath^=' . fnameescape(${vimString(root)})`,
+    'runtime plugin/realtime_dev_agent.vim',
+    `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
+    'call cursor(3, 1)',
+    'let b:before_line = line(".")',
+    'let b:before_text = getline(".")',
+    'silent RealtimeDevAgentCheck',
+    'sleep 500m',
+    'let b:after_line = line(".")',
+    'let b:after_text = getline(".")',
+    `call writefile([json_encode({'beforeLine': b:before_line, 'beforeText': b:before_text, 'afterLine': b:after_line, 'afterText': b:after_text, 'lineCount': line('$'), 'currentLineText': getline(b:after_line)})], ${vimString(outputFile)})`,
+    'quitall!',
+    '',
+  ].join('\n'), 'utf8');
+
+  const result = spawnSync('nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-S', scriptFile], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 15000,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+  assert.equal(payload.beforeText, '        result = kind + args');
+  assert.equal(payload.afterText, payload.beforeText);
+  assert.equal(payload.currentLineText, payload.beforeText);
+  assert.ok(payload.lineCount >= source.trimEnd().split('\n').length);
+});
+
+test('runtime evita segunda rodada automatica logo apos aplicar um lote', () => {
+  assert.match(internalRuntime, /realtime_dev_agent_suppress_auto_fix_once = v:false/);
+  assert.match(internalRuntime, /let l:suppress_auto_fix = s:realtime_dev_agent_suppress_auto_fix_once/);
+  assert.match(internalRuntime, /g:realtime_dev_agent_auto_fix_enabled && !l:suppress_auto_fix/);
+  assert.match(internalRuntime, /let s:realtime_dev_agent_suppress_auto_fix_once = v:true/);
+});
+
+test('runtime compensa deslocamento visual quando auto-fix insere linhas', () => {
+  assert.match(internalRuntime, /\\ 'line_adjustments': \[\]/);
+  assert.match(internalRuntime, /function! s:shift_saved_view_for_adjustments\(view, adjustments\) abort/);
+  assert.match(internalRuntime, /let l:shift \+= get\(l:adjustment, 'delta', 0\)/);
+  assert.match(internalRuntime, /call winrestview\(s:shift_saved_view_for_adjustments\(l:view, get\(l:context, 'line_adjustments', \[\]\)\)\)/);
+  assert.match(internalRuntime, /call add\(l:state\.line_adjustments, l:adjustment\)/);
+});
+
+test('runtime ignora ambientes Python e dependencias por padrao', () => {
+  ['.venv/', 'venv/', '__pycache__/', 'site-packages/', '.mypy_cache/', '.pytest_cache/'].forEach((pattern) => {
+    assert.match(pluginRuntime, new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  });
+});
+
+test('CLI ignora ambientes Python e dependencias ao varrer diretorios', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-cli-ignore-'));
+  fs.mkdirSync(path.join(tempDir, 'app'), { recursive: true });
+  fs.mkdirSync(path.join(tempDir, '.venv', 'lib', 'python3.14', 'site-packages', 'pkg'), { recursive: true });
+  fs.writeFileSync(path.join(tempDir, 'app', 'main.py'), 'def run():\n    return 1\n', 'utf8');
+  fs.writeFileSync(
+    path.join(tempDir, '.venv', 'lib', 'python3.14', 'site-packages', 'pkg', 'ignored.py'),
+    'def vendor():\n    return 1\n',
+    'utf8',
+  );
+
+  const files = resolveCliTargetFiles([tempDir]);
+
+  assert.deepEqual(files.map((file) => path.relative(tempDir, file)), [path.join('app', 'main.py')]);
 });

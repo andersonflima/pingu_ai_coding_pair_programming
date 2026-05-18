@@ -767,6 +767,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_review_on_open = 1` mantem revisao automatica ao abrir arquivos
 - `let g:realtime_dev_agent_target_scope = 'current_file'` mantem analise e correcoes no arquivo aberto, mas ainda permite `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`
 - `let g:realtime_dev_agent_target_scope = 'workspace'` mantem acoes multi-arquivo amplas fora desse conjunto seguro
+- por padrao, o runtime ignora diretorios de dependencia e cache como `.venv/`, `venv/`, `site-packages/`, `__pycache__/`, `node_modules/`, `vendor/`, `dist/`, `build/` e caches de ferramentas
 - `let g:realtime_dev_agent_auto_fix_scope = 'near_cursor'` aplica apenas o trecho mais proximo do cursor
 - `let g:realtime_dev_agent_auto_fix_scope = 'file'` volta para o comportamento de arquivo inteiro por ciclo
 - `let g:realtime_dev_agent_auto_fix_scope = 'cursor_only'` restringe ao cursor imediato
