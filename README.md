@@ -516,6 +516,7 @@ Maturidade automatica atual do core:
   - ajustar `function_spec` em Elixir quando a aridade diverge;
   - registrar `unit_test_signature` quando chamadas em testes não combinam mais com a nova aridade.
 - Para documentacao automatica de classes, variaveis e comentarios de fluxo, o runtime tambem valida o simbolo atual da declaracao antes de aplicar uma acao antiga.
+- Para `unit_test_signature`, a validacao usa um contrato estrutural da declaracao: tipo do simbolo, nome qualificado, faixa de aridade, parametros e linha de origem.
 - Em Elixir, comentarios automaticos redundantes entre `@doc` e `@spec` entram na mesma faixa de atualizacao do `@doc`, evitando restos como `# Funcao start:` apos renomear a funcao para `sstart`.
 - Esse comportamento ocorre em modo offline e por heurística de linguagem já mapeada; quando não há confiança suficiente, não altera e mantém a ação para revisão.
 
@@ -839,6 +840,7 @@ Importante:
 - `function_spec` em Elixir evita duplicacao em funcoes com multiplas clausulas da mesma aridade, reduzindo oscilacao de add/remove de `@spec`
 - atualizacoes de `function_spec` com `replace_range` agora substituem o bloco de `@spec` corretamente no runtime Vim/Neovim, evitando insercao paralela e oscilacao
 - o runtime valida a declaracao atual antes de aplicar `class_doc`, `variable_doc`, `flow_comment`, `function_comment`, `moduledoc`, `function_doc`, `function_spec` e `unit_test_signature` antigos
+- `unit_test_signature` agora carrega contrato estrutural de declaracao e cobre tambem metodos JavaScript/TypeScript de classes exportadas
 - `syntax_*` com acao de insercao (`insert_after`/`insert_before`) nao sao mais bloqueadas por dedupe simplista da linha ancora
 - respostas assistidas para comentarios/documentacao receberam instrucoes mais restritivas para reduzir texto generico quando o provider estiver operacional
 - no fallback local de `function_doc`/`function_comment`, os argumentos e contrato agora usam contexto de simbolo para evitar placeholders genericos
