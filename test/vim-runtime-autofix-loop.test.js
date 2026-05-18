@@ -132,6 +132,17 @@ test('runtime ignora ambientes Python e dependencias por padrao', () => {
   });
 });
 
+test('runtime cria fallback Copilot para warnings do LSP sem code action', () => {
+  assert.match(pluginRuntime, /realtime_dev_agent_lsp_ai_fix_enabled/);
+  assert.match(pluginRuntime, /realtime_dev_agent_lsp_ai_fix_severities = \['warning'\]/);
+  assert.match(internalRuntime, /function! s:lsp_ai_fix_enabled\(\) abort/);
+  assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix\(issue\) abort/);
+  assert.match(internalRuntime, /'kind': 'lsp_ai_fix'/);
+  assert.match(internalRuntime, /'op': 'lsp_ai_fix'/);
+  assert.match(internalRuntime, /'--lsp-ai-fix'/);
+  assert.match(internalRuntime, /index\(\['lsp_code_action', 'lsp_ai_fix'\], l:item_kind\)/);
+});
+
 test('CLI ignora ambientes Python e dependencias ao varrer diretorios', () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-cli-ignore-'));
   fs.mkdirSync(path.join(tempDir, 'app'), { recursive: true });

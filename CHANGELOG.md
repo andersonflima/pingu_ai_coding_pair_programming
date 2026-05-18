@@ -2,6 +2,30 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## 0.1.42 - Em desenvolvimento
+
+### Antes
+
+- pingu-dev-agent@0.1.41 já estava publicada.
+- Warnings do LSP dependiam apenas de `codeAction`; quando o servidor nao oferecia acao aplicavel, o runtime nao tinha fallback assistido para gerar uma edicao local.
+
+### Depois
+
+- A versão foi avançada para `0.1.42` com bump patch.
+- Warnings do LSP no Neovim podem entrar como `lsp_ai_fix` depois do `lsp_code_action`, usando Copilot para propor uma correcao local quando o LSP nao aplicar a acao.
+- O fallback assistido fica limitado por ciclo, severidade e operacoes locais de edicao.
+
+### Motivo
+
+- Evitar falha de publicação por versão duplicada e manter rastreabilidade da decisão.
+- Cobrir warnings reais do LSP que nao possuem quickfix deterministico, sem bloquear o fluxo quando o provider externo nao estiver disponivel.
+
+### Impacto
+
+- A publicação passa a refletir a versão versionada no repositório, sem inconsistência entre source e npm.
+- O auto-fix continua priorizando code actions deterministicas e usa Copilot apenas como fallback controlado para warnings elegiveis.
+
+
 ## 0.1.41 - Em desenvolvimento
 
 ### Antes

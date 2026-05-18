@@ -366,6 +366,20 @@ if !exists('g:realtime_dev_agent_lsp_auto_fix_prefer_global')
   let g:realtime_dev_agent_lsp_auto_fix_prefer_global = 1
 endif
 
+if !exists('g:realtime_dev_agent_lsp_ai_fix_enabled')
+  " 1 permite fallback com Copilot para warnings do LSP sem code action aplicavel.
+  let g:realtime_dev_agent_lsp_ai_fix_enabled = has('nvim') ? 1 : 0
+endif
+
+if !exists('g:realtime_dev_agent_lsp_ai_fix_max_per_check')
+  " Limita quantos warnings do LSP podem chamar o provider externo por ciclo.
+  let g:realtime_dev_agent_lsp_ai_fix_max_per_check = 1
+endif
+
+if !exists('g:realtime_dev_agent_lsp_ai_fix_severities')
+  let g:realtime_dev_agent_lsp_ai_fix_severities = ['warning']
+endif
+
 if !exists('g:realtime_dev_agent_terminal_actions_enabled')
   " 1 permite executar acoes de terminal inferidas a partir de comentarios com *.
   let g:realtime_dev_agent_terminal_actions_enabled = 1
