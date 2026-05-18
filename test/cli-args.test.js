@@ -10,6 +10,12 @@ test('cli parser trata autofix-guard como JSON e seta saída', () => {
   assert.equal(args.output, 'json');
 });
 
+test('cli parser trata lsp-ai-fix como JSON de runtime', () => {
+  const args = parseArgs(['--lsp-ai-fix']);
+  assert.equal(args.lspAiFixMode, true);
+  assert.equal(args.output, 'json');
+});
+
 test('cli parser trata --format como alias de output', () => {
   const args = parseArgs(['--format', 'vim', 'sample.js']);
   assert.equal(args.output, 'vim');
