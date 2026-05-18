@@ -3427,7 +3427,7 @@ function! s:extract_symbol_name_from_snippet_lines(snippet_lines) abort
       return l:match[1]
     endif
 
-    let l:match = matchlist(l:source, '\c\<\(funcao\|function\|method\|m[eé]todo\)\>\s*[:-]\s*`*\([A-Za-z_][A-Za-z0-9_?!:#]*\)`*')
+    let l:match = matchlist(l:source, '\c\<\(funcao\|funcão\|function\|method\|m[eé]todo\)\>\s*[:-]\s*`*\([A-Za-z_][A-Za-z0-9_?!:#]*\)`*')
     if !empty(l:match)
       return l:match[2]
     endif
