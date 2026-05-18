@@ -166,6 +166,53 @@ test('unit test coverage updates stale calls when function signature changes', (
   assert.ok(signatureIssue);
   assert.equal(signatureIssue.action.target_file, testFile);
   assert.equal(signatureIssue.snippet, '"Ada", title');
+  assert.deepEqual(signatureIssue.metadata.declarationParams, ['name', 'title']);
+  assert.deepEqual(signatureIssue.metadata.declarationArityRange, { min: 2, max: 2 });
+  assert.equal(signatureIssue.metadata.declarationSignatureKey, 'function|greet|2-2|name,title');
+});
+
+test('unit test coverage tracks method signature contract, not only symbol name', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-unit-test-method-signature-'));
+  const sourceFile = path.join(projectRoot, 'src', 'greeter.js');
+  const testFile = path.join(projectRoot, 'test', 'src', 'greeter.test.js');
+  fs.mkdirSync(path.dirname(sourceFile), { recursive: true });
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(sourceFile, [
+    'export class Greeter {',
+    '  greet(name, title) {',
+    '    return `${title} ${name}`;',
+    '  }',
+    '}',
+  ].join('\n'));
+  fs.writeFileSync(testFile, [
+    'const { Greeter } = require("../../src/greeter");',
+    'test("greet", () => {',
+    '  const greeter = new Greeter();',
+    '  expect(greeter.greet("Ada")).toBe("Dr Ada");',
+    '});',
+  ].join('\n'));
+
+  const checkUnitTestCoverage = createJavaScriptUnitTestChecker(projectRoot, () => null);
+  const issues = checkUnitTestCoverage(
+    [
+      'export class Greeter {',
+      '  greet(name, title) {',
+      '    return `${title} ${name}`;',
+      '  }',
+      '}',
+    ],
+    sourceFile,
+  );
+
+  const signatureIssue = issues.find((issue) => issue.kind === 'unit_test_signature');
+  assert.ok(signatureIssue);
+  assert.equal(signatureIssue.action.target_file, testFile);
+  assert.equal(signatureIssue.snippet, '"Ada", title');
+  assert.equal(signatureIssue.metadata.declarationKind, 'method');
+  assert.equal(signatureIssue.metadata.declarationContainerName, 'Greeter');
+  assert.equal(signatureIssue.metadata.declarationQualifiedName, 'Greeter.greet');
+  assert.deepEqual(signatureIssue.metadata.declarationParams, ['name', 'title']);
+  assert.equal(signatureIssue.metadata.declarationSignatureKey, 'method|Greeter.greet|2-2|name,title');
 });
 
 test('unit test coverage finds stale calls when invocation parenthesis starts on next line', () => {
