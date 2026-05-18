@@ -790,6 +790,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_realtime_doc_cursor_context_only = 1` restringe esses comentarios ao bloco atual durante realtime, evitando edicoes longe do cursor enquanto voce navega ou digita
 - `let g:realtime_dev_agent_auto_fix_local_cursor_context_only = 1` restringe `debug_output`, syntax local, `trailing_whitespace`, `function_spec`, `markdown_title`, `terraform_required_version` e `dockerfile_workdir` ao bloco textual atual
 - `let g:realtime_dev_agent_auto_fix_doc_cursor_context_max_lines = 80` controla o tamanho maximo desse bloco automatico
+- no LazyVim/Neovim, auto-fixes pendentes calculados durante insert mode sao descartados no `InsertLeave` quando o `changedtick` do buffer muda, evitando que uma correcao antiga sobrescreva texto digitado antes de apertar `Esc`
 - com os defaults atuais no Vim, o auto-fix realtime continua priorizando correcoes locais para syntax, higiene e comentarios no contexto do cursor, valida o lote antes de concluir e mantem o escopo no arquivo atual; no `save`, o agente pode incluir `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`, enquanto `terminal_task` continua fora do auto-fix padrao e sob controle explicito do runtime de terminal
 
 ### Terminal no Vim / Neovim

@@ -2,6 +2,29 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## 0.1.43 - Em desenvolvimento
+
+### Antes
+
+- pingu-dev-agent@0.1.42 já estava publicada.
+- Auto-fixes calculados durante insert mode podiam ficar pendentes ate o `InsertLeave` e ainda serem aplicados mesmo quando o buffer mudava antes do `Esc`.
+
+### Depois
+
+- A versão foi avançada para `0.1.43` com bump patch.
+- O runtime guarda `bufnr`, arquivo, opcoes e `changedtick` junto do lote pendente e descarta o lote no `InsertLeave` se o buffer mudou.
+
+### Motivo
+
+- Evitar falha de publicação por versão duplicada e manter rastreabilidade da decisão.
+- Evitar que LazyVim/Neovim aplique uma correcao antiga sobre texto digitado pelo usuario enquanto ainda estava em insert mode.
+
+### Impacto
+
+- A publicação passa a refletir a versão versionada no repositório, sem inconsistência entre source e npm.
+- Texto digitado antes de apertar `Esc` deixa de ser sobrescrito por auto-fix stale; lotes pendentes ainda sao aplicados quando o buffer permanece exatamente no mesmo estado.
+
+
 ## 0.1.42 - Em desenvolvimento
 
 ### Antes

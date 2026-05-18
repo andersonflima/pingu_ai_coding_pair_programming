@@ -143,6 +143,13 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /index\(\['lsp_code_action', 'lsp_ai_fix'\], l:item_kind\)/);
 });
 
+test('runtime descarta auto-fix pendente quando insert mode altera o buffer', () => {
+  assert.match(internalRuntime, /'changedtick': getbufvar\(l:target_buf, 'changedtick', -1\)/);
+  assert.match(internalRuntime, /let l:pending_tick = get\(l:pending, 'changedtick', -1\)/);
+  assert.match(internalRuntime, /getbufvar\(l:target_buf, 'changedtick', -1\) !=# l:pending_tick/);
+  assert.match(internalRuntime, /return\n\s*endif\n\n  let l:items = get\(l:pending, 'items', \[\]\)/);
+});
+
 test('CLI ignora ambientes Python e dependencias ao varrer diretorios', () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-cli-ignore-'));
   fs.mkdirSync(path.join(tempDir, 'app'), { recursive: true });
