@@ -951,6 +951,10 @@ function! s:auto_fix_doc_cursor_context_only() abort
   return str2nr(string(get(g:, 'realtime_dev_agent_auto_fix_doc_cursor_context_only', 1))) > 0
 endfunction
 
+function! s:realtime_doc_cursor_context_only() abort
+  return str2nr(string(get(g:, 'realtime_dev_agent_realtime_doc_cursor_context_only', 1))) > 0
+endfunction
+
 function! s:auto_fix_local_cursor_context_only() abort
   return str2nr(string(get(g:, 'realtime_dev_agent_auto_fix_local_cursor_context_only', 1))) > 0
 endfunction
@@ -1004,12 +1008,13 @@ function! s:is_scope_agnostic_issue(item) abort
   return l:kind =~# '^syntax_'
 endfunction
 
-function! s:should_limit_issue_to_cursor_context(item) abort
+function! s:should_limit_issue_to_cursor_context(item, ...) abort
+  let l:force_documentation_context = a:0 > 0 ? a:1 : v:false
   if s:is_scope_agnostic_issue(a:item)
     return v:false
   endif
   if s:is_documentation_issue(a:item)
-    return s:auto_fix_doc_cursor_context_only()
+    return l:force_documentation_context || s:auto_fix_doc_cursor_context_only()
   endif
   if s:is_local_cursor_context_issue(a:item)
     return s:auto_fix_local_cursor_context_only()
@@ -1132,7 +1137,8 @@ endfunction
 
 function! s:limit_cursor_context_auto_fix_candidates(items, ...) abort
   let l:scope = s:auto_fix_scope()
-  if l:scope ==# 'file'
+  let l:force_documentation_context = a:0 > 1 ? a:2 : v:false
+  if l:scope ==# 'file' && !l:force_documentation_context
     return a:items
   endif
 
@@ -1145,7 +1151,7 @@ function! s:limit_cursor_context_auto_fix_candidates(items, ...) abort
   let [l:start, l:end] = s:cursor_context_bounds_for_buffer(l:bufnr, l:cursor_line)
   let l:selected = []
   for l:item in a:items
-    if !s:should_limit_issue_to_cursor_context(l:item)
+    if !s:should_limit_issue_to_cursor_context(l:item, l:force_documentation_context)
       call add(l:selected, l:item)
       continue
     endif
@@ -1236,14 +1242,15 @@ endfunction
 
 function! s:select_auto_fix_candidates_by_scope(items, ...) abort
   let l:scope = s:auto_fix_scope()
-  if l:scope ==# 'file'
+  let l:force_documentation_context = a:0 > 1 ? a:2 : v:false
+  if l:scope ==# 'file' && !l:force_documentation_context
     return a:items
   endif
 
   let l:scope_agnostic_items = filter(copy(a:items), {_, item -> s:is_scope_agnostic_issue(item)})
   let l:documentation_items = []
   let l:items_to_scope = filter(copy(a:items), {_, item -> !s:is_scope_agnostic_issue(item)})
-  if !s:auto_fix_doc_cursor_context_only()
+  if !l:force_documentation_context && !s:auto_fix_doc_cursor_context_only()
     let l:documentation_items = filter(copy(l:items_to_scope), {_, item -> s:is_documentation_issue(item)})
     let l:items_to_scope = filter(copy(l:items_to_scope), {_, item -> !s:is_documentation_issue(item)})
     if empty(l:items_to_scope)
@@ -2161,6 +2168,21 @@ function! s:issue_equivalence_key(item) abort
   endif
 
   return printf('%s|%d|%s|%s', l:file, l:line, get(a:item, 'kind', ''), l:identity)
+endfunction
+
+function! s:uses_realtime_loop_guard(item) abort
+  return s:is_documentation_issue(a:item)
+endfunction
+
+function! s:issue_realtime_loop_guard_key(item) abort
+  let l:action = s:issue_effective_action(a:item)
+  let l:op = get(l:action, 'op', '')
+  let l:file = fnamemodify(get(a:item, 'filename', ''), ':p')
+  let l:identity = s:issue_action_identity(a:item)
+  if empty(l:identity)
+    let l:identity = get(a:item, 'text', '')
+  endif
+  return printf('%s|%s|%s|%s', l:file, get(a:item, 'kind', ''), l:op, l:identity)
 endfunction
 
 function! s:normalize_line_for_insert_dedupe(text) abort
@@ -4861,8 +4883,9 @@ function! s:build_auto_fix_state(qf, file, opts) abort
 
   let l:realtime_mode = get(a:opts, 'realtime_mode', s:realtime_dev_agent_is_realtime_check ? v:true : v:false)
   if l:realtime_mode
-    let l:auto_candidates = s:select_auto_fix_candidates_by_scope(l:auto_candidates, l:target_buf)
-    let l:auto_candidates = s:limit_cursor_context_auto_fix_candidates(l:auto_candidates, l:target_buf)
+    let l:force_documentation_context = s:realtime_doc_cursor_context_only()
+    let l:auto_candidates = s:select_auto_fix_candidates_by_scope(l:auto_candidates, l:target_buf, l:force_documentation_context)
+    let l:auto_candidates = s:limit_cursor_context_auto_fix_candidates(l:auto_candidates, l:target_buf, l:force_documentation_context)
   endif
 
   if empty(l:auto_candidates)
@@ -4988,10 +5011,24 @@ function! s:run_auto_fix_state(state, max_items) abort
         endif
         continue
       endif
+      let l:loop_guard_key = ''
+      if get(l:state, 'realtime_mode', v:false) && s:uses_realtime_loop_guard(l:item)
+        let l:loop_guard_key = 'loop|' . s:issue_realtime_loop_guard_key(l:item)
+        if has_key(l:state.fix_guard, l:loop_guard_key)
+          let l:processed += 1
+          if a:max_items > 0 && l:processed >= a:max_items
+            break
+          endif
+          continue
+        endif
+      endif
 
       let l:shifted_item = s:shift_issue_for_batch(l:item, s:cumulative_line_shift(l:item_line, l:state.line_adjustments))
       if s:apply_issue_snippet(l:shifted_item, v:false)
         let l:state.fix_guard[l:guard_key] = 1
+        if !empty(l:loop_guard_key)
+          let l:state.fix_guard[l:loop_guard_key] = 1
+        endif
         call add(l:line_kinds, l:item_apply_key)
         let l:state.line_kind_applied[l:item_line_key] = l:line_kinds
         let l:state.applied += 1
