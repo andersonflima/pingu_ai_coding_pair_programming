@@ -253,6 +253,53 @@ test('mantem function_doc estavel em Python com parametro default', () => {
   }
 });
 
+test('detecta documentacao JavaScript desatualizada quando o nome da funcao muda', () => {
+  const source = [
+    '/**',
+    ' * Funcao: sstart.',
+    ' * @param {string} type Tipo de inicializacao.',
+    ' * @param {object} args Argumentos de inicializacao.',
+    ' * @returns {boolean} Resultado da inicializacao.',
+    ' */',
+    'export function start(type, args) {',
+    '  return Boolean(type) && Boolean(args);',
+    '}',
+  ].join('\n');
+
+  const issues = functionDocIssues(source, 'sample.js');
+  assert.equal(issues.length > 0, true);
+  assert.equal(issues[0].message.includes('desatualizada'), true);
+});
+
+test('detecta documentacao Python desatualizada quando o nome da funcao muda', () => {
+  const source = [
+    'def start(_type, _args):',
+    '    """',
+    '    Funcao: sstart.',
+    '',
+    '    Args:',
+    '      _type: Tipo da inicializacao.',
+    '      _args: Argumentos da inicializacao.',
+    '',
+    '    Returns:',
+    '      bool: Resultado da inicializacao.',
+    '    """',
+    '    return bool(_type) and bool(_args)',
+  ].join('\n');
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-doc-rename-py-'));
+  const sourceFile = path.join(tempDir, 'sample.py');
+  fs.writeFileSync(sourceFile, source, 'utf8');
+
+  try {
+    const issues = functionDocIssues(source, sourceFile);
+    assert.equal(issues.length > 0, true);
+    assert.equal(issues[0].message.includes('desatualizada'), true);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('nao replica function_spec em Elixir quando funcao possui multiplas clausulas', () => {
   const source = [
     'defmodule Multi do',
