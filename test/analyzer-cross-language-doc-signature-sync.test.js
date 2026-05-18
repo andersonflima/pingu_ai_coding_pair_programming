@@ -143,6 +143,32 @@ test('detecta @doc Elixir desatualizado quando nome da funcao muda', () => {
   assert.equal(issues[0].message.includes('desatualizada'), true);
 });
 
+test('detecta @doc Elixir desatualizado com referencia antiga em resumo, retorno e contrato', () => {
+  const source = [
+    'defmodule Example do',
+    '  @doc """',
+    '  Executa a etapa principal de sstart preservando o contrato esperado.',
+    '',
+    '  ## Parametros',
+    '  - `_type`: Valor de entrada para type dentro desta funcao.',
+    '  - `_args`: Valor de entrada para args dentro desta funcao.',
+    '',
+    '  ## Retorno',
+    '  Retorna o resultado produzido por sstart conforme o contrato da funcao.',
+    '',
+    '  ## Contrato',
+    '  `@spec sstart(term(), term()) :: term()`',
+    '  """',
+    '  @spec start(term(), term()) :: term()',
+    '  def start(_type, _args), do: :ok',
+    'end',
+  ].join('\n');
+
+  const issues = functionDocIssues(source, 'example.ex');
+  assert.equal(issues.length > 0, true);
+  assert.equal(issues[0].message.includes('desatualizada'), true);
+});
+
 test('detecta documentacao Lua em bloco desatualizada', () => {
   const source = [
     '--[[',
