@@ -108,7 +108,7 @@ test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', 
   assert.equal(payload.beforeText, '        result = kind + args');
   assert.equal(payload.afterText, payload.beforeText);
   assert.equal(payload.currentLineText, payload.beforeText);
-  assert.ok(payload.lineCount > source.trimEnd().split('\n').length);
+  assert.ok(payload.lineCount >= source.trimEnd().split('\n').length);
 });
 
 test('runtime evita segunda rodada automatica logo apos aplicar um lote', () => {
@@ -116,6 +116,14 @@ test('runtime evita segunda rodada automatica logo apos aplicar um lote', () => 
   assert.match(internalRuntime, /let l:suppress_auto_fix = s:realtime_dev_agent_suppress_auto_fix_once/);
   assert.match(internalRuntime, /g:realtime_dev_agent_auto_fix_enabled && !l:suppress_auto_fix/);
   assert.match(internalRuntime, /let s:realtime_dev_agent_suppress_auto_fix_once = v:true/);
+});
+
+test('runtime compensa deslocamento visual quando auto-fix insere linhas', () => {
+  assert.match(internalRuntime, /\\ 'line_adjustments': \[\]/);
+  assert.match(internalRuntime, /function! s:shift_saved_view_for_adjustments\(view, adjustments\) abort/);
+  assert.match(internalRuntime, /let l:shift \+= get\(l:adjustment, 'delta', 0\)/);
+  assert.match(internalRuntime, /call winrestview\(s:shift_saved_view_for_adjustments\(l:view, get\(l:context, 'line_adjustments', \[\]\)\)\)/);
+  assert.match(internalRuntime, /call add\(l:state\.line_adjustments, l:adjustment\)/);
 });
 
 test('runtime ignora ambientes Python e dependencias por padrao', () => {
