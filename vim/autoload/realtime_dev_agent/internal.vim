@@ -3523,10 +3523,211 @@ function! s:nearest_declaration_symbol_name(target_buf, start_lnum) abort
   return ''
 endfunction
 
+function! s:split_declaration_params(params_source) abort
+  let l:source = '' . a:params_source
+  if empty(l:source)
+    return []
+  endif
+  let l:params = []
+  let l:current = ''
+  let l:depth = 0
+  for l:index in range(0, len(l:source) - 1)
+    let l:char = l:source[l:index]
+    if l:char ==# '(' || l:char ==# '[' || l:char ==# '{'
+      let l:depth += 1
+    elseif l:char ==# ')' || l:char ==# ']' || l:char ==# '}'
+      let l:depth = max([0, l:depth - 1])
+    elseif l:char ==# ',' && l:depth == 0
+      let l:pending = trim(l:current)
+      if !empty(l:pending)
+        call add(l:params, l:pending)
+      endif
+      let l:current = ''
+      continue
+    endif
+    let l:current .= l:char
+  endfor
+
+  let l:pending = trim(l:current)
+  if !empty(l:pending)
+    call add(l:params, l:pending)
+  endif
+  return l:params
+endfunction
+
+function! s:normalize_declaration_param_name(param_source) abort
+  let l:param = trim('' . a:param_source)
+  let l:param = substitute(l:param, '=.*$', '', '')
+  let l:param = substitute(l:param, '\\\\.*$', '', '')
+  let l:param = substitute(l:param, '^\.\.\.', '', '')
+  let l:param = substitute(l:param, '^\*\+', '', '')
+  let l:param = substitute(l:param, '\s*:\s*.*$', '', '')
+  let l:param = substitute(l:param, '?$', '', '')
+  let l:param = trim(l:param)
+  let l:match = matchstr(l:param, '^[A-Za-z_$][A-Za-z0-9_$]*')
+  return l:match
+endfunction
+
+function! s:declaration_param_contract(params_source) abort
+  let l:raw_params = s:split_declaration_params(a:params_source)
+  let l:names = []
+  let l:required = 0
+  let l:has_variadic = v:false
+
+  for l:param in l:raw_params
+    let l:name = s:normalize_declaration_param_name(l:param)
+    if empty(l:name) || l:name ==# 'self' || l:name ==# 'cls'
+      continue
+    endif
+    call add(l:names, l:name)
+    let l:is_variadic = l:param =~# '\.\.\.' || l:param =~# '^\s*\*'
+    let l:is_optional = l:is_variadic || l:param =~# '=' || l:param =~# '?' || l:param =~# '\\\\'
+    if l:is_variadic
+      let l:has_variadic = v:true
+    endif
+    if !l:is_optional
+      let l:required += 1
+    endif
+  endfor
+
+  return {
+        \ 'params': l:names,
+        \ 'min': l:required,
+        \ 'max': l:has_variadic ? 9007199254740991 : len(l:names),
+        \ }
+endfunction
+
+function! s:extract_param_source_after_symbol(line, symbol) abort
+  let l:source = '' . a:line
+  let l:symbol = '' . a:symbol
+  if empty(l:symbol)
+    return ''
+  endif
+
+  let l:start = match(l:source, '\V' . escape(l:symbol, '\'))
+  if l:start < 0
+    return ''
+  endif
+
+  let l:cursor = l:start + len(l:symbol)
+  while l:cursor < len(l:source)
+    let l:char = l:source[l:cursor]
+    if l:char ==# '('
+      break
+    endif
+    if l:char !~# '\s'
+      return ''
+    endif
+    let l:cursor += 1
+  endwhile
+  if l:cursor >= len(l:source) || l:source[l:cursor] !=# '('
+    return ''
+  endif
+
+  let l:depth = 1
+  let l:current = ''
+  let l:index = l:cursor + 1
+  while l:index < len(l:source)
+    let l:char = l:source[l:index]
+    if l:char ==# '('
+      let l:depth += 1
+    elseif l:char ==# ')'
+      let l:depth -= 1
+      if l:depth == 0
+        return l:current
+      endif
+    endif
+    let l:current .= l:char
+    let l:index += 1
+  endwhile
+
+  return ''
+endfunction
+
+function! s:unit_test_signature_current_contract_key(item) abort
+  let l:metadata = get(a:item, 'metadata', {})
+  if type(l:metadata) != v:t_dict
+    return ''
+  endif
+
+  let l:expected = trim('' . get(l:metadata, 'declarationSignatureKey', ''))
+  if empty(l:expected)
+    return ''
+  endif
+
+  let l:source_file = fnamemodify(get(a:item, 'filename', ''), ':p')
+  if empty(l:source_file)
+    return ''
+  endif
+
+  let l:line_no = str2nr(string(get(l:metadata, 'declarationLine', 0)))
+  if l:line_no <= 0
+    return ''
+  endif
+
+  let l:source_lines = []
+  let l:bufnr = bufnr(l:source_file)
+  if l:bufnr > 0 && bufloaded(l:bufnr)
+    let l:source_lines = getbufline(l:bufnr, l:line_no, l:line_no + 8)
+  elseif filereadable(l:source_file)
+    let l:all_lines = readfile(l:source_file, 'b')
+    let l:source_lines = l:all_lines[l:line_no - 1 : min([len(l:all_lines) - 1, l:line_no + 7])]
+  endif
+  if empty(l:source_lines)
+    return ''
+  endif
+
+  let l:name = trim('' . get(l:metadata, 'declarationName', get(l:metadata, 'symbolName', '')))
+  let l:kind = trim('' . get(l:metadata, 'declarationKind', get(l:metadata, 'symbolKind', 'function')))
+  let l:container = trim('' . get(l:metadata, 'declarationContainerName', ''))
+  let l:qualified = empty(l:container) ? l:name : l:container . '.' . l:name
+  if empty(l:name) || empty(l:kind)
+    return ''
+  endif
+
+  for l:line in l:source_lines
+    let l:param_source = s:extract_param_source_after_symbol(l:line, l:name)
+    if empty(l:param_source) && l:line !~# '\V' . escape(l:name, '\')
+      continue
+    endif
+    if empty(l:param_source)
+      continue
+    endif
+
+    let l:contract = s:declaration_param_contract(l:param_source)
+    return join([
+          \ l:kind,
+          \ l:qualified,
+          \ string(get(l:contract, 'min', 0)) . '-' . string(get(l:contract, 'max', 0)),
+          \ join(get(l:contract, 'params', []), ','),
+          \ ], '|')
+  endfor
+
+  return ''
+endfunction
+
+function! s:unit_test_signature_matches_source_contract(item) abort
+  let l:metadata = get(a:item, 'metadata', {})
+  if type(l:metadata) != v:t_dict
+    return v:true
+  endif
+
+  let l:expected = trim('' . get(l:metadata, 'declarationSignatureKey', ''))
+  if empty(l:expected)
+    return v:true
+  endif
+
+  let l:current = s:unit_test_signature_current_contract_key(a:item)
+  return !empty(l:current) && l:current ==# l:expected
+endfunction
+
 function! s:declaration_authority_matches_current(item, target_buf, line_no, snippet_lines) abort
   let l:kind = get(a:item, 'kind', '')
   if !s:is_declaration_authority_issue(l:kind)
     return v:true
+  endif
+  if l:kind ==# 'unit_test_signature'
+    return s:unit_test_signature_matches_source_contract(a:item)
   endif
 
   let l:snippet_symbol = s:issue_metadata_symbol_name(a:item)
@@ -3993,6 +4194,7 @@ function! s:qf_items_from_issues(issues, file) abort
           \ 'kind': trim('' . get(l:issue, 'kind', '')),
           \ 'snippet': type(get(l:issue, 'snippet', '')) == v:t_string ? get(l:issue, 'snippet', '') : '',
           \ 'action': type(get(l:issue, 'action', {})) == v:t_dict ? get(l:issue, 'action', {}) : {},
+          \ 'metadata': type(get(l:issue, 'metadata', {})) == v:t_dict ? deepcopy(get(l:issue, 'metadata', {})) : {},
           \ 'confidence': type(get(l:issue, 'confidence', {})) == v:t_dict ? deepcopy(get(l:issue, 'confidence', {})) : {},
           \ 'autofixPriority': str2nr(string(get(l:issue, 'autofixPriority', 0))),
           \ }
