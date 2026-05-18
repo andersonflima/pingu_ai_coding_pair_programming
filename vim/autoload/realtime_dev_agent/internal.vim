@@ -3408,7 +3408,30 @@ function! s:split_snippet_lines(snippet) abort
 endfunction
 
 function! s:is_declaration_authority_issue(kind) abort
-  return index(['function_doc', 'function_spec', 'unit_test_signature'], a:kind) != -1
+  return index([
+        \ 'class_doc',
+        \ 'flow_comment',
+        \ 'function_comment',
+        \ 'function_doc',
+        \ 'function_spec',
+        \ 'moduledoc',
+        \ 'unit_test_signature',
+        \ 'variable_doc',
+        \ ], a:kind) != -1
+endfunction
+
+function! s:issue_metadata_symbol_name(item) abort
+  let l:metadata = get(a:item, 'metadata', {})
+  if type(l:metadata) != v:t_dict
+    return ''
+  endif
+
+  let l:name = trim('' . get(l:metadata, 'symbolName', ''))
+  if !empty(l:name)
+    return l:name
+  endif
+
+  return trim('' . get(l:metadata, 'name', ''))
 endfunction
 
 function! s:extract_symbol_name_from_snippet_lines(snippet_lines) abort
@@ -3431,6 +3454,11 @@ function! s:extract_symbol_name_from_snippet_lines(snippet_lines) abort
     if !empty(l:match)
       return l:match[2]
     endif
+
+    let l:match = matchlist(l:source, '\c\<\(classe\|class\|modulo\|module\|variavel\|variable\|atributo\|attribute\|constante\|constant\)\>\s*`*\([A-Za-z_$@#][A-Za-z0-9_$@:#]*\)`*')
+    if !empty(l:match)
+      return substitute(l:match[2], '^[@#]\+', '', '')
+    endif
   endfor
 
   return ''
@@ -3447,13 +3475,17 @@ function! s:extract_declaration_symbol_name(line) abort
 
   let l:patterns = [
         \ '^\s*defp\=\s\+\([a-z_][A-Za-z0-9_?!]*\)\>',
-        \ '^\s*\(async\s\+\)\=def\s\+\([A-Za-z_][A-Za-z0-9_?!]*\)\>',
-        \ '^\s*\(export\s\+\)\=\(default\s\+\)\=\(async\s\+\)\=function\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\>',
-        \ '^\s*\(export\s\+\)\=\(const\|let\|var\)\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\s*=',
+        \ '^\s*\%(async\s\+\)\=def\s\+\([A-Za-z_][A-Za-z0-9_?!]*\)\>',
+        \ '^\s*\%(export\s\+\)\=\%(default\s\+\)\=\%(async\s\+\)\=function\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\>',
+        \ '^\s*\%(export\s\+\)\=\%(default\s\+\)\=\%(abstract\s\+\)\=class\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\>',
+        \ '^\s*\%(export\s\+\)\=\%(const\|let\|var\|static\|readonly\)\s\+\([#A-Za-z_$][A-Za-z0-9_$]*\)\s*\%(:\|=\)',
+        \ '^\s*\([A-Za-z_][A-Za-z0-9_]*\)\s*\%(:\|=\)',
+        \ '^\s*\(@\{1,2}[A-Za-z_][A-Za-z0-9_]*\|[A-Z][A-Za-z0-9_]*\)\s*=',
+        \ '^\s*\%(class\|module\)\s\+\([A-Za-z_][A-Za-z0-9_:]*\)\>',
         \ '^\s*\(local\s\+\)\=function\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
         \ '^\s*function!\=\s\+\(\([gswbtlav]:\)\=[A-Za-z_#][A-Za-z0-9_:#]*\)\s*(',
         \ '^\s*func\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
-        \ '^\s*\(pub\s\+\)\=\(async\s\+\)\=fn\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
+        \ '^\s*\%(pub\s\+\)\=\%(async\s\+\)\=fn\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
         \ ]
 
   for l:pattern in l:patterns
@@ -3461,7 +3493,7 @@ function! s:extract_declaration_symbol_name(line) abort
     if !empty(l:match)
       let l:name = l:match[len(l:match) - 1]
       if !empty(l:name)
-        return l:name
+        return substitute(l:name, '^[@#]\+', '', '')
       endif
     endif
   endfor
@@ -3489,6 +3521,21 @@ function! s:nearest_declaration_symbol_name(target_buf, start_lnum) abort
   endfor
 
   return ''
+endfunction
+
+function! s:declaration_authority_matches_current(item, target_buf, line_no, snippet_lines) abort
+  let l:kind = get(a:item, 'kind', '')
+  if !s:is_declaration_authority_issue(l:kind)
+    return v:true
+  endif
+
+  let l:snippet_symbol = s:issue_metadata_symbol_name(a:item)
+  if empty(l:snippet_symbol)
+    let l:snippet_symbol = s:extract_symbol_name_from_snippet_lines(a:snippet_lines)
+  endif
+
+  let l:decl_symbol = s:nearest_declaration_symbol_name(a:target_buf, a:line_no)
+  return empty(l:snippet_symbol) || empty(l:decl_symbol) || l:snippet_symbol ==# l:decl_symbol
 endfunction
 
 function! s:replace_range_matches_buffer(action, target_buf, snippet_lines) abort
@@ -3566,12 +3613,8 @@ function! s:realtime_issue_still_relevant(item, target_buf, lnum, line_content) 
       return v:false
     endif
 
-    if s:is_declaration_authority_issue(l:kind)
-      let l:snippet_symbol = s:extract_symbol_name_from_snippet_lines(l:snippet_lines)
-      let l:decl_symbol = s:nearest_declaration_symbol_name(l:target_buf, l:line_no)
-      if !empty(l:snippet_symbol) && !empty(l:decl_symbol) && l:snippet_symbol !=# l:decl_symbol
-        return v:false
-      endif
+    if !s:declaration_authority_matches_current(a:item, l:target_buf, l:line_no, l:snippet_lines)
+      return v:false
     endif
 
     return v:true
@@ -3650,6 +3693,9 @@ function! s:realtime_issue_still_relevant(item, target_buf, lnum, line_content) 
     endif
     if l:kind =~# '^syntax_'
       return v:true
+    endif
+    if !s:declaration_authority_matches_current(a:item, l:target_buf, l:line_no, l:snippet_lines)
+      return v:false
     endif
 
     let l:lookahead = get(l:action, 'lookahead', get(l:action, 'dedupeLookahead', len(l:snippet_lines) + 4))

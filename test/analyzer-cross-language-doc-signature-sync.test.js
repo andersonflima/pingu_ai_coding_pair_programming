@@ -169,6 +169,42 @@ test('detecta @doc Elixir desatualizado com referencia antiga em resumo, retorno
   assert.equal(issues[0].message.includes('desatualizada'), true);
 });
 
+test('remove comentario automatico Elixir obsoleto ao atualizar @doc', () => {
+  const source = [
+    'defmodule Example do',
+    '  @doc """',
+    '  Executa a etapa principal de sstart preservando o contrato esperado.',
+    '',
+    '  ## Parametros',
+    '  - `_type`: Valor de entrada para type dentro desta funcao.',
+    '  - `_args`: Valor de entrada para args dentro desta funcao.',
+    '',
+    '  ## Retorno',
+    '  Retorna o resultado produzido por sstart conforme o contrato da funcao.',
+    '',
+    '  ## Contrato',
+    '  `@spec sstart(term(), term()) :: term()`',
+    '  """',
+    '  # Funcao start: Orquestra o comportamento principal de start.',
+    '  # Argumentos: _type, _args.',
+    '  # Retorno: resultado transformado para o fluxo atual.',
+    '  @spec sstart(term(), term()) :: term()',
+    '  def sstart(_type, _args) do',
+    '    Logger.debug(Example.hello())',
+    '  end',
+    'end',
+  ].join('\n');
+
+  const issues = functionDocIssues(source, 'example.ex');
+  assert.equal(issues.length > 0, true);
+  assert.equal(issues[0].message.includes('desatualizada'), true);
+
+  const patched = applyIssueSnippet(source, issues[0]);
+  assert.equal(patched.includes('Funcao start'), false);
+  assert.equal(patched.includes('@spec sstart(term(), term()) :: term()'), true);
+  assert.equal(functionDocIssues(patched, 'example.ex').length, 0);
+});
+
 test('detecta documentacao Lua em bloco desatualizada', () => {
   const source = [
     '--[[',
