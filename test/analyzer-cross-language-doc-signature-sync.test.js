@@ -118,6 +118,31 @@ test('detecta @doc Elixir desatualizado quando funcao recebe novo argumento', ()
   assert.equal(issues[0].message.includes('desatualizada'), true);
 });
 
+test('detecta @doc Elixir desatualizado quando nome da funcao muda', () => {
+  const source = [
+    'defmodule Zing do',
+    '  @doc """',
+    '  Orquestra o comportamento principal de start.',
+    '',
+    '  ## Argumentos',
+    '  - `_type`: entrada utilizada nesta etapa.',
+    '  - `_args`: entrada utilizada nesta etapa.',
+    '',
+    '  ## Retorno',
+    '  Retorna o resultado produzido por start conforme o contrato da funcao.',
+    '  """',
+    '  @spec sstart(term(), term()) :: term()',
+    '  def sstart(_type, _args) do',
+    '    :ok',
+    '  end',
+    'end',
+  ].join('\n');
+
+  const issues = functionDocIssues(source, 'zing.ex');
+  assert.equal(issues.length > 0, true);
+  assert.equal(issues[0].message.includes('desatualizada'), true);
+});
+
 test('detecta documentacao Lua em bloco desatualizada', () => {
   const source = [
     '--[[',
@@ -265,4 +290,19 @@ test('nao sobrescreve @spec de outra funcao ao corrigir assinatura Elixir', () =
   assert.equal(patched.includes('@spec run(term()) :: term()'), true);
   const after = issuesByKind(patched, 'multi.ex', 'function_spec');
   assert.equal(after.length, 0);
+});
+
+test('trata @spec renomeada como desatualizada e substitui no mesmo bloco', () => {
+  const source = [
+    'defmodule Multi do',
+    '  @spec start(term(), term()) :: term()',
+    '  def sstart(_type, _args), do: :ok',
+    'end',
+  ].join('\n');
+
+  const issues = issuesByKind(source, 'multi.ex', 'function_spec');
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].message.includes('desatualizada'), true);
+  assert.equal(issues[0].action && issues[0].action.op, 'replace_range');
+  assert.equal(String(issues[0].snippet || '').startsWith('@spec sstart('), true);
 });
