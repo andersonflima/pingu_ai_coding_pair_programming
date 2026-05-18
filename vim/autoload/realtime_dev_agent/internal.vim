@@ -10,6 +10,7 @@ let s:realtime_dev_agent_pending_issue = {}
 let s:realtime_dev_agent_pending_auto_fixes = []
 let s:realtime_dev_agent_auto_fix_busy = v:false
 let s:realtime_dev_agent_is_realtime_check = v:false
+let s:realtime_dev_agent_suppress_auto_fix_once = v:false
 let s:realtime_dev_agent_file_ticks = {}
 let s:realtime_dev_agent_fix_guard = {}
 let s:realtime_dev_agent_last_cursor_context_key = ''
@@ -1316,11 +1317,31 @@ function! s:start_auto_fix_visual_batch(bufnr) abort
         \ 'winid': l:current_winid,
         \ 'bufnr': l:current_buf,
         \ 'view': l:view,
+        \ 'line_adjustments': [],
         \ 'lazyredraw': &lazyredraw,
         \ }
   let &lazyredraw = 1
   let s:realtime_dev_agent_visual_batch_context = l:context
   return l:context
+endfunction
+
+function! s:shift_saved_view_for_adjustments(view, adjustments) abort
+  if type(a:view) != v:t_dict || empty(a:view)
+    return a:view
+  endif
+
+  let l:view = copy(a:view)
+  let l:cursor_line = get(l:view, 'lnum', 0)
+  if l:cursor_line > 0
+    let l:view.lnum = max([1, l:cursor_line + s:cumulative_line_shift(l:cursor_line, a:adjustments)])
+  endif
+
+  let l:topline = get(l:view, 'topline', 0)
+  if l:topline > 0
+    let l:view.topline = max([1, l:topline + s:cumulative_line_shift(l:topline, a:adjustments)])
+  endif
+
+  return l:view
 endfunction
 
 function! s:end_auto_fix_visual_batch(context) abort
@@ -1338,7 +1359,7 @@ function! s:end_auto_fix_visual_batch(context) abort
 
   let l:view = get(l:context, 'view', {})
   if type(l:view) == v:t_dict && !empty(l:view) && get(l:context, 'bufnr', -1) == bufnr('%')
-    call winrestview(l:view)
+    call winrestview(s:shift_saved_view_for_adjustments(l:view, get(l:context, 'line_adjustments', [])))
   endif
   redraw
 endfunction
@@ -4336,9 +4357,11 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
   let s:realtime_dev_agent_last_qf = l:qf
   let l:auto_fix_applied = 0
   let l:previous_mode = s:realtime_dev_agent_is_realtime_check
+  let l:suppress_auto_fix = s:realtime_dev_agent_suppress_auto_fix_once
+  let s:realtime_dev_agent_suppress_auto_fix_once = v:false
   let s:realtime_dev_agent_is_realtime_check = a:realtime_mode
   try
-    if g:realtime_dev_agent_auto_fix_enabled
+    if g:realtime_dev_agent_auto_fix_enabled && !l:suppress_auto_fix
       let l:auto_fix_applied = s:realtime_dev_agent_apply_auto_fixes(l:qf, l:file, {
             \ 'bufnr': a:bufnr,
             \ 'open_qf': a:open_qf,
@@ -5036,6 +5059,9 @@ function! s:run_auto_fix_state(state, max_items) abort
         let l:adjustment = s:issue_shift_adjustment(l:shifted_item)
         if !empty(l:adjustment)
           call add(l:state.line_adjustments, l:adjustment)
+          if get(l:visual_batch, 'active', v:false)
+            call add(l:visual_batch.line_adjustments, l:adjustment)
+          endif
         endif
         let l:state = s:drop_stale_candidates_after_delete_line(l:state, l:item)
       endif
@@ -5101,6 +5127,7 @@ function! s:finalize_auto_fix_state(state) abort
   if l:applied > 0
     let l:realtime_mode = get(l:state, 'realtime_mode', v:false) ? v:true : v:false
     let l:analysis_mode = s:analysis_mode_for_request(l:realtime_mode)
+    let s:realtime_dev_agent_suppress_auto_fix_once = v:true
     call s:start_async_realtime_check_with_fallback(
           \ get(l:state, 'target_buf', -1),
           \ get(l:state, 'open_qf', 0),
