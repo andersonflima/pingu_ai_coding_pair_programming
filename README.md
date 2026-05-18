@@ -828,6 +828,7 @@ Importante:
 - se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
 - no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `source.fixAll`, `source.organizeImports` e `quickfix` sem abrir prompt
+- no Neovim, warnings do LSP sem `codeAction` aplicavel entram como `lsp_ai_fix` e podem usar Copilot para gerar uma edicao local minima; se o provider estiver indisponivel, o fluxo continua sem bloquear o editor
 - no Neovim, o loop realtime tambem observa `DiagnosticChanged` e agenda nova rodada automaticamente quando o LSP atualiza lint/syntax sem edicao manual no buffer
 - quando houver `syntax_*` no arquivo e provider assistido estiver operacional, o runtime tenta consolidar um reparo unico de sintaxe no arquivo antes do fallback por item
 - quando o servidor exigir `codeAction/resolve`, o runtime resolve e executa a acao automaticamente antes de aplicar edits/comandos
@@ -865,6 +866,9 @@ Importante:
 - `g:realtime_dev_agent_lsp_auto_fix_max_severity='warning'` limita severidade elegivel (`error`, `warning`, `info`, `hint` ou `1..4`)
 - `g:realtime_dev_agent_lsp_auto_fix_only=['source.fixAll','source.organizeImports','quickfix']` controla a ordem/tipos de code action elegiveis
 - `g:realtime_dev_agent_lsp_auto_fix_prefer_global=1` prioriza tentativa de `fixAll`/`organizeImports` no escopo do arquivo antes do quickfix local
+- `g:realtime_dev_agent_lsp_ai_fix_enabled=1` habilita fallback com Copilot para warnings do LSP sem code action aplicavel (default no Neovim)
+- `g:realtime_dev_agent_lsp_ai_fix_max_per_check=1` limita chamadas ao provider externo por ciclo
+- `g:realtime_dev_agent_lsp_ai_fix_severities=['warning']` restringe quais severidades podem acionar o fallback assistido
 
 ## Como funciona internamente
 

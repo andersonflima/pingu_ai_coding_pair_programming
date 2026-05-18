@@ -994,7 +994,8 @@ function! s:is_local_cursor_context_issue(item) abort
         \ 'syntax_malformed_keyword',
         \ 'syntax_missing_quote',
         \ 'terraform_required_version',
-        \ 'trailing_whitespace'
+        \ 'trailing_whitespace',
+        \ 'lsp_ai_fix'
         \ ], l:kind) != -1
 endfunction
 
@@ -1651,6 +1652,9 @@ function! s:issue_auto_fix_noop_reason(item) abort
   if l:kind ==# 'lsp_code_action' && !s:lsp_auto_fix_enabled()
     return 'code action do LSP indisponivel no editor atual'
   endif
+  if l:kind ==# 'lsp_ai_fix' && !s:lsp_ai_fix_enabled()
+    return 'fallback com Copilot para LSP indisponivel no editor atual'
+  endif
   if l:kind ==# 'terminal_task' && get(s:, 'realtime_dev_agent_is_realtime_check', v:false)
     return 'execucao automatica de terminal fica para save e checagens de consolidacao'
   endif
@@ -1770,6 +1774,28 @@ function! s:lsp_auto_fix_prefer_global() abort
   return str2nr(string(get(g:, 'realtime_dev_agent_lsp_auto_fix_prefer_global', 1))) > 0
 endfunction
 
+function! s:lsp_ai_fix_enabled() abort
+  if !has('nvim') || !exists('*json_decode')
+    return v:false
+  endif
+  return str2nr(string(get(g:, 'realtime_dev_agent_lsp_ai_fix_enabled', has('nvim') ? 1 : 0))) > 0
+endfunction
+
+function! s:lsp_ai_fix_max_per_check() abort
+  let l:max_items = get(g:, 'realtime_dev_agent_lsp_ai_fix_max_per_check', 1)
+  if type(l:max_items) != v:t_number
+    let l:max_items = str2nr(string(l:max_items))
+  endif
+  return max([0, l:max_items])
+endfunction
+
+function! s:lsp_ai_fix_allowed_severity(severity) abort
+  let l:raw = get(g:, 'realtime_dev_agent_lsp_ai_fix_severities', ['warning'])
+  let l:items = type(l:raw) == v:t_list ? copy(l:raw) : split('' . l:raw, ',')
+  let l:label = tolower(s:lsp_severity_label(a:severity))
+  return index(map(l:items, {_, item -> tolower(trim('' . item))}), l:label) != -1
+endfunction
+
 function! s:lsp_source_fixall_kind(source) abort
   let l:source = tolower(trim('' . a:source))
   if empty(l:source)
@@ -1885,6 +1911,8 @@ function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
   let l:synthetic = []
   let l:seen = {}
   let l:added = 0
+  let l:ai_added = 0
+  let l:ai_max_items = s:lsp_ai_fix_enabled() ? s:lsp_ai_fix_max_per_check() : 0
   for l:diag in l:diagnostics
     if l:added >= l:max_items
       break
@@ -1916,8 +1944,11 @@ function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
           \ 'col': l:col,
           \ 'text': join(l:parts, ' | '),
           \ 'kind': 'lsp_code_action',
+          \ 'autofixPriority': 25,
           \ 'lsp_source': l:source,
           \ 'lsp_code': l:code,
+          \ 'lsp_message': l:message,
+          \ 'lsp_severity': l:severity,
           \ 'snippet': '',
           \ 'action': {
           \   'op': 'lsp_code_action',
@@ -1929,6 +1960,29 @@ function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
           \   'line': l:lnum,
           \ },
           \ })
+
+    if l:ai_added < l:ai_max_items && s:lsp_ai_fix_allowed_severity(l:severity)
+      let l:ai_parts = copy(l:parts)
+      call add(l:ai_parts, 'Fallback: tenta resolver com Copilot quando o LSP nao aplicar code action.')
+      call add(l:synthetic, {
+            \ 'filename': l:target_file,
+            \ 'lnum': l:lnum,
+            \ 'col': l:col,
+            \ 'text': join(l:ai_parts, ' | '),
+            \ 'kind': 'lsp_ai_fix',
+            \ 'autofixPriority': 26,
+            \ 'lsp_source': l:source,
+            \ 'lsp_code': l:code,
+            \ 'lsp_message': l:message,
+            \ 'lsp_severity': l:severity,
+            \ 'snippet': '',
+            \ 'action': {
+            \   'op': 'lsp_ai_fix',
+            \   'line': l:lnum,
+            \ },
+            \ })
+      let l:ai_added += 1
+    endif
     let l:added += 1
   endfor
 
@@ -2131,6 +2185,71 @@ function! s:apply_issue_lsp_code_action(issue) abort
   return l:applied
 endfunction
 
+function! s:apply_issue_lsp_ai_fix(issue) abort
+  if !s:lsp_ai_fix_enabled()
+    return v:false
+  endif
+
+  let l:filename = fnamemodify(get(a:issue, 'filename', ''), ':p')
+  let l:target_buf = s:issue_target_buffer(l:filename)
+  if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    return v:false
+  endif
+
+  let l:runner = s:realtime_dev_agent_script_runner()
+  let l:script = s:realtime_dev_agent_script_path()
+  if empty(l:runner) || empty(l:script)
+    return v:false
+  endif
+
+  let l:diagnostic = {
+        \ 'line': max([1, str2nr(string(get(a:issue, 'lnum', 1)))]),
+        \ 'col': max([1, str2nr(string(get(a:issue, 'col', 1)))]),
+        \ 'severity': tolower(s:lsp_severity_label(str2nr(string(get(a:issue, 'lsp_severity', 2))))),
+        \ 'message': trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', ''))),
+        \ 'source': trim('' . get(a:issue, 'lsp_source', '')),
+        \ 'code': trim('' . get(a:issue, 'lsp_code', '')),
+        \ }
+  let l:payload = {
+        \ 'file': l:filename,
+        \ 'lines': getbufline(l:target_buf, 1, '$'),
+        \ 'diagnostic': l:diagnostic,
+        \ }
+  let l:argv = [l:runner, l:script, '--lsp-ai-fix']
+  let l:output = s:run_systemlist(l:argv, s:project_root(l:filename), json_encode(l:payload))
+  if v:shell_error != 0
+    return v:false
+  endif
+
+  let l:raw = join(l:output, "\n")
+  if empty(trim(l:raw))
+    return v:false
+  endif
+
+  try
+    let l:decoded = json_decode(l:raw)
+  catch
+    return v:false
+  endtry
+  if type(l:decoded) != v:t_dict || !get(l:decoded, 'ok', v:false)
+    return v:false
+  endif
+
+  let l:resolved = get(l:decoded, 'issue', {})
+  if type(l:resolved) != v:t_dict || empty(trim('' . get(l:resolved, 'snippet', '')))
+    return v:false
+  endif
+  let l:resolved.filename = get(l:resolved, 'filename', get(l:resolved, 'file', l:filename))
+  let l:resolved.lnum = max([1, str2nr(string(get(l:resolved, 'lnum', get(l:resolved, 'line', get(a:issue, 'lnum', 1)))))])
+  let l:resolved.col = max([1, str2nr(string(get(l:resolved, 'col', get(a:issue, 'col', 1))))])
+  let l:resolved.kind = get(l:resolved, 'kind', 'lsp_ai_fix')
+  if !has_key(l:resolved, 'action') || type(get(l:resolved, 'action', {})) != v:t_dict
+    let l:resolved.action = {'op': 'replace_line'}
+  endif
+
+  return s:apply_issue_snippet(l:resolved, v:false)
+endfunction
+
 function! s:extract_extra_delimiter_char(text) abort
   let l:match = matchlist(a:text, "Delimitador '\\(.\\)' sem abertura correspondente")
   if empty(l:match)
@@ -2161,6 +2280,15 @@ function! s:issue_action_identity(item) abort
           \ join(type(get(l:action, 'only', [])) == v:t_list ? get(l:action, 'only', []) : [], ','),
           \ l:source,
           \ l:code
+          \ )
+  endif
+  if l:op ==# 'lsp_ai_fix'
+    return printf(
+          \ '%d|%s|%s|%s',
+          \ get(a:item, 'lnum', 0),
+          \ trim('' . get(a:item, 'lsp_source', '')),
+          \ trim('' . get(a:item, 'lsp_code', '')),
+          \ trim('' . get(a:item, 'lsp_message', get(a:item, 'text', '')))
           \ )
   endif
   if index(['insert_before', 'insert_after', 'replace_line', 'delete_line'], l:op) != -1
@@ -3261,6 +3389,9 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   endif
   if l:op ==# 'lsp_code_action'
     return s:apply_issue_lsp_code_action(l:issue)
+  endif
+  if l:op ==# 'lsp_ai_fix'
+    return s:apply_issue_lsp_ai_fix(l:issue)
   endif
   if empty(l:snippet_raw)
     if l:kind ==# 'trailing_whitespace' || l:kind ==# 'syntax_extra_delimiter' || l:op ==# 'delete_line'
@@ -4877,7 +5008,7 @@ function! s:build_auto_fix_state(qf, file, opts) abort
     if l:item_kind ==# 'todo_fixme' && l:apply_all_kinds
       continue
     endif
-    if !l:apply_all_kinds && index(l:kinds, l:item_kind) == -1 && l:item_kind !=# 'lsp_code_action'
+    if !l:apply_all_kinds && index(l:kinds, l:item_kind) == -1 && index(['lsp_code_action', 'lsp_ai_fix'], l:item_kind) == -1
       continue
     endif
     let l:item_action = s:issue_effective_action(l:item)
@@ -4886,6 +5017,7 @@ function! s:build_auto_fix_state(qf, file, opts) abort
           \ && l:item_kind !=# 'trailing_whitespace'
           \ && l:item_op !=# 'run_command'
           \ && l:item_op !=# 'lsp_code_action'
+          \ && l:item_op !=# 'lsp_ai_fix'
       continue
     endif
     if !empty(s:issue_auto_fix_noop_reason(l:item))
