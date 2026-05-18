@@ -2,15 +2,15 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
-## 0.1.30 - Em desenvolvimento
+## 0.1.31 - Em desenvolvimento
 
 ### Antes
 
-- pingu-dev-agent@0.1.29 já estava publicada.
+- pingu-dev-agent@0.1.30 já estava publicada.
 
 ### Depois
 
-- A versão foi avançada para `0.1.30` com bump patch.
+- A versão foi avançada para `0.1.31` com bump patch.
 
 ### Motivo
 
@@ -19,6 +19,29 @@ Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo
 ### Impacto
 
 - A publicação passa a refletir a versão versionada no repositório, sem inconsistência entre source e npm.
+
+
+## 0.1.30 - Em desenvolvimento
+
+### Antes
+
+- pingu-dev-agent@0.1.29 já estava publicada.
+- o loop realtime dependia de entrada no buffer ou edicao para disparar analise, sem gatilho dedicado de carga do arquivo.
+
+### Depois
+
+- A versão foi avançada para `0.1.30` com bump patch.
+- o runtime agora pode disparar analise no carregamento do buffer via `BufReadPost/BufNewFile` com `g:realtime_dev_agent_realtime_on_buffer_load=1` (default).
+
+### Motivo
+
+- Evitar falha de publicação por versão duplicada e manter rastreabilidade da decisão.
+- reduzir janela sem cobertura automatica ao abrir arquivos com erro antes da primeira edicao manual.
+
+### Impacto
+
+- A publicação passa a refletir a versão versionada no repositório, sem inconsistência entre source e npm.
+- o pingu passa a iniciar analise mais cedo no arquivo aberto, melhorando chance de correção automática imediata.
 
 
 ## 0.1.29 - Em desenvolvimento

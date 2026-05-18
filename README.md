@@ -731,6 +731,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
     vim.g.realtime_dev_agent_realtime_on_change = 1
     vim.g.realtime_dev_agent_realtime_on_cursor_hold = 0
     vim.g.realtime_dev_agent_realtime_on_buf_enter = 0
+    vim.g.realtime_dev_agent_realtime_on_buffer_load = 1
     vim.g.realtime_dev_agent_realtime_insert_mode = 1
     vim.g.realtime_dev_agent_realtime_async = 1
     vim.g.realtime_dev_agent_realtime_use_daemon = 1
@@ -769,6 +770,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_auto_fix_cluster_gap = 8` controla a distancia maxima entre issues do mesmo trecho
 - `let g:realtime_dev_agent_realtime_on_cursor_hold = 0` faz o agente agir sozinho quando o cursor para sobre um bloco sem exigir edicao manual (ative só se desejar)
 - `let g:realtime_dev_agent_realtime_on_buf_enter = 0` reanalisa o contexto assim que voce entra no arquivo (ative apenas se quiser)
+- `let g:realtime_dev_agent_realtime_on_buffer_load = 1` dispara analise assim que o buffer e carregado (arquivo aberto/criado)
 - `let g:realtime_dev_agent_auto_on_save = 1` consolida comentarios, fixes locais, blueprint seguro e testes adjacentes automaticamente no save
 - `let g:realtime_dev_agent_auto_fix_visual_mode = 'preserve'` reduz ruido visual durante o batch
 - `let g:realtime_dev_agent_realtime_insert_mode = 1` mantem analise tambem no meio da digitacao
