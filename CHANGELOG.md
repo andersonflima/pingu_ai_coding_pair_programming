@@ -2,15 +2,15 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
-## 0.1.29 - Em desenvolvimento
+## 0.1.30 - Em desenvolvimento
 
 ### Antes
 
-- pingu-dev-agent@0.1.28 já estava publicada.
+- pingu-dev-agent@0.1.29 já estava publicada.
 
 ### Depois
 
-- A versão foi avançada para `0.1.29` com bump patch.
+- A versão foi avançada para `0.1.30` com bump patch.
 
 ### Motivo
 
@@ -19,6 +19,26 @@ Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo
 ### Impacto
 
 - A publicação passa a refletir a versão versionada no repositório, sem inconsistência entre source e npm.
+
+
+## 0.1.29 - Em desenvolvimento
+
+### Antes
+
+- erros de sintaxe isolados podiam ficar presos em heuristica local por linguagem e nem sempre escalavam para reparo consolidado assistido.
+
+### Depois
+
+- o runtime passou a consolidar reparo de sintaxe por arquivo com provider assistido mesmo com uma unica issue `syntax_*` (default), mantendo fallback local quando o provider nao estiver operacional.
+- Elixir ganhou deteccao dedicada para keyword `end` malformada (`eend`, `ennd`, `endd`) com auto-fix `replace_line`.
+
+### Motivo
+
+- reduzir lacunas de correcao automatica em pair programming e tornar a recuperacao de erros sintaticos mais resiliente em linguagens mapeadas.
+
+### Impacto
+
+- maior cobertura de auto-correcao para syntax errors com prioridade ao provider assistido e fallback offline preservado.
 
 
 ## 0.1.28 - Em desenvolvimento
