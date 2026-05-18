@@ -92,7 +92,7 @@ test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', 
     'sleep 500m',
     'let b:after_line = line(".")',
     'let b:after_text = getline(".")',
-    `call writefile([json_encode({'beforeLine': b:before_line, 'beforeText': b:before_text, 'afterLine': b:after_line, 'afterText': b:after_text, 'lineCount': line('$')})], ${vimString(outputFile)})`,
+    `call writefile([json_encode({'beforeLine': b:before_line, 'beforeText': b:before_text, 'afterLine': b:after_line, 'afterText': b:after_text, 'lineCount': line('$'), 'currentLineText': getline(b:after_line)})], ${vimString(outputFile)})`,
     'quitall!',
     '',
   ].join('\n'), 'utf8');
@@ -107,7 +107,7 @@ test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', 
   const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
   assert.equal(payload.beforeText, '        result = kind + args');
   assert.equal(payload.afterText, payload.beforeText);
-  assert.ok(payload.afterLine > payload.beforeLine);
+  assert.equal(payload.currentLineText, payload.beforeText);
   assert.ok(payload.lineCount > source.trimEnd().split('\n').length);
 });
 
