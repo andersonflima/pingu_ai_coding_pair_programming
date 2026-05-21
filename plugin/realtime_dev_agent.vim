@@ -223,13 +223,13 @@ if !exists('g:realtime_dev_agent_realtime_analysis_mode')
 endif
 
 if !exists('g:realtime_dev_agent_realtime_on_cursor_hold')
-  " Quando o cursor para sobre um bloco, reanalisa o contexto atual sem exigir edicao manual.
-  let g:realtime_dev_agent_realtime_on_cursor_hold = 1
+  " Desligado por padrao para evitar reanalises enquanto o usuario apenas navega pelo arquivo.
+  let g:realtime_dev_agent_realtime_on_cursor_hold = 0
 endif
 
 if !exists('g:realtime_dev_agent_realtime_on_buf_enter')
-  " Ligado por padrao para reavaliar o contexto assim que o usuario entra no buffer.
-  let g:realtime_dev_agent_realtime_on_buf_enter = 1
+  " Desligado por padrao para evitar trabalho repetido ao alternar buffers no LazyVim.
+  let g:realtime_dev_agent_realtime_on_buf_enter = 0
 endif
 
 if !exists('g:realtime_dev_agent_realtime_on_buffer_load')
@@ -238,8 +238,8 @@ if !exists('g:realtime_dev_agent_realtime_on_buffer_load')
 endif
 
 if !exists('g:realtime_dev_agent_realtime_insert_mode')
-  " 1 analisa tambem durante Insert mode; 0 concentra a checagem ao sair da insercao.
-  let g:realtime_dev_agent_realtime_insert_mode = 1
+  " 0 concentra a checagem ao sair da insercao para preservar responsividade durante digitacao.
+  let g:realtime_dev_agent_realtime_insert_mode = 0
 endif
 
 if !exists('g:realtime_dev_agent_review_on_open')
@@ -260,12 +260,12 @@ endif
 if !exists('g:realtime_dev_agent_auto_check_max_lines')
   " Limite de linhas para checks automaticos no editor.
   " 0 desliga o limite.
-  let g:realtime_dev_agent_auto_check_max_lines = 1200
+  let g:realtime_dev_agent_auto_check_max_lines = 600
 endif
 
 if !exists('g:realtime_dev_agent_realtime_delay')
   " Milisegundos de espera apos a ultima mudanca para disparar a checagem.
-  let g:realtime_dev_agent_realtime_delay = 700
+  let g:realtime_dev_agent_realtime_delay = 900
 endif
 
 if !exists('g:realtime_dev_agent_realtime_async')
@@ -458,7 +458,7 @@ endif
 
 if !exists('g:realtime_dev_agent_auto_fix_strict_validation')
   " 1 reanalisa e valida guard de forma sincrona apos autofix; 0 prioriza fluxo non-blocking.
-  let g:realtime_dev_agent_auto_fix_strict_validation = 1
+  let g:realtime_dev_agent_auto_fix_strict_validation = has('nvim') ? 0 : 1
 endif
 
 if !exists('g:realtime_dev_agent_auto_fix_cursor_only')
