@@ -735,7 +735,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
     vim.g.realtime_dev_agent_realtime_on_cursor_hold = 0
     vim.g.realtime_dev_agent_realtime_on_buf_enter = 0
     vim.g.realtime_dev_agent_realtime_on_buffer_load = 1
-    vim.g.realtime_dev_agent_realtime_insert_mode = 1
+    vim.g.realtime_dev_agent_realtime_insert_mode = 0
     vim.g.realtime_dev_agent_realtime_async = 1
     vim.g.realtime_dev_agent_realtime_use_daemon = 1
     vim.g.realtime_dev_agent_realtime_focus_scope_enabled = 1
@@ -773,12 +773,12 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_auto_fix_scope = 'cursor_only'` restringe ao cursor imediato
 - `let g:realtime_dev_agent_auto_fix_near_cursor_radius = 24` controla a distancia maxima entre cursor e trecho elegivel
 - `let g:realtime_dev_agent_auto_fix_cluster_gap = 8` controla a distancia maxima entre issues do mesmo trecho
-- `let g:realtime_dev_agent_realtime_on_cursor_hold = 0` faz o agente agir sozinho quando o cursor para sobre um bloco sem exigir edicao manual (ative só se desejar)
-- `let g:realtime_dev_agent_realtime_on_buf_enter = 0` reanalisa o contexto assim que voce entra no arquivo (ative apenas se quiser)
+- `let g:realtime_dev_agent_realtime_on_cursor_hold = 0` evita reanalise enquanto o cursor fica parado; use `1` apenas se quiser checagem por pausa de cursor
+- `let g:realtime_dev_agent_realtime_on_buf_enter = 0` evita reanalise ao alternar buffers; use `1` apenas se quiser checagem a cada entrada no arquivo
 - `let g:realtime_dev_agent_realtime_on_buffer_load = 1` dispara analise assim que o buffer e carregado (arquivo aberto/criado)
 - `let g:realtime_dev_agent_auto_on_save = 1` consolida comentarios, fixes locais, blueprint seguro e testes adjacentes automaticamente no save
 - `let g:realtime_dev_agent_auto_fix_visual_mode = 'preserve'` reduz ruido visual durante o batch
-- `let g:realtime_dev_agent_realtime_insert_mode = 1` mantem analise tambem no meio da digitacao
+- `let g:realtime_dev_agent_realtime_insert_mode = 0` concentra a analise ao sair do insert mode para reduzir travamentos durante digitacao
 - `let g:realtime_dev_agent_realtime_async = 1` usa job assincrono no Neovim para evitar congelar a UI durante o loop automatico
 - `let g:realtime_dev_agent_realtime_use_daemon = 1` reaproveita um runtime residente no Neovim para reduzir spawn por analise realtime
 - `let g:realtime_dev_agent_realtime_focus_scope_enabled = 1` limita a analise leve realtime ao bloco atual do cursor
@@ -786,6 +786,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_auto_check_max_lines = 600` limita checks automaticos a arquivos menores
 - `let g:realtime_dev_agent_analysis_cache_max_entries = 24` reaproveita a ultima analise do mesmo texto e reduz relancamento do agente
 - `let g:realtime_dev_agent_realtime_auto_fix_max_per_check = 2` reduz o lote automatico por ciclo realtime para manter o editor fluido
+- `let g:realtime_dev_agent_auto_fix_strict_validation = 0` no Neovim evita reanalise e guard sincronos apos cada lote automatico; use `1` quando preferir validacao estrita mesmo com maior latencia
 - `let g:realtime_dev_agent_auto_fix_doc_cursor_context_only = 0` deixa `function_doc`, `class_doc`, `variable_doc` e `flow_comment` elegiveis no arquivo inteiro
 - `let g:realtime_dev_agent_realtime_doc_cursor_context_only = 1` restringe esses comentarios ao bloco atual durante realtime, evitando edicoes longe do cursor enquanto voce navega ou digita
 - `let g:realtime_dev_agent_auto_fix_local_cursor_context_only = 1` restringe `debug_output`, syntax local, `trailing_whitespace`, `function_spec`, `markdown_title`, `terraform_required_version` e `dockerfile_workdir` ao bloco textual atual
