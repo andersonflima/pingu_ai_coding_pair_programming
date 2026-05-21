@@ -47,6 +47,15 @@ test('runtime realtime limita comentarios automaticos ao contexto do cursor', ()
   );
 });
 
+test('runtime LazyVim usa defaults leves para preservar responsividade', () => {
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_on_cursor_hold = 0/);
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_on_buf_enter = 0/);
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_insert_mode = 0/);
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_auto_check_max_lines = 600/);
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_delay = 900/);
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_auto_fix_strict_validation = has\('nvim'\) \? 0 : 1/);
+});
+
 test('runtime realtime guarda comentarios por identidade para evitar reaplicacao em loop', () => {
   assert.match(internalRuntime, /function! s:uses_realtime_loop_guard\(item\) abort/);
   assert.match(internalRuntime, /return s:is_documentation_issue\(a:item\)/);
