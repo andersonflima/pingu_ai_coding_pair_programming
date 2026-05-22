@@ -3,6 +3,97 @@ if exists('g:loaded_realtime_dev_agent')
 endif
 let g:loaded_realtime_dev_agent = 1
 
+let s:pingu_config_names = [
+  \ 'allow_sync_fallback',
+  \ 'analysis_cache_max_entries',
+  \ 'auto_check_max_lines',
+  \ 'auto_fix_cluster_gap',
+  \ 'auto_fix_cursor_only',
+  \ 'auto_fix_doc_cursor_context_max_lines',
+  \ 'auto_fix_doc_cursor_context_only',
+  \ 'auto_fix_doc_max_per_check',
+  \ 'auto_fix_doc_max_per_check_large_file',
+  \ 'auto_fix_enabled',
+  \ 'auto_fix_kinds',
+  \ 'auto_fix_large_file_line_threshold',
+  \ 'auto_fix_large_file_radius',
+  \ 'auto_fix_local_cursor_context_only',
+  \ 'auto_fix_max_per_check',
+  \ 'auto_fix_near_cursor_radius',
+  \ 'auto_fix_non_blocking_max_per_check',
+  \ 'auto_fix_scope',
+  \ 'auto_fix_strict_validation',
+  \ 'auto_fix_visual_mode',
+  \ 'auto_on_save',
+  \ 'code_extensions',
+  \ 'extensions',
+  \ 'ignore_patterns',
+  \ 'issue_kind_registry',
+  \ 'latency_metrics_enabled',
+  \ 'latency_metrics_max_entries',
+  \ 'lsp_ai_fix_enabled',
+  \ 'lsp_ai_fix_max_per_check',
+  \ 'lsp_ai_fix_severities',
+  \ 'lsp_auto_fix_enabled',
+  \ 'lsp_auto_fix_max_per_check',
+  \ 'lsp_auto_fix_max_severity',
+  \ 'lsp_auto_fix_only',
+  \ 'lsp_auto_fix_prefer_global',
+  \ 'lsp_auto_fix_timeout_ms',
+  \ 'map_key',
+  \ 'node_path',
+  \ 'non_blocking_mode',
+  \ 'open_qf',
+  \ 'open_window_on_start',
+  \ 'realtime_analysis_mode',
+  \ 'realtime_async',
+  \ 'realtime_auto_fix_max_per_check',
+  \ 'realtime_delay',
+  \ 'realtime_doc_cursor_context_only',
+  \ 'realtime_focus_scope_enabled',
+  \ 'realtime_insert_mode',
+  \ 'realtime_on_buf_enter',
+  \ 'realtime_on_buffer_load',
+  \ 'realtime_on_change',
+  \ 'realtime_on_cursor_hold',
+  \ 'realtime_open_qf',
+  \ 'realtime_use_daemon',
+  \ 'review_on_open',
+  \ 'script',
+  \ 'show_window',
+  \ 'start_on_editor_enter',
+  \ 'strict_code_only',
+  \ 'target_scope',
+  \ 'terminal_actions_enabled',
+  \ 'terminal_height',
+  \ 'terminal_risk_mode',
+  \ 'terminal_strategy',
+  \ 'window_height',
+  \ 'window_key',
+  \ 'window_name'
+\ ]
+
+function! s:set_global_value(name, value) abort
+  let g:[a:name] = deepcopy(a:value)
+endfunction
+
+function! s:sync_pingu_config_aliases(prefer_pingu_only) abort
+  for l:name in s:pingu_config_names
+    let l:pingu_name = 'pingu_' . l:name
+    let l:legacy_name = 'realtime_dev_agent_' . l:name
+    let l:has_pingu = exists('g:' . l:pingu_name)
+    let l:has_legacy = exists('g:' . l:legacy_name)
+
+    if l:has_pingu && (!a:prefer_pingu_only || !l:has_legacy)
+      call s:set_global_value(l:legacy_name, get(g:, l:pingu_name))
+    elseif !l:has_pingu && l:has_legacy
+      call s:set_global_value(l:pingu_name, get(g:, l:legacy_name))
+    endif
+  endfor
+endfunction
+
+call s:sync_pingu_config_aliases(v:true)
+
 if !exists('g:realtime_dev_agent_script')
   " Mantem o caminho do script de agente automaticamente para os cenarios
   " de repo local ou plugin instalado no packpath.
@@ -540,6 +631,8 @@ if !exists('g:realtime_dev_agent_target_scope')
   " current_file: limita analise exibida e auto-fix ao arquivo atual; workspace: permite acoes multi-arquivo.
   let g:realtime_dev_agent_target_scope = 'current_file'
 endif
+
+call s:sync_pingu_config_aliases(v:false)
 
 let s:internal_script = fnamemodify(resolve(expand('<sfile>:p')), ':h:h') . '/autoload/realtime_dev_agent/internal.vim'
 if filereadable(s:internal_script)
