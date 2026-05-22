@@ -338,7 +338,7 @@ if !exists('g:realtime_dev_agent_window_height')
 endif
 
 if !exists('g:realtime_dev_agent_window_name')
-  let g:realtime_dev_agent_window_name = '__Realtime Dev Agent__'
+  let g:realtime_dev_agent_window_name = '__Pingu__'
 endif
 
 if !exists('g:realtime_dev_agent_auto_fix_enabled')

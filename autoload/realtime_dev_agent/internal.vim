@@ -206,7 +206,7 @@ function! s:start_async_realtime_check_with_fallback(bufnr, open_qf, show_echo, 
 
   if !s:allow_sync_fallback()
     if a:show_echo
-      echomsg '[RealtimeDevAgent] Analise async indisponivel; fallback sincrono desativado em modo non-blocking'
+      echomsg '[Pingu] Analise async indisponivel; fallback sincrono desativado em modo non-blocking'
     endif
     return v:false
   endif
@@ -489,10 +489,10 @@ endfunction
 
 function! s:latency_metrics_lines() abort
   if empty(s:realtime_dev_agent_latency_metrics)
-    return ['[RealtimeDevAgent] Sem metricas de latencia registradas']
+    return ['[Pingu] Sem metricas de latencia registradas']
   endif
 
-  let l:lines = ['[RealtimeDevAgent] metricas de latencia recentes']
+  let l:lines = ['[Pingu] metricas de latencia recentes']
   for l:metric in s:realtime_dev_agent_latency_metrics
     call add(l:lines, printf(
           \ '%s mode=%s realtime=%d lines=%d issues=%d duration_ms=%d file=%s',
@@ -683,7 +683,7 @@ function! s:notify_operational_noot() abort
     return
   endif
 
-  echomsg '[RealtimeDevAgent] ' . l:message
+  echomsg '[Pingu] ' . l:message
 endfunction
 
 function! s:realtime_dev_agent_start_current_buffer() abort
@@ -1464,8 +1464,8 @@ function! s:window_set_buffer_keymaps() abort
   let l:current = bufnr('%')
   execute 'buffer ' . l:buf
   nnoremap <buffer> <silent> <CR> :call <SID>window_jumpto_issue()<CR>
-  nnoremap <buffer> <silent> r :RealtimeDevAgentWindowCheck<CR>
-  nnoremap <buffer> <silent> q :RealtimeDevAgentWindowClose<CR>
+  nnoremap <buffer> <silent> r :PinguWindowCheck<CR>
+  nnoremap <buffer> <silent> q :PinguWindowClose<CR>
   nnoremap <buffer> <silent> a :call <SID>window_apply_suggestion()<CR>
   nnoremap <buffer> <silent> i :call <SID>window_apply_suggestion()<CR>
   nnoremap <buffer> <silent> f :call <SID>window_insert_followup()<CR>
@@ -2578,7 +2578,7 @@ function! s:auto_save_buffer_if_modified(bufnr, file) abort
   try
     return s:persist_buffer_contents(a:bufnr, l:target_file)
   catch
-    echomsg '[RealtimeDevAgent] Auto-save falhou para ' . l:target_file
+    echomsg '[Pingu] Auto-save falhou para ' . l:target_file
     return v:false
   endtry
 endfunction
@@ -3031,7 +3031,7 @@ endfunction
 function! s:issue_terminal_finish(context, exit_code) abort
   if a:exit_code != 0
     echohl ErrorMsg
-    echomsg printf('[RealtimeDevAgent] Acao de terminal falhou com codigo %d', a:exit_code)
+    echomsg printf('[Pingu] Acao de terminal falhou com codigo %d', a:exit_code)
     echohl None
     return
   endif
@@ -3105,15 +3105,15 @@ function! s:apply_issue_run_command_toggleterm(command, cwd, context, background
         \ )
   if !l:ok
     echohl ErrorMsg
-    echomsg '[RealtimeDevAgent] Falha ao controlar o ToggleTerm'
+    echomsg '[Pingu] Falha ao controlar o ToggleTerm'
     echohl None
     return v:false
   endif
   if a:background
     call s:issue_terminal_refocus_code(get(l:payload, 'return_winid', 0))
-    echomsg '[RealtimeDevAgent] Executando em background no ToggleTerm: ' . a:command
+    echomsg '[Pingu] Executando em background no ToggleTerm: ' . a:command
   else
-    echomsg '[RealtimeDevAgent] Executando no ToggleTerm: ' . a:command
+    echomsg '[Pingu] Executando no ToggleTerm: ' . a:command
   endif
   call s:issue_terminal_remove_trigger_now(a:context)
   call s:issue_terminal_schedule_poll(a:context, l:status_file)
@@ -3135,10 +3135,10 @@ function! s:apply_issue_run_command_native(command, cwd, context, background) ab
           \ })
     if a:background
       call s:issue_terminal_refocus_code(l:return_winid)
-      echomsg '[RealtimeDevAgent] Executando em background no terminal: ' . a:command
+      echomsg '[Pingu] Executando em background no terminal: ' . a:command
     else
       startinsert
-      echomsg '[RealtimeDevAgent] Executando no terminal: ' . a:command
+      echomsg '[Pingu] Executando no terminal: ' . a:command
     endif
     call s:issue_terminal_remove_trigger_now(a:context)
     return v:true
@@ -3153,9 +3153,9 @@ function! s:apply_issue_run_command_native(command, cwd, context, background) ab
           \ })
     if a:background
       call s:issue_terminal_refocus_code(l:return_winid)
-      echomsg '[RealtimeDevAgent] Executando em background no terminal: ' . a:command
+      echomsg '[Pingu] Executando em background no terminal: ' . a:command
     else
-      echomsg '[RealtimeDevAgent] Executando no terminal: ' . a:command
+      echomsg '[Pingu] Executando no terminal: ' . a:command
     endif
     call s:issue_terminal_remove_trigger_now(a:context)
     return v:true
@@ -3204,9 +3204,9 @@ function! s:issue_terminal_hidden_job_finalize(job_id, exit_code) abort
   let l:output = filter(copy(get(l:entry, 'output', [])), {_, val -> type(val) == v:t_string && !empty(trim(val))})
   if a:exit_code != 0
     echohl ErrorMsg
-    echomsg '[RealtimeDevAgent] Falha ao executar acao de terminal'
+    echomsg '[Pingu] Falha ao executar acao de terminal'
     if !empty(l:output)
-      echomsg '[RealtimeDevAgent] ' . trim(get(l:output, -1, ''))
+      echomsg '[Pingu] ' . trim(get(l:output, -1, ''))
     endif
     echohl None
     return
@@ -3219,7 +3219,7 @@ function! s:issue_terminal_hidden_job_finalize(job_id, exit_code) abort
   if !empty(l:output)
     let l:last_output = trim(get(l:output, -1, ''))
     if !empty(l:last_output)
-      echomsg '[RealtimeDevAgent] ' . l:last_output
+      echomsg '[Pingu] ' . l:last_output
     endif
   endif
 
@@ -3248,7 +3248,7 @@ function! s:issue_terminal_start_hidden_async(context, command, cwd) abort
         \ 'context': deepcopy(a:context),
         \ 'output': []
         \ }
-  echomsg '[RealtimeDevAgent] Executando comando hidden em background: ' . a:command
+  echomsg '[Pingu] Executando comando hidden em background: ' . a:command
   return v:true
 endfunction
 
@@ -3267,9 +3267,9 @@ function! s:apply_issue_run_command_hidden(issue, keep_focus_code) abort
   let l:output = s:run_shell_systemlist(l:command, l:cwd)
   if v:shell_error != 0
     echohl ErrorMsg
-    echomsg '[RealtimeDevAgent] Falha ao executar acao de terminal'
+    echomsg '[Pingu] Falha ao executar acao de terminal'
     if !empty(l:output)
-      echomsg '[RealtimeDevAgent] ' . trim(get(l:output, -1, ''))
+      echomsg '[Pingu] ' . trim(get(l:output, -1, ''))
     endif
     echohl None
     return v:false
@@ -3282,7 +3282,7 @@ function! s:apply_issue_run_command_hidden(issue, keep_focus_code) abort
   if !empty(l:output)
     let l:last_output = trim(get(l:output, -1, ''))
     if !empty(l:last_output)
-      echomsg '[RealtimeDevAgent] ' . l:last_output
+      echomsg '[Pingu] ' . l:last_output
     endif
   endif
 
@@ -3292,14 +3292,14 @@ endfunction
 
 function! s:apply_issue_run_command(issue, keep_focus_code) abort
   if !get(g:, 'realtime_dev_agent_terminal_actions_enabled', 1)
-    echomsg '[RealtimeDevAgent] Acoes de terminal estao desligadas'
+    echomsg '[Pingu] Acoes de terminal estao desligadas'
     return v:false
   endif
 
   let l:action = s:issue_effective_action(a:issue)
   let l:command = get(l:action, 'command', '')
   if empty(l:command)
-    echomsg '[RealtimeDevAgent] Comando de terminal ausente para esta sugestao'
+    echomsg '[Pingu] Comando de terminal ausente para esta sugestao'
     return v:false
   endif
 
@@ -3308,7 +3308,7 @@ function! s:apply_issue_run_command(issue, keep_focus_code) abort
   if s:issue_terminal_risk_rank(l:risk.level) > s:issue_terminal_risk_rank(l:risk_mode)
     echohl WarningMsg
     echomsg printf(
-          \ '[RealtimeDevAgent] Comando bloqueado pelo modo de risco "%s": %s (%s - %s)',
+          \ '[Pingu] Comando bloqueado pelo modo de risco "%s": %s (%s - %s)',
           \ l:risk_mode,
           \ l:command,
           \ l:risk.level,
@@ -3442,7 +3442,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   let l:active_file = fnamemodify(bufname(l:active_buf), ':p')
   let l:target_file = fnamemodify(l:filename, ':p')
   if !s:issue_targets_active_scope(l:issue, l:filename)
-    echomsg '[RealtimeDevAgent] Acao descartada: fora do arquivo atual'
+    echomsg '[Pingu] Acao descartada: fora do arquivo atual'
     return v:false
   endif
   if l:op ==# 'run_command'
@@ -3459,7 +3459,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
       let l:snippet_lines = ['']
     else
       echohl WarningMsg
-      echomsg '[RealtimeDevAgent] Sem snippet para esta sugestao'
+      echomsg '[Pingu] Sem snippet para esta sugestao'
       echohl None
       return v:false
     endif
@@ -3493,7 +3493,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
 
   if l:target_buf <= 0 || !bufexists(l:target_buf)
     if !a:keep_focus_code
-      echomsg '[RealtimeDevAgent] Snippet descartado: buffer alvo nao carregado'
+      echomsg '[Pingu] Snippet descartado: buffer alvo nao carregado'
     endif
     return v:false
   endif
@@ -4314,7 +4314,7 @@ function! s:window_set_lines(lines) abort
   call setbufvar(l:buf, '&modifiable', 1)
   call deletebufline(l:buf, 1, '$')
   if empty(a:lines)
-    call appendbufline(l:buf, 0, '[Realtime Dev Agent] Nenhuma informacao para exibir')
+    call appendbufline(l:buf, 0, '[Pingu] Nenhuma informacao para exibir')
   else
     call appendbufline(l:buf, 0, a:lines)
   endif
@@ -4328,7 +4328,7 @@ function! s:window_set_busy(file) abort
   endif
 
   let l:busy_lines = []
-  call add(l:busy_lines, 'Realtime Dev Agent')
+  call add(l:busy_lines, 'Pingu')
   call add(l:busy_lines, 'Arquivo: ' . a:file)
   call add(l:busy_lines, '')
   call add(l:busy_lines, 'Status: analisando...')
@@ -4532,7 +4532,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
     if g:realtime_dev_agent_show_window
       if l:is_missing_runtime
         let l:error_lines = []
-        call add(l:error_lines, 'Realtime Dev Agent')
+        call add(l:error_lines, 'Pingu')
         call add(l:error_lines, 'Arquivo: ' . l:file)
         call add(l:error_lines, '')
         call add(l:error_lines, 'Erro: runtime nao encontrado no PATH')
@@ -4541,7 +4541,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
         call s:window_set_lines(l:error_lines)
       else
         let l:error_lines = []
-        call add(l:error_lines, 'Realtime Dev Agent')
+        call add(l:error_lines, 'Pingu')
         call add(l:error_lines, 'Arquivo: ' . l:file)
         call add(l:error_lines, '')
         call add(l:error_lines, 'Erro: falha ao executar o agente')
@@ -4553,9 +4553,9 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
     if a:show_echo
       echohl ErrorMsg
       if l:is_missing_runtime
-        echomsg '[RealtimeDevAgent] Runtime nao encontrado no PATH'
+        echomsg '[Pingu] Runtime nao encontrado no PATH'
       else
-        echomsg '[RealtimeDevAgent] Falha ao executar o agente'
+        echomsg '[Pingu] Falha ao executar o agente'
       endif
       echohl None
     endif
@@ -4565,7 +4565,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
   let l:qf = deepcopy(get(a:analysis, 'qf', []))
   let l:qf = s:merge_lsp_diagnostic_auto_fix_candidates(a:bufnr, l:file, l:qf)
   if a:open_qf || g:realtime_dev_agent_show_window || !a:realtime_mode
-    call setqflist([], 'r', {'title': 'Realtime Dev Agent'})
+    call setqflist([], 'r', {'title': 'Pingu'})
     call setqflist(l:qf, 'a')
   endif
   let s:realtime_dev_agent_last_qf = l:qf
@@ -4597,7 +4597,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
     endif
     call s:window_refresh(l:file, l:qf)
     if a:show_echo
-      echo '[RealtimeDevAgent] Nenhuma sugestao encontrada'
+      echo '[Pingu] Nenhuma sugestao encontrada'
     endif
   else
     if a:open_qf
@@ -4605,7 +4605,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
     endif
     call s:window_refresh(l:file, l:qf)
     if a:show_echo
-      echomsg '[RealtimeDevAgent] ' . len(l:qf) . ' sugestao(oes) encontrada(s)'
+      echomsg '[Pingu] ' . len(l:qf) . ' sugestao(oes) encontrada(s)'
     endif
   endif
 endfunction
@@ -5373,13 +5373,13 @@ function! s:finalize_auto_fix_state(state) abort
     endfor
 
     if !get(l:state, 'strict_validation', v:false)
-      echo printf('[RealtimeDevAgent] Auto-fix aplicado em %d sugerenca(s) [background]', l:applied)
+      echo printf('[Pingu] Auto-fix aplicado em %d sugerenca(s) [background]', l:applied)
     else
       let l:analysis = s:collect_analysis_for_buffer(get(l:state, 'target_buf', -1))
       if !get(l:analysis, 'ok', v:false)
         call s:restore_file_snapshot(get(l:state, 'file_snapshot', {}))
         echohl WarningMsg
-        echomsg '[RealtimeDevAgent] Auto-fix revertido: falha ao reanalisar o buffer'
+        echomsg '[Pingu] Auto-fix revertido: falha ao reanalisar o buffer'
         echohl None
         let l:applied = 0
       else
@@ -5393,11 +5393,11 @@ function! s:finalize_auto_fix_state(state) abort
         if !get(l:guard_result, 'ok', v:false)
           call s:restore_file_snapshot(get(l:state, 'file_snapshot', {}))
           echohl WarningMsg
-          echomsg '[RealtimeDevAgent] Auto-fix revertido: ' . s:format_guard_failure(l:guard_result)
+          echomsg '[Pingu] Auto-fix revertido: ' . s:format_guard_failure(l:guard_result)
           echohl None
           let l:applied = 0
         else
-          echo printf('[RealtimeDevAgent] Auto-fix aplicado em %d sugerenca(s)', l:applied)
+          echo printf('[Pingu] Auto-fix aplicado em %d sugerenca(s)', l:applied)
         endif
       endif
     endif
@@ -5677,11 +5677,15 @@ function! s:realtime_dev_agent_schedule_check(...) abort
   if l:delay < 200
     let l:delay = 200
   endif
-  let s:realtime_dev_agent_realtime_timer = timer_start(l:delay, function('RealtimeDevAgentRunPendingCheck'))
+  let s:realtime_dev_agent_realtime_timer = timer_start(l:delay, function('PinguRunPendingCheck'))
+endfunction
+
+function! PinguRunPendingCheck(timer_id) abort
+  call s:realtime_dev_agent_run_pending_check(a:timer_id)
 endfunction
 
 function! RealtimeDevAgentRunPendingCheck(timer_id) abort
-  call s:realtime_dev_agent_run_pending_check(a:timer_id)
+  call PinguRunPendingCheck(a:timer_id)
 endfunction
 
 function! s:realtime_dev_agent_run_pending_check(timer_id) abort
@@ -5711,7 +5715,7 @@ function! s:window_refresh(file, qf) abort
   if type(l:lines) != v:t_list
     let l:lines = []
   endif
-  call add(l:lines, 'Realtime Dev Agent')
+  call add(l:lines, 'Pingu')
   call add(l:lines, 'Arquivo: ' . a:file)
   call add(l:lines, '')
 
@@ -5750,7 +5754,7 @@ function! s:window_refresh(file, qf) abort
   endfor
   let s:realtime_dev_agent_last_qf = a:qf
   call add(l:lines, '')
-  let l:command_line = 'Painel Realtime Dev Agent: ' . g:realtime_dev_agent_window_key . ' para abrir/atualizar'
+  let l:command_line = 'Painel Pingu: ' . g:realtime_dev_agent_window_key . ' para abrir/atualizar'
   let l:command_line = l:command_line . ' | <Tab>/i/a: aplicar | Enter: ir para item | f: follow-up | r: reanalisar | q: fechar'
   call add(l:lines, l:command_line)
   call s:window_set_lines(l:lines)
@@ -5861,19 +5865,26 @@ function! s:set_global_normal_map(lhs, rhs, desc) abort
   execute 'nnoremap <silent> ' . a:lhs . ' ' . a:rhs
 endfunction
 
-command! RealtimeDevAgentCheck call s:realtime_dev_agent_check()
-command! RealtimeDevAgentWindowCheck call s:realtime_dev_agent_window_check()
-command! RealtimeDevAgentWindowClose call s:window_close()
-command! RealtimeDevAgentWindowToggle call s:window_toggle()
-command! RealtimeDevAgentLatencyMetrics call s:print_latency_metrics()
-command! RealtimeDevAgentAutoFixEnable let g:realtime_dev_agent_auto_fix_enabled = 1 | echomsg '[RealtimeDevAgent] Auto-fix ligado'
-command! RealtimeDevAgentAutoFixDisable let g:realtime_dev_agent_auto_fix_enabled = 0 | echomsg '[RealtimeDevAgent] Auto-fix desligado'
+command! PinguCheck call s:realtime_dev_agent_check()
+command! PinguWindowCheck call s:realtime_dev_agent_window_check()
+command! PinguWindowClose call s:window_close()
+command! PinguWindowToggle call s:window_toggle()
+command! PinguLatencyMetrics call s:print_latency_metrics()
+command! PinguAutoFixEnable let g:realtime_dev_agent_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
+command! PinguAutoFixDisable let g:realtime_dev_agent_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'
+command! RealtimeDevAgentCheck PinguCheck
+command! RealtimeDevAgentWindowCheck PinguWindowCheck
+command! RealtimeDevAgentWindowClose PinguWindowClose
+command! RealtimeDevAgentWindowToggle PinguWindowToggle
+command! RealtimeDevAgentLatencyMetrics PinguLatencyMetrics
+command! RealtimeDevAgentAutoFixEnable PinguAutoFixEnable
+command! RealtimeDevAgentAutoFixDisable PinguAutoFixDisable
 
 if !empty(g:realtime_dev_agent_map_key)
   " Atalho de analise rapida do arquivo atual.
   call s:set_global_normal_map(
         \ g:realtime_dev_agent_map_key,
-        \ ':RealtimeDevAgentCheck<CR>',
+        \ ':PinguCheck<CR>',
         \ 'Pingu: analisar arquivo atual',
         \ )
 endif
@@ -5882,7 +5893,7 @@ if !empty(g:realtime_dev_agent_window_key)
   " Atalho para executar analise no modo janela de interacao em tempo real.
   call s:set_global_normal_map(
         \ g:realtime_dev_agent_window_key,
-        \ ':RealtimeDevAgentWindowCheck<CR>',
+        \ ':PinguWindowCheck<CR>',
         \ 'Pingu: abrir painel e analisar',
         \ )
 endif
