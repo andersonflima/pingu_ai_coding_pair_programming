@@ -29,6 +29,13 @@ let s:realtime_dev_agent_hidden_terminal_jobs = {}
 let s:realtime_dev_agent_auto_fix_timer = -1
 let s:realtime_dev_agent_auto_fix_state = {}
 let s:realtime_dev_agent_latency_metrics = []
+let s:pingu_status = {
+      \ 'running': v:false,
+      \ 'phase': 'idle',
+      \ 'issue_count': 0,
+      \ 'last_error': '',
+      \ 'updated_at_ms': 0
+      \ }
 
 function! s:issue_kind_entry(kind) abort
   let l:registry = get(g:, 'pingu_issue_kind_registry', {})
@@ -200,6 +207,7 @@ function! s:auto_fix_non_blocking_max_per_check() abort
 endfunction
 
 function! s:start_async_realtime_check_with_fallback(bufnr, open_qf, show_echo, analysis_mode, realtime_mode) abort
+  call s:status_set_running(a:realtime_mode ? 'realtime' : 'manual')
   if s:start_async_realtime_check(a:bufnr, a:open_qf, a:show_echo, a:analysis_mode, a:realtime_mode)
     return v:true
   endif
@@ -208,6 +216,7 @@ function! s:start_async_realtime_check_with_fallback(bufnr, open_qf, show_echo, 
     if a:show_echo
       echomsg '[Pingu] Analise async indisponivel; fallback sincrono desativado em modo non-blocking'
     endif
+    call s:status_set_idle(0, 'analise async indisponivel')
     return v:false
   endif
 
@@ -512,6 +521,71 @@ function! s:print_latency_metrics() abort
   for l:line in s:latency_metrics_lines()
     echomsg l:line
   endfor
+endfunction
+
+function! s:statusline_enabled() abort
+  return str2nr(string(get(g:, 'pingu_statusline_enabled', 1))) > 0
+endfunction
+
+function! s:statusline_icon() abort
+  let l:icon = get(g:, 'pingu_statusline_icon', '🐧')
+  return empty(l:icon) ? 'Pingu' : l:icon
+endfunction
+
+function! s:status_set_running(phase) abort
+  let s:pingu_status.running = v:true
+  let s:pingu_status.phase = empty(a:phase) ? 'running' : a:phase
+  let s:pingu_status.last_error = ''
+  let s:pingu_status.updated_at_ms = s:now_ms()
+  redrawstatus
+endfunction
+
+function! s:status_set_idle(issue_count, error) abort
+  let s:pingu_status.running = v:false
+  let s:pingu_status.phase = empty(a:error) ? 'idle' : 'error'
+  let s:pingu_status.issue_count = max([0, str2nr(string(a:issue_count))])
+  let s:pingu_status.last_error = a:error
+  let s:pingu_status.updated_at_ms = s:now_ms()
+  redrawstatus
+endfunction
+
+function! PinguStatusline() abort
+  if !s:statusline_enabled()
+    return ''
+  endif
+  if !s:realtime_dev_agent_started && !get(g:, 'pingu_statusline_show_when_idle', 1)
+    return ''
+  endif
+
+  let l:icon = s:statusline_icon()
+  if get(s:pingu_status, 'running', v:false) || s:realtime_dev_agent_auto_fix_busy || get(s:, 'realtime_dev_agent_async_analysis_job', -1) > 0 || !empty(get(s:, 'realtime_dev_agent_daemon_pending', {}))
+    return l:icon . ' Pingu...'
+  endif
+  if !empty(get(s:pingu_status, 'last_error', ''))
+    return l:icon . ' Pingu!'
+  endif
+
+  let l:issue_count = get(s:pingu_status, 'issue_count', 0)
+  return l:issue_count > 0 ? printf('%s Pingu %d', l:icon, l:issue_count) : l:icon . ' Pingu'
+endfunction
+
+function! s:install_statusline_component() abort
+  if !s:statusline_enabled() || !get(g:, 'pingu_statusline_auto', 1)
+    return
+  endif
+  if stridx(&statusline, 'PinguStatusline()') != -1
+    return
+  endif
+  let &statusline = empty(&statusline)
+        \ ? '%<%f %h%m%r%=%{PinguStatusline()} %y %{&fileencoding?&fileencoding:&encoding} %l:%c'
+        \ : &statusline . '%=%{PinguStatusline()}'
+endfunction
+
+function! s:install_neovim_lualine_global() abort
+  if !has('nvim')
+    return
+  endif
+  silent! call luaeval('rawset(_G, "PinguStatusline", function() return vim.fn.PinguStatusline() end)')
 endfunction
 
 function! s:prepared_analysis_request(bufnr, ...) abort
@@ -4528,6 +4602,7 @@ endfunction
 function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, realtime_mode) abort
   let l:file = get(a:analysis, 'file', fnamemodify(bufname(a:bufnr), ':p'))
   if !get(a:analysis, 'ok', v:false)
+    call s:status_set_idle(0, get(a:analysis, 'error', 'falha ao analisar'))
     let l:is_missing_runtime = get(a:analysis, 'error', '') ==# 'runtime nao encontrado'
     if g:pingu_show_window
       if l:is_missing_runtime
@@ -4564,6 +4639,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
 
   let l:qf = deepcopy(get(a:analysis, 'qf', []))
   let l:qf = s:merge_lsp_diagnostic_auto_fix_candidates(a:bufnr, l:file, l:qf)
+  call s:status_set_idle(len(l:qf), '')
   if a:open_qf || g:pingu_show_window || !a:realtime_mode
     call setqflist([], 'r', {'title': 'Pingu'})
     call setqflist(l:qf, 'a')
@@ -5096,6 +5172,7 @@ function! s:clear_auto_fix_runtime() abort
   call s:stop_auto_fix_timer()
   let s:realtime_dev_agent_auto_fix_state = {}
   let s:realtime_dev_agent_auto_fix_busy = v:false
+  redrawstatus
 endfunction
 
 function! s:auto_fix_queue_delay() abort
@@ -5459,6 +5536,7 @@ function! s:realtime_dev_agent_apply_auto_fixes(qf, file, ...) abort
   endif
 
   let s:realtime_dev_agent_auto_fix_busy = v:true
+  call s:status_set_running('auto-fix')
   if get(l:state, 'chunk_limit', 0) > 0
     let s:realtime_dev_agent_auto_fix_state = l:state
     call s:schedule_auto_fix_queue(0)
@@ -5868,6 +5946,9 @@ command! PinguWindowToggle call s:window_toggle()
 command! PinguLatencyMetrics call s:print_latency_metrics()
 command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
 command! PinguAutoFixDisable let g:pingu_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'
+
+call s:install_neovim_lualine_global()
+call s:install_statusline_component()
 
 if !empty(g:pingu_map_key)
   " Atalho de analise rapida do arquivo atual.
