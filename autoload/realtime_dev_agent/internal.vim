@@ -28,6 +28,7 @@ let s:realtime_dev_agent_daemon_stdout_remainder = ''
 let s:realtime_dev_agent_hidden_terminal_jobs = {}
 let s:realtime_dev_agent_auto_fix_timer = -1
 let s:realtime_dev_agent_auto_fix_state = {}
+let s:realtime_dev_agent_latency_metrics = []
 
 function! s:issue_kind_entry(kind) abort
   let l:registry = get(g:, 'realtime_dev_agent_issue_kind_registry', {})
@@ -451,6 +452,66 @@ function! s:stop_async_analysis_job() abort
     silent! call jobstop(l:job)
   endif
   call s:cleanup_async_analysis_temp_file(l:context)
+endfunction
+
+function! s:now_ms() abort
+  if exists('*reltimefloat')
+    return float2nr(reltimefloat(reltime()) * 1000.0)
+  endif
+  return localtime() * 1000
+endfunction
+
+function! s:latency_metrics_enabled() abort
+  return str2nr(string(get(g:, 'realtime_dev_agent_latency_metrics_enabled', 0))) > 0
+endfunction
+
+function! s:latency_metrics_max_entries() abort
+  let l:max_entries = get(g:, 'realtime_dev_agent_latency_metrics_max_entries', 50)
+  if type(l:max_entries) != v:t_number
+    let l:max_entries = str2nr(string(l:max_entries))
+  endif
+  return l:max_entries > 0 ? l:max_entries : 50
+endfunction
+
+function! s:record_latency_metric(metric) abort
+  if !s:latency_metrics_enabled() || type(a:metric) != v:t_dict
+    return
+  endif
+
+  let l:metric = deepcopy(a:metric)
+  let l:metric.recorded_at_ms = s:now_ms()
+  call add(s:realtime_dev_agent_latency_metrics, l:metric)
+  let l:max_entries = s:latency_metrics_max_entries()
+  while len(s:realtime_dev_agent_latency_metrics) > l:max_entries
+    call remove(s:realtime_dev_agent_latency_metrics, 0)
+  endwhile
+endfunction
+
+function! s:latency_metrics_lines() abort
+  if empty(s:realtime_dev_agent_latency_metrics)
+    return ['[RealtimeDevAgent] Sem metricas de latencia registradas']
+  endif
+
+  let l:lines = ['[RealtimeDevAgent] metricas de latencia recentes']
+  for l:metric in s:realtime_dev_agent_latency_metrics
+    call add(l:lines, printf(
+          \ '%s mode=%s realtime=%d lines=%d issues=%d duration_ms=%d file=%s',
+          \ get(l:metric, 'source', 'unknown'),
+          \ get(l:metric, 'analysis_mode', 'unknown'),
+          \ get(l:metric, 'realtime_mode', 0),
+          \ get(l:metric, 'line_count', 0),
+          \ get(l:metric, 'issue_count', 0),
+          \ get(l:metric, 'duration_ms', 0),
+          \ fnamemodify(get(l:metric, 'file', ''), ':t')
+          \ ))
+  endfor
+  return l:lines
+endfunction
+
+function! s:print_latency_metrics() abort
+  for l:line in s:latency_metrics_lines()
+    echomsg l:line
+  endfor
 endfunction
 
 function! s:prepared_analysis_request(bufnr, ...) abort
@@ -4403,12 +4464,24 @@ function! s:analysis_for_buffer(bufnr, ...) abort
   let l:changedtick = get(l:request, 'changedtick', 0)
   let l:buffer_dirty_tmp = get(l:request, 'buffer_dirty_tmp', '')
   let l:analysis_mode = get(l:request, 'analysis_mode', l:analysis_mode)
+  let l:started_at_ms = s:now_ms()
   let l:output = get(l:request, 'uses_stdin', v:false)
         \ ? s:run_systemlist(get(l:request, 'argv', []), get(l:request, 'root', ''), get(l:request, 'stdin_payload', ''))
         \ : s:run_systemlist(get(l:request, 'argv', []), get(l:request, 'root', ''))
+  let l:duration_ms = max([0, s:now_ms() - l:started_at_ms])
   call s:cleanup_async_analysis_temp_file(l:request)
 
   if v:shell_error != 0
+    call s:record_latency_metric({
+          \ 'source': 'sync',
+          \ 'file': l:file,
+          \ 'analysis_mode': l:analysis_mode,
+          \ 'realtime_mode': s:realtime_dev_agent_is_realtime_check ? 1 : 0,
+          \ 'line_count': s:buffer_line_count(a:bufnr),
+          \ 'issue_count': 0,
+          \ 'duration_ms': l:duration_ms,
+          \ 'ok': 0,
+          \ })
     return {
           \ 'ok': v:false,
           \ 'file': l:file,
@@ -4425,6 +4498,16 @@ function! s:analysis_for_buffer(bufnr, ...) abort
         \ 'error': '',
         \ 'from_cache': v:false,
         \ }
+  call s:record_latency_metric({
+        \ 'source': 'sync',
+        \ 'file': l:file,
+        \ 'analysis_mode': l:analysis_mode,
+        \ 'realtime_mode': s:realtime_dev_agent_is_realtime_check ? 1 : 0,
+        \ 'line_count': s:buffer_line_count(a:bufnr),
+        \ 'issue_count': len(get(l:analysis, 'qf', [])),
+        \ 'duration_ms': l:duration_ms,
+        \ 'ok': 1,
+        \ })
   return s:store_analysis_for_buffer(
         \ l:file,
         \ l:changedtick,
@@ -4607,6 +4690,16 @@ function! s:analysis_daemon_on_stdout(job_id, data, event) abort
     endif
 
     if !get(l:response, 'ok', v:false)
+      call s:record_latency_metric({
+            \ 'source': 'daemon',
+            \ 'file': get(l:context, 'file', ''),
+            \ 'analysis_mode': get(l:context, 'analysis_mode', 'full'),
+            \ 'realtime_mode': get(l:context, 'realtime_mode', v:true) ? 1 : 0,
+            \ 'line_count': get(l:context, 'line_count', 0),
+            \ 'issue_count': 0,
+            \ 'duration_ms': max([0, s:now_ms() - get(l:context, 'started_at_ms', s:now_ms())]),
+            \ 'ok': 0,
+            \ })
       call s:schedule_realtime_check_handle_analysis(l:bufnr, {
             \ 'ok': v:false,
             \ 'file': get(l:context, 'file', ''),
@@ -4625,6 +4718,16 @@ function! s:analysis_daemon_on_stdout(job_id, data, event) abort
           \ 'error': '',
           \ 'from_cache': v:false,
           \ }
+    call s:record_latency_metric({
+          \ 'source': 'daemon',
+          \ 'file': l:file,
+          \ 'analysis_mode': get(l:context, 'analysis_mode', 'full'),
+          \ 'realtime_mode': get(l:context, 'realtime_mode', v:true) ? 1 : 0,
+          \ 'line_count': get(l:context, 'line_count', 0),
+          \ 'issue_count': len(get(l:analysis, 'qf', [])),
+          \ 'duration_ms': max([0, s:now_ms() - get(l:context, 'started_at_ms', s:now_ms())]),
+          \ 'ok': 1,
+          \ })
     let l:analysis = s:store_analysis_for_buffer(
           \ l:file,
           \ get(l:context, 'changedtick', 0),
@@ -4659,6 +4762,19 @@ function! s:analysis_daemon_on_exit(job_id, code, event) abort
   else
     call s:analysis_daemon_handle_failure('falha no daemon de analise realtime')
   endif
+endfunction
+
+function! s:drop_daemon_pending_requests_for_buffer(bufnr) abort
+  if a:bufnr <= 0 || empty(s:realtime_dev_agent_daemon_pending)
+    return
+  endif
+
+  for l:request_id in keys(copy(s:realtime_dev_agent_daemon_pending))
+    let l:context = get(s:realtime_dev_agent_daemon_pending, l:request_id, {})
+    if get(l:context, 'bufnr', -1) ==# a:bufnr
+      call remove(s:realtime_dev_agent_daemon_pending, l:request_id)
+    endif
+  endfor
 endfunction
 
 function! s:ensure_analysis_daemon() abort
@@ -4716,6 +4832,7 @@ function! s:start_daemon_realtime_check(bufnr, open_qf, show_echo, analysis_mode
     return v:true
   endif
 
+  call s:drop_daemon_pending_requests_for_buffer(a:bufnr)
   let s:realtime_dev_agent_daemon_request_seq += 1
   let l:request_id = s:realtime_dev_agent_daemon_request_seq
   let l:payload = {
@@ -4740,6 +4857,8 @@ function! s:start_daemon_realtime_check(bufnr, open_qf, show_echo, analysis_mode
         \ 'analysis_mode': get(l:request, 'analysis_mode', a:analysis_mode),
         \ 'focus_start_line': get(l:request, 'focus_start_line', 0),
         \ 'focus_end_line': get(l:request, 'focus_end_line', 0),
+        \ 'started_at_ms': s:now_ms(),
+        \ 'line_count': s:buffer_line_count(a:bufnr),
         \ }
 
   try
@@ -4807,6 +4926,16 @@ function! s:async_analysis_on_exit(job_id, code, event) abort
           \ 'error': join(l:stdout + l:stderr, "\n"),
           \ 'from_cache': v:false,
           \ }
+    call s:record_latency_metric({
+          \ 'source': 'job',
+          \ 'file': l:file,
+          \ 'analysis_mode': get(l:context, 'analysis_mode', 'full'),
+          \ 'realtime_mode': get(l:context, 'realtime_mode', v:true) ? 1 : 0,
+          \ 'line_count': get(l:context, 'line_count', 0),
+          \ 'issue_count': 0,
+          \ 'duration_ms': max([0, s:now_ms() - get(l:context, 'started_at_ms', s:now_ms())]),
+          \ 'ok': 0,
+          \ })
   else
     let l:analysis = {
           \ 'ok': v:true,
@@ -4815,6 +4944,16 @@ function! s:async_analysis_on_exit(job_id, code, event) abort
           \ 'error': '',
           \ 'from_cache': v:false,
           \ }
+    call s:record_latency_metric({
+          \ 'source': 'job',
+          \ 'file': l:file,
+          \ 'analysis_mode': get(l:context, 'analysis_mode', 'full'),
+          \ 'realtime_mode': get(l:context, 'realtime_mode', v:true) ? 1 : 0,
+          \ 'line_count': get(l:context, 'line_count', 0),
+          \ 'issue_count': len(get(l:analysis, 'qf', [])),
+          \ 'duration_ms': max([0, s:now_ms() - get(l:context, 'started_at_ms', s:now_ms())]),
+          \ 'ok': 1,
+          \ })
     let l:analysis = s:store_analysis_for_buffer(
           \ l:file,
           \ l:changedtick,
@@ -4880,6 +5019,8 @@ function! s:start_async_realtime_check(bufnr, open_qf, show_echo, ...) abort
         \ 'analysis_mode': l:analysis_mode,
         \ 'focus_start_line': get(l:request, 'focus_start_line', 0),
         \ 'focus_end_line': get(l:request, 'focus_end_line', 0),
+        \ 'started_at_ms': s:now_ms(),
+        \ 'line_count': s:buffer_line_count(a:bufnr),
         \ 'stdout': [],
         \ 'stderr': [],
         \ }
@@ -5724,6 +5865,7 @@ command! RealtimeDevAgentCheck call s:realtime_dev_agent_check()
 command! RealtimeDevAgentWindowCheck call s:realtime_dev_agent_window_check()
 command! RealtimeDevAgentWindowClose call s:window_close()
 command! RealtimeDevAgentWindowToggle call s:window_toggle()
+command! RealtimeDevAgentLatencyMetrics call s:print_latency_metrics()
 command! RealtimeDevAgentAutoFixEnable let g:realtime_dev_agent_auto_fix_enabled = 1 | echomsg '[RealtimeDevAgent] Auto-fix ligado'
 command! RealtimeDevAgentAutoFixDisable let g:realtime_dev_agent_auto_fix_enabled = 0 | echomsg '[RealtimeDevAgent] Auto-fix desligado'
 

@@ -56,6 +56,24 @@ test('runtime LazyVim usa defaults leves para preservar responsividade', () => {
   assert.match(pluginRuntime, /let g:realtime_dev_agent_auto_fix_strict_validation = has\('nvim'\) \? 0 : 1/);
 });
 
+test('runtime registra telemetria local opcional de latencia', () => {
+  assert.match(pluginRuntime, /realtime_dev_agent_latency_metrics_enabled/);
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_latency_metrics_enabled = 0/);
+  assert.match(pluginRuntime, /let g:realtime_dev_agent_latency_metrics_max_entries = 50/);
+  assert.match(internalRuntime, /function! s:record_latency_metric\(metric\) abort/);
+  assert.match(internalRuntime, /function! s:print_latency_metrics\(\) abort/);
+  assert.match(internalRuntime, /command! RealtimeDevAgentLatencyMetrics call s:print_latency_metrics\(\)/);
+  assert.match(internalRuntime, /'source': 'daemon'/);
+  assert.match(internalRuntime, /'source': 'job'/);
+  assert.match(internalRuntime, /'source': 'sync'/);
+});
+
+test('runtime descarta requests antigos do daemon para o mesmo buffer', () => {
+  assert.match(internalRuntime, /function! s:drop_daemon_pending_requests_for_buffer\(bufnr\) abort/);
+  assert.match(internalRuntime, /call s:drop_daemon_pending_requests_for_buffer\(a:bufnr\)/);
+  assert.match(internalRuntime, /remove\(s:realtime_dev_agent_daemon_pending, l:request_id\)/);
+});
+
 test('runtime realtime guarda comentarios por identidade para evitar reaplicacao em loop', () => {
   assert.match(internalRuntime, /function! s:uses_realtime_loop_guard\(item\) abort/);
   assert.match(internalRuntime, /return s:is_documentation_issue\(a:item\)/);

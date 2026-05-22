@@ -298,6 +298,16 @@ if !exists('g:realtime_dev_agent_analysis_cache_max_entries')
   let g:realtime_dev_agent_analysis_cache_max_entries = 24
 endif
 
+if !exists('g:realtime_dev_agent_latency_metrics_enabled')
+  " Mantem telemetria local desligada por padrao; habilite para diagnosticar latencia do runtime.
+  let g:realtime_dev_agent_latency_metrics_enabled = 0
+endif
+
+if !exists('g:realtime_dev_agent_latency_metrics_max_entries')
+  " Quantidade maxima de amostras mantidas em memoria na sessao do editor.
+  let g:realtime_dev_agent_latency_metrics_max_entries = 50
+endif
+
 if !exists('g:realtime_dev_agent_realtime_open_qf')
   " Mantem quickfix fechado no fluxo em tempo real para evitar ruido.
   let g:realtime_dev_agent_realtime_open_qf = 0
