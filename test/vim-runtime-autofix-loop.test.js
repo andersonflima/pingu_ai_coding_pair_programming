@@ -76,7 +76,8 @@ test('runtime registra telemetria local opcional de latencia', () => {
 
 test('runtime expoe indicador Pingu para statusline', () => {
   assert.match(pluginRuntime, /let g:pingu_statusline_enabled = 1/);
-  assert.match(pluginRuntime, /let g:pingu_statusline_icon = '🐧'/);
+  assert.match(pluginRuntime, /let g:pingu_statusline_icon = ''/);
+  assert.match(pluginRuntime, /let g:pingu_statusline_auto = 0/);
   assert.match(internalRuntime, /function! PinguStatusline\(\) abort/);
   assert.match(internalRuntime, /function! s:install_statusline_component\(\) abort/);
   assert.match(internalRuntime, /function! s:install_neovim_lualine_global\(\) abort/);

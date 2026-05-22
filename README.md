@@ -574,10 +574,10 @@ Comandos principais no editor:
 Indicador de status:
 
 - o runtime expõe `PinguStatusline()` para statusline Vim/Neovim e `_G.PinguStatusline()` para componentes Lua
-- por padrao, `g:pingu_statusline_enabled = 1` e `g:pingu_statusline_icon = '🐧'`
-- quando uma analise ou auto-fix esta rodando, o indicador mostra `🐧 Pingu...`
-- quando a ultima analise encontrou sugestoes, o indicador mostra a contagem, por exemplo `🐧 Pingu 3`
-- para desativar a integracao automatica com statusline nativa, use `let g:pingu_statusline_auto = 0`
+- por padrao, `g:pingu_statusline_enabled = 1` e `g:pingu_statusline_icon = ''`
+- quando uma analise ou auto-fix esta rodando, o indicador mostra ` Pingu...`
+- quando a ultima analise encontrou sugestoes, o indicador mostra a contagem, por exemplo ` Pingu 3`
+- para adicionar automaticamente o indicador na statusline nativa, use `let g:pingu_statusline_auto = 1`
 
 Exemplo com `lualine.nvim` no LazyVim:
 
@@ -776,7 +776,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
     vim.g.pingu_latency_metrics_enabled = 0
     vim.g.pingu_latency_metrics_max_entries = 50
     vim.g.pingu_statusline_enabled = 1
-    vim.g.pingu_statusline_icon = "🐧"
+    vim.g.pingu_statusline_icon = ""
     vim.g.pingu_realtime_auto_fix_max_per_check = 2
     vim.g.pingu_auto_fix_doc_cursor_context_only = 0
     vim.g.pingu_realtime_doc_cursor_context_only = 1
@@ -825,8 +825,8 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
 - `let g:pingu_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
 - `let g:pingu_statusline_enabled = 1` habilita o indicador de status `PinguStatusline()`
-- `let g:pingu_statusline_icon = '🐧'` define o icone exibido na status bar
-- `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; no `lualine`, use `_G.PinguStatusline()` como componente
+- `let g:pingu_statusline_icon = ''` define o icone exibido na status bar
+- `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; por padrao fica desligado para evitar duplicidade em setups com `lualine`
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `let g:pingu_realtime_auto_fix_max_per_check = 2` reduz o lote automatico por ciclo realtime para manter o editor fluido
 - `let g:pingu_auto_fix_strict_validation = 0` no Neovim evita reanalise e guard sincronos apos cada lote automatico; use `1` quando preferir validacao estrita mesmo com maior latencia

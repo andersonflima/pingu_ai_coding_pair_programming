@@ -313,7 +313,7 @@ if !exists('g:pingu_statusline_enabled')
 endif
 
 if !exists('g:pingu_statusline_icon')
-  let g:pingu_statusline_icon = '🐧'
+  let g:pingu_statusline_icon = ''
 endif
 
 if !exists('g:pingu_statusline_show_when_idle')
@@ -321,7 +321,7 @@ if !exists('g:pingu_statusline_show_when_idle')
 endif
 
 if !exists('g:pingu_statusline_auto')
-  let g:pingu_statusline_auto = 1
+  let g:pingu_statusline_auto = 0
 endif
 
 if !exists('g:pingu_realtime_open_qf')

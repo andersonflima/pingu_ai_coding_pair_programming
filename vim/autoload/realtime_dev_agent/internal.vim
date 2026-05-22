@@ -528,7 +528,7 @@ function! s:statusline_enabled() abort
 endfunction
 
 function! s:statusline_icon() abort
-  let l:icon = get(g:, 'pingu_statusline_icon', '🐧')
+  let l:icon = get(g:, 'pingu_statusline_icon', '')
   return empty(l:icon) ? 'Pingu' : l:icon
 endfunction
 
