@@ -355,10 +355,10 @@ Entrada:
 Output esperado no terminal:
 
 ```text
-[RealtimeDevAgent] command: npm test
+[Pingu] command: npm test
 ...
-[RealtimeDevAgent] exit code: 0
-[RealtimeDevAgent] terminal pronto para o proximo comando.
+[Pingu] exit code: 0
+[Pingu] terminal pronto para o proximo comando.
 ```
 
 Comportamento esperado:
@@ -560,6 +560,18 @@ Atalhos principais:
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
 - `q`: fecha o painel
+
+Comandos principais no editor:
+
+- `:PinguCheck`
+- `:PinguWindowCheck`
+- `:PinguWindowClose`
+- `:PinguWindowToggle`
+- `:PinguLatencyMetrics`
+- `:PinguAutoFixEnable`
+- `:PinguAutoFixDisable`
+
+Os comandos antigos com prefixo `RealtimeDevAgent` continuam como aliases para preservar configuracoes existentes.
 
 ## CLI de terminal
 
@@ -789,7 +801,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_analysis_cache_max_entries = 24` reaproveita a ultima analise do mesmo texto e reduz relancamento do agente
 - `let g:realtime_dev_agent_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
 - `let g:realtime_dev_agent_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
-- `:RealtimeDevAgentLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
+- `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `let g:realtime_dev_agent_realtime_auto_fix_max_per_check = 2` reduz o lote automatico por ciclo realtime para manter o editor fluido
 - `let g:realtime_dev_agent_auto_fix_strict_validation = 0` no Neovim evita reanalise e guard sincronos apos cada lote automatico; use `1` quando preferir validacao estrita mesmo com maior latencia
 - `let g:realtime_dev_agent_auto_fix_doc_cursor_context_only = 0` deixa `function_doc`, `class_doc`, `variable_doc` e `flow_comment` elegiveis no arquivo inteiro
@@ -842,7 +854,7 @@ Importante:
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
 - quando uma correcao automatica (snippet local ou `lsp_code_action`) eh aplicada com sucesso, o buffer alvo eh salvo automaticamente no disco
-- `:RealtimeDevAgentWindowCheck` (e o atalho `g:realtime_dev_agent_window_key`) mantem o painel aberto durante e apos a analise assincrona
+- `:PinguWindowCheck` (e o atalho `g:realtime_dev_agent_window_key`) mantem o painel aberto durante e apos a analise assincrona
 - `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote
 - Elixir ganhou deteccao adicional de bloco `do/end` pendente, cobrindo erros como `syntax error before: 'Logger'` quando faltam `end`s
 - Elixir agora detecta keyword de fechamento malformada (`eend`, `ennd`, `endd`) como `syntax_malformed_keyword` com auto-fix por `replace_line`
