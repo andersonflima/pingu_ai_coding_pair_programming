@@ -571,8 +571,6 @@ Comandos principais no editor:
 - `:PinguAutoFixEnable`
 - `:PinguAutoFixDisable`
 
-Os comandos antigos com prefixo `RealtimeDevAgent` continuam como aliases para preservar configuracoes existentes.
-
 ## CLI de terminal
 
 O Pingu tambem pode ser usado fora do editor como CLI, mantendo os flags legados que o Vim/Neovim ja usam.
@@ -764,7 +762,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
 }
 ```
 
-As variaveis `g:pingu_*` sao a configuracao principal do plugin. As variaveis antigas `g:realtime_dev_agent_*` continuam aceitas como aliases para preservar configuracoes existentes durante a migracao.
+As variaveis `g:pingu_*` sao a configuracao principal do plugin. As variaveis antigas `g:realtime_dev_agent_*` nao sao mais aceitas.
 
 ### `vim-plug`
 
