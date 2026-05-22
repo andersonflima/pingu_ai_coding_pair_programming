@@ -742,6 +742,8 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
     vim.g.realtime_dev_agent_auto_on_save = 1
     vim.g.realtime_dev_agent_auto_check_max_lines = 600
     vim.g.realtime_dev_agent_analysis_cache_max_entries = 24
+    vim.g.realtime_dev_agent_latency_metrics_enabled = 0
+    vim.g.realtime_dev_agent_latency_metrics_max_entries = 50
     vim.g.realtime_dev_agent_realtime_auto_fix_max_per_check = 2
     vim.g.realtime_dev_agent_auto_fix_doc_cursor_context_only = 0
     vim.g.realtime_dev_agent_realtime_doc_cursor_context_only = 1
@@ -785,6 +787,9 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:realtime_dev_agent_node_path = '/caminho/absoluto/para/node'` fixa o runtime quando o PATH do Neovim difere do shell
 - `let g:realtime_dev_agent_auto_check_max_lines = 600` limita checks automaticos a arquivos menores
 - `let g:realtime_dev_agent_analysis_cache_max_entries = 24` reaproveita a ultima analise do mesmo texto e reduz relancamento do agente
+- `let g:realtime_dev_agent_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
+- `let g:realtime_dev_agent_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
+- `:RealtimeDevAgentLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `let g:realtime_dev_agent_realtime_auto_fix_max_per_check = 2` reduz o lote automatico por ciclo realtime para manter o editor fluido
 - `let g:realtime_dev_agent_auto_fix_strict_validation = 0` no Neovim evita reanalise e guard sincronos apos cada lote automatico; use `1` quando preferir validacao estrita mesmo com maior latencia
 - `let g:realtime_dev_agent_auto_fix_doc_cursor_context_only = 0` deixa `function_doc`, `class_doc`, `variable_doc` e `flow_comment` elegiveis no arquivo inteiro
