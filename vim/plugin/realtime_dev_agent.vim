@@ -308,6 +308,22 @@ if !exists('g:pingu_latency_metrics_max_entries')
   let g:pingu_latency_metrics_max_entries = 50
 endif
 
+if !exists('g:pingu_statusline_enabled')
+  let g:pingu_statusline_enabled = 1
+endif
+
+if !exists('g:pingu_statusline_icon')
+  let g:pingu_statusline_icon = '🐧'
+endif
+
+if !exists('g:pingu_statusline_show_when_idle')
+  let g:pingu_statusline_show_when_idle = 1
+endif
+
+if !exists('g:pingu_statusline_auto')
+  let g:pingu_statusline_auto = 1
+endif
+
 if !exists('g:pingu_realtime_open_qf')
   " Mantem quickfix fechado no fluxo em tempo real para evitar ruido.
   let g:pingu_realtime_open_qf = 0
