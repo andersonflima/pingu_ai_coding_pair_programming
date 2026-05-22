@@ -34,8 +34,8 @@ function vimString(value) {
 }
 
 test('runtime realtime limita comentarios automaticos ao contexto do cursor', () => {
-  assert.match(pluginRuntime, /realtime_dev_agent_realtime_doc_cursor_context_only/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_doc_cursor_context_only = 1/);
+  assert.match(pluginRuntime, /pingu_realtime_doc_cursor_context_only/);
+  assert.match(pluginRuntime, /let g:pingu_realtime_doc_cursor_context_only = 1/);
   assert.match(internalRuntime, /function! s:realtime_doc_cursor_context_only\(\) abort/);
   assert.match(
     internalRuntime,
@@ -48,33 +48,27 @@ test('runtime realtime limita comentarios automaticos ao contexto do cursor', ()
 });
 
 test('runtime LazyVim usa defaults leves para preservar responsividade', () => {
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_on_cursor_hold = 0/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_on_buf_enter = 0/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_insert_mode = 0/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_auto_check_max_lines = 600/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_realtime_delay = 900/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_auto_fix_strict_validation = has\('nvim'\) \? 0 : 1/);
+  assert.match(pluginRuntime, /let g:pingu_realtime_on_cursor_hold = 0/);
+  assert.match(pluginRuntime, /let g:pingu_realtime_on_buf_enter = 0/);
+  assert.match(pluginRuntime, /let g:pingu_realtime_insert_mode = 0/);
+  assert.match(pluginRuntime, /let g:pingu_auto_check_max_lines = 600/);
+  assert.match(pluginRuntime, /let g:pingu_realtime_delay = 900/);
+  assert.match(pluginRuntime, /let g:pingu_auto_fix_strict_validation = has\('nvim'\) \? 0 : 1/);
 });
 
-test('runtime aceita variaveis g:pingu_* e preserva aliases legados', () => {
-  assert.match(pluginRuntime, /s:pingu_config_names = \[/);
-  assert.match(pluginRuntime, /'realtime_on_change'/);
-  assert.match(pluginRuntime, /'start_on_editor_enter'/);
-  assert.match(pluginRuntime, /function! s:sync_pingu_config_aliases\(prefer_pingu_only\) abort/);
-  assert.match(pluginRuntime, /let l:pingu_name = 'pingu_' \. l:name/);
-  assert.match(pluginRuntime, /let l:legacy_name = 'realtime_dev_agent_' \. l:name/);
-  assert.match(pluginRuntime, /call s:sync_pingu_config_aliases\(v:true\)/);
-  assert.match(pluginRuntime, /call s:sync_pingu_config_aliases\(v:false\)/);
+test('runtime usa somente variaveis globais g:pingu_*', () => {
+  assert.match(pluginRuntime, /let g:pingu_realtime_on_change = 1/);
+  assert.match(pluginRuntime, /let g:pingu_start_on_editor_enter = 1/);
+  assert.doesNotMatch(pluginRuntime, /g:realtime_dev_agent_/);
 });
 
 test('runtime registra telemetria local opcional de latencia', () => {
-  assert.match(pluginRuntime, /realtime_dev_agent_latency_metrics_enabled/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_latency_metrics_enabled = 0/);
-  assert.match(pluginRuntime, /let g:realtime_dev_agent_latency_metrics_max_entries = 50/);
+  assert.match(pluginRuntime, /pingu_latency_metrics_enabled/);
+  assert.match(pluginRuntime, /let g:pingu_latency_metrics_enabled = 0/);
+  assert.match(pluginRuntime, /let g:pingu_latency_metrics_max_entries = 50/);
   assert.match(internalRuntime, /function! s:record_latency_metric\(metric\) abort/);
   assert.match(internalRuntime, /function! s:print_latency_metrics\(\) abort/);
   assert.match(internalRuntime, /command! PinguLatencyMetrics call s:print_latency_metrics\(\)/);
-  assert.match(internalRuntime, /command! RealtimeDevAgentLatencyMetrics PinguLatencyMetrics/);
   assert.match(internalRuntime, /'source': 'daemon'/);
   assert.match(internalRuntime, /'source': 'job'/);
   assert.match(internalRuntime, /'source': 'sync'/);
@@ -86,11 +80,10 @@ test('runtime descarta requests antigos do daemon para o mesmo buffer', () => {
   assert.match(internalRuntime, /remove\(s:realtime_dev_agent_daemon_pending, l:request_id\)/);
 });
 
-test('runtime expõe comandos Pingu e preserva aliases legados', () => {
+test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /command! PinguCheck call s:realtime_dev_agent_check\(\)/);
   assert.match(internalRuntime, /command! PinguWindowCheck call s:realtime_dev_agent_window_check\(\)/);
-  assert.match(internalRuntime, /command! RealtimeDevAgentCheck PinguCheck/);
-  assert.match(internalRuntime, /command! RealtimeDevAgentWindowCheck PinguWindowCheck/);
+  assert.doesNotMatch(internalRuntime, /command! RealtimeDevAgent/);
   assert.match(internalRuntime, /':PinguCheck<CR>'/);
   assert.match(internalRuntime, /':PinguWindowCheck<CR>'/);
 });
@@ -162,7 +155,7 @@ test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', 
 test('runtime evita segunda rodada automatica logo apos aplicar um lote', () => {
   assert.match(internalRuntime, /realtime_dev_agent_suppress_auto_fix_once = v:false/);
   assert.match(internalRuntime, /let l:suppress_auto_fix = s:realtime_dev_agent_suppress_auto_fix_once/);
-  assert.match(internalRuntime, /g:realtime_dev_agent_auto_fix_enabled && !l:suppress_auto_fix/);
+  assert.match(internalRuntime, /g:pingu_auto_fix_enabled && !l:suppress_auto_fix/);
   assert.match(internalRuntime, /let s:realtime_dev_agent_suppress_auto_fix_once = v:true/);
 });
 
@@ -181,8 +174,8 @@ test('runtime ignora ambientes Python e dependencias por padrao', () => {
 });
 
 test('runtime cria fallback Copilot para warnings do LSP sem code action', () => {
-  assert.match(pluginRuntime, /realtime_dev_agent_lsp_ai_fix_enabled/);
-  assert.match(pluginRuntime, /realtime_dev_agent_lsp_ai_fix_severities = \['warning'\]/);
+  assert.match(pluginRuntime, /pingu_lsp_ai_fix_enabled/);
+  assert.match(pluginRuntime, /pingu_lsp_ai_fix_severities = \['warning'\]/);
   assert.match(internalRuntime, /function! s:lsp_ai_fix_enabled\(\) abort/);
   assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix\(issue\) abort/);
   assert.match(internalRuntime, /'kind': 'lsp_ai_fix'/);

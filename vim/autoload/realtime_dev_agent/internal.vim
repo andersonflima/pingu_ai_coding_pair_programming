@@ -31,7 +31,7 @@ let s:realtime_dev_agent_auto_fix_state = {}
 let s:realtime_dev_agent_latency_metrics = []
 
 function! s:issue_kind_entry(kind) abort
-  let l:registry = get(g:, 'realtime_dev_agent_issue_kind_registry', {})
+  let l:registry = get(g:, 'pingu_issue_kind_registry', {})
   if type(l:registry) != v:t_dict || empty(l:registry)
     return {}
   endif
@@ -39,7 +39,7 @@ function! s:issue_kind_entry(kind) abort
 endfunction
 
 function! s:realtime_dev_agent_node_path() abort
-  let l:configured = trim('' . get(g:, 'realtime_dev_agent_node_path', ''))
+  let l:configured = trim('' . get(g:, 'pingu_node_path', ''))
   if !empty(l:configured)
     if filereadable(l:configured) && executable(l:configured)
       return fnamemodify(l:configured, ':p')
@@ -65,7 +65,7 @@ endfunction
 
 function! s:realtime_dev_agent_script_candidates() abort
   let l:candidates = []
-  let l:configured = expand(get(g:, 'realtime_dev_agent_script', ''))
+  let l:configured = expand(get(g:, 'pingu_script', ''))
   if !empty(l:configured)
     call add(l:candidates, l:configured)
     call add(l:candidates, fnamemodify(l:configured, ':p'))
@@ -91,7 +91,7 @@ function! s:realtime_dev_agent_script_path() abort
       let l:script = substitute(l:script, '\.exs$', '.js', '')
     endif
     if l:script =~? '\.js$' && filereadable(l:script)
-      let g:realtime_dev_agent_script = l:script
+      let g:pingu_script = l:script
       return l:script
     endif
   endfor
@@ -163,36 +163,36 @@ function! s:realtime_async_enabled() abort
   if !has('nvim') || !exists('*jobstart')
     return v:false
   endif
-  return get(g:, 'realtime_dev_agent_realtime_async', has('nvim') ? 1 : 0) ? v:true : v:false
+  return get(g:, 'pingu_realtime_async', has('nvim') ? 1 : 0) ? v:true : v:false
 endfunction
 
 function! s:realtime_daemon_enabled() abort
   if !s:realtime_async_enabled()
     return v:false
   endif
-  return get(g:, 'realtime_dev_agent_realtime_use_daemon', has('nvim') ? 1 : 0) ? v:true : v:false
+  return get(g:, 'pingu_realtime_use_daemon', has('nvim') ? 1 : 0) ? v:true : v:false
 endfunction
 
 function! s:non_blocking_mode_enabled() abort
-  return str2nr(string(get(g:, 'realtime_dev_agent_non_blocking_mode', has('nvim') ? 1 : 0))) > 0
+  return str2nr(string(get(g:, 'pingu_non_blocking_mode', has('nvim') ? 1 : 0))) > 0
 endfunction
 
 function! s:allow_sync_fallback() abort
   if !s:non_blocking_mode_enabled()
     return v:true
   endif
-  return str2nr(string(get(g:, 'realtime_dev_agent_allow_sync_fallback', has('nvim') ? 0 : 1))) > 0
+  return str2nr(string(get(g:, 'pingu_allow_sync_fallback', has('nvim') ? 0 : 1))) > 0
 endfunction
 
 function! s:auto_fix_strict_validation_enabled() abort
   if !s:non_blocking_mode_enabled()
     return v:true
   endif
-  return str2nr(string(get(g:, 'realtime_dev_agent_auto_fix_strict_validation', 0))) > 0
+  return str2nr(string(get(g:, 'pingu_auto_fix_strict_validation', 0))) > 0
 endfunction
 
 function! s:auto_fix_non_blocking_max_per_check() abort
-  let l:max_to_apply = get(g:, 'realtime_dev_agent_auto_fix_non_blocking_max_per_check', 4)
+  let l:max_to_apply = get(g:, 'pingu_auto_fix_non_blocking_max_per_check', 4)
   if type(l:max_to_apply) != v:t_number
     let l:max_to_apply = str2nr(string(l:max_to_apply))
   endif
@@ -271,7 +271,7 @@ function! s:should_check_file(file) abort
 
   let l:file_normalized = fnamemodify(a:file, ':p')
   let l:file_normalized = substitute(l:file_normalized, '\\', '/', 'g')
-  for l:ignored in g:realtime_dev_agent_ignore_patterns
+  for l:ignored in g:pingu_ignore_patterns
     if empty(l:ignored)
       continue
     endif
@@ -282,22 +282,22 @@ function! s:should_check_file(file) abort
   endfor
 
   let l:ext = s:file_type_token(a:file)
-  if g:realtime_dev_agent_strict_code_only
-    if index(g:realtime_dev_agent_code_extensions, l:ext) == -1
+  if g:pingu_strict_code_only
+    if index(g:pingu_code_extensions, l:ext) == -1
       return v:false
     endif
-    if empty(g:realtime_dev_agent_extensions)
+    if empty(g:pingu_extensions)
       return v:true
     endif
-    let l:allowed = index(g:realtime_dev_agent_extensions, l:ext) >= 0
+    let l:allowed = index(g:pingu_extensions, l:ext) >= 0
     return l:allowed
   endif
 
-  if empty(g:realtime_dev_agent_extensions)
+  if empty(g:pingu_extensions)
     return v:true
   endif
 
-  let l:allowed = index(g:realtime_dev_agent_extensions, l:ext) >= 0
+  let l:allowed = index(g:pingu_extensions, l:ext) >= 0
   return l:allowed
 endfunction
 
@@ -317,7 +317,7 @@ function! s:buffer_line_count(bufnr) abort
 endfunction
 
 function! s:auto_check_max_lines() abort
-  let l:max_lines = get(g:, 'realtime_dev_agent_auto_check_max_lines', 600)
+  let l:max_lines = get(g:, 'pingu_auto_check_max_lines', 600)
   if type(l:max_lines) != v:t_number
     let l:max_lines = str2nr(string(l:max_lines))
   endif
@@ -325,7 +325,7 @@ function! s:auto_check_max_lines() abort
 endfunction
 
 function! s:analysis_cache_max_entries() abort
-  let l:max_entries = get(g:, 'realtime_dev_agent_analysis_cache_max_entries', 24)
+  let l:max_entries = get(g:, 'pingu_analysis_cache_max_entries', 24)
   if type(l:max_entries) != v:t_number
     let l:max_entries = str2nr(string(l:max_entries))
   endif
@@ -339,7 +339,7 @@ endfunction
 
 function! s:analysis_mode_for_request(realtime_mode) abort
   if a:realtime_mode
-    return s:normalize_analysis_mode(get(g:, 'realtime_dev_agent_realtime_analysis_mode', 'light'))
+    return s:normalize_analysis_mode(get(g:, 'pingu_realtime_analysis_mode', 'light'))
   endif
   return 'full'
 endfunction
@@ -462,11 +462,11 @@ function! s:now_ms() abort
 endfunction
 
 function! s:latency_metrics_enabled() abort
-  return str2nr(string(get(g:, 'realtime_dev_agent_latency_metrics_enabled', 0))) > 0
+  return str2nr(string(get(g:, 'pingu_latency_metrics_enabled', 0))) > 0
 endfunction
 
 function! s:latency_metrics_max_entries() abort
-  let l:max_entries = get(g:, 'realtime_dev_agent_latency_metrics_max_entries', 50)
+  let l:max_entries = get(g:, 'pingu_latency_metrics_max_entries', 50)
   if type(l:max_entries) != v:t_number
     let l:max_entries = str2nr(string(l:max_entries))
   endif
@@ -627,7 +627,7 @@ function! s:should_run_auto_check(bufnr) abort
     return v:true
   endif
 
-  if !s:realtime_async_enabled() || !s:non_blocking_mode_enabled() || !get(g:, 'realtime_dev_agent_realtime_focus_scope_enabled', 1)
+  if !s:realtime_async_enabled() || !s:non_blocking_mode_enabled() || !get(g:, 'pingu_realtime_focus_scope_enabled', 1)
     return v:false
   endif
 
@@ -643,7 +643,7 @@ function! s:realtime_dev_agent_open_review() abort
     return
   endif
 
-  if !g:realtime_dev_agent_review_on_open
+  if !g:pingu_review_on_open
     return
   endif
 
@@ -665,7 +665,7 @@ function! s:realtime_dev_agent_open_review() abort
 
   call s:remember_code_window(win_getid())
   let l:analysis_mode = s:analysis_mode_for_request(v:true)
-  call s:start_async_realtime_check_with_fallback(l:bufnr, g:realtime_dev_agent_realtime_open_qf, 0, l:analysis_mode, v:true)
+  call s:start_async_realtime_check_with_fallback(l:bufnr, g:pingu_realtime_open_qf, 0, l:analysis_mode, v:true)
 endfunction
 
 function! s:notify_operational_noot() abort
@@ -691,7 +691,7 @@ function! s:realtime_dev_agent_start_current_buffer() abort
     return v:false
   endif
 
-  if !get(g:, 'realtime_dev_agent_start_on_editor_enter', 0)
+  if !get(g:, 'pingu_start_on_editor_enter', 0)
     return v:false
   endif
 
@@ -716,18 +716,18 @@ function! s:realtime_dev_agent_start_current_buffer() abort
   call s:remember_code_window(win_getid())
   call s:notify_operational_noot()
 
-  if get(g:, 'realtime_dev_agent_open_window_on_start', 1)
-    let g:realtime_dev_agent_show_window = 1
+  if get(g:, 'pingu_open_window_on_start', 1)
+    let g:pingu_show_window = 1
     call s:window_open()
   endif
 
   let l:analysis_mode = s:analysis_mode_for_request(v:true)
-  call s:start_async_realtime_check_with_fallback(l:bufnr, g:realtime_dev_agent_open_qf, 0, l:analysis_mode, v:true)
+  call s:start_async_realtime_check_with_fallback(l:bufnr, g:pingu_open_qf, 0, l:analysis_mode, v:true)
   return v:true
 endfunction
 
 function! s:window_buffer() abort
-  return bufnr(g:realtime_dev_agent_window_name, 1)
+  return bufnr(g:pingu_window_name, 1)
 endfunction
 
 function! s:window_find() abort
@@ -823,7 +823,7 @@ function! s:focus_issue_target_file(file) abort
 endfunction
 
 function! s:auto_fix_visual_mode() abort
-  let l:mode = tolower(trim('' . get(g:, 'realtime_dev_agent_auto_fix_visual_mode', 'preserve')))
+  let l:mode = tolower(trim('' . get(g:, 'pingu_auto_fix_visual_mode', 'preserve')))
   if index(['preserve', 'step'], l:mode) == -1
     return 'preserve'
   endif
@@ -831,7 +831,7 @@ function! s:auto_fix_visual_mode() abort
 endfunction
 
 function! s:target_scope() abort
-  let l:scope = tolower(trim('' . get(g:, 'realtime_dev_agent_target_scope', 'current_file')))
+  let l:scope = tolower(trim('' . get(g:, 'pingu_target_scope', 'current_file')))
   if index(['current_file', 'workspace'], l:scope) == -1
     return 'current_file'
   endif
@@ -947,11 +947,11 @@ function! s:issue_targets_active_scope(item, current_file) abort
 endfunction
 
 function! s:auto_fix_scope() abort
-  if str2nr(string(get(g:, 'realtime_dev_agent_auto_fix_cursor_only', 0))) > 0
+  if str2nr(string(get(g:, 'pingu_auto_fix_cursor_only', 0))) > 0
     return 'cursor_only'
   endif
 
-  let l:scope = tolower(trim('' . get(g:, 'realtime_dev_agent_auto_fix_scope', 'near_cursor')))
+  let l:scope = tolower(trim('' . get(g:, 'pingu_auto_fix_scope', 'near_cursor')))
   if index(['near_cursor', 'file', 'cursor_only'], l:scope) == -1
     return 'near_cursor'
   endif
@@ -959,7 +959,7 @@ function! s:auto_fix_scope() abort
 endfunction
 
 function! s:auto_fix_near_cursor_radius() abort
-  let l:radius = get(g:, 'realtime_dev_agent_auto_fix_near_cursor_radius', 24)
+  let l:radius = get(g:, 'pingu_auto_fix_near_cursor_radius', 24)
   if type(l:radius) != v:t_number
     let l:radius = str2nr(string(l:radius))
   endif
@@ -970,7 +970,7 @@ function! s:auto_fix_near_cursor_radius() abort
 endfunction
 
 function! s:auto_fix_large_file_line_threshold() abort
-  let l:threshold = get(g:, 'realtime_dev_agent_auto_fix_large_file_line_threshold', 260)
+  let l:threshold = get(g:, 'pingu_auto_fix_large_file_line_threshold', 260)
   if type(l:threshold) != v:t_number
     let l:threshold = str2nr(string(l:threshold))
   endif
@@ -978,7 +978,7 @@ function! s:auto_fix_large_file_line_threshold() abort
 endfunction
 
 function! s:auto_fix_large_file_radius() abort
-  let l:radius = get(g:, 'realtime_dev_agent_auto_fix_large_file_radius', 12)
+  let l:radius = get(g:, 'pingu_auto_fix_large_file_radius', 12)
   if type(l:radius) != v:t_number
     let l:radius = str2nr(string(l:radius))
   endif
@@ -986,7 +986,7 @@ function! s:auto_fix_large_file_radius() abort
 endfunction
 
 function! s:auto_fix_cluster_gap() abort
-  let l:gap = get(g:, 'realtime_dev_agent_auto_fix_cluster_gap', 8)
+  let l:gap = get(g:, 'pingu_auto_fix_cluster_gap', 8)
   if type(l:gap) != v:t_number
     let l:gap = str2nr(string(l:gap))
   endif
@@ -994,7 +994,7 @@ function! s:auto_fix_cluster_gap() abort
 endfunction
 
 function! s:auto_fix_doc_max_per_check() abort
-  let l:limit = get(g:, 'realtime_dev_agent_auto_fix_doc_max_per_check', 0)
+  let l:limit = get(g:, 'pingu_auto_fix_doc_max_per_check', 0)
   if type(l:limit) != v:t_number
     let l:limit = str2nr(string(l:limit))
   endif
@@ -1002,7 +1002,7 @@ function! s:auto_fix_doc_max_per_check() abort
 endfunction
 
 function! s:auto_fix_doc_max_per_check_large_file() abort
-  let l:limit = get(g:, 'realtime_dev_agent_auto_fix_doc_max_per_check_large_file', 4)
+  let l:limit = get(g:, 'pingu_auto_fix_doc_max_per_check_large_file', 4)
   if type(l:limit) != v:t_number
     let l:limit = str2nr(string(l:limit))
   endif
@@ -1010,19 +1010,19 @@ function! s:auto_fix_doc_max_per_check_large_file() abort
 endfunction
 
 function! s:auto_fix_doc_cursor_context_only() abort
-  return str2nr(string(get(g:, 'realtime_dev_agent_auto_fix_doc_cursor_context_only', 1))) > 0
+  return str2nr(string(get(g:, 'pingu_auto_fix_doc_cursor_context_only', 1))) > 0
 endfunction
 
 function! s:realtime_doc_cursor_context_only() abort
-  return str2nr(string(get(g:, 'realtime_dev_agent_realtime_doc_cursor_context_only', 1))) > 0
+  return str2nr(string(get(g:, 'pingu_realtime_doc_cursor_context_only', 1))) > 0
 endfunction
 
 function! s:auto_fix_local_cursor_context_only() abort
-  return str2nr(string(get(g:, 'realtime_dev_agent_auto_fix_local_cursor_context_only', 1))) > 0
+  return str2nr(string(get(g:, 'pingu_auto_fix_local_cursor_context_only', 1))) > 0
 endfunction
 
 function! s:auto_fix_doc_cursor_context_max_lines() abort
-  let l:max_lines = get(g:, 'realtime_dev_agent_auto_fix_doc_cursor_context_max_lines', 80)
+  let l:max_lines = get(g:, 'pingu_auto_fix_doc_cursor_context_max_lines', 80)
   if type(l:max_lines) != v:t_number
     let l:max_lines = str2nr(string(l:max_lines))
   endif
@@ -1185,7 +1185,7 @@ function! s:buffer_cursor_line(bufnr) abort
 endfunction
 
 function! s:analysis_focus_scope_for_buffer(bufnr, analysis_mode) abort
-  if !get(g:, 'realtime_dev_agent_realtime_focus_scope_enabled', 1)
+  if !get(g:, 'pingu_realtime_focus_scope_enabled', 1)
     return [0, 0]
   endif
   if s:normalize_analysis_mode(a:analysis_mode) !=# 'light'
@@ -1435,7 +1435,7 @@ function! s:window_open() abort
   endif
 
   let l:curr = winnr()
-  execute 'botright ' . g:realtime_dev_agent_window_height . 'split'
+  execute 'botright ' . g:pingu_window_height . 'split'
   let l:win = winnr()
   execute 'buffer ' . s:window_buffer()
   setlocal buftype=nofile
@@ -1478,7 +1478,7 @@ function! s:set_code_buffer_tab_accept() abort
     return
   endif
 
-  if g:realtime_dev_agent_auto_fix_enabled
+  if g:pingu_auto_fix_enabled
     inoremap <buffer> <silent> <expr> <Tab> "\<Tab>"
   else
     inoremap <buffer> <silent> <expr> <Tab> <SID>realtime_dev_agent_accept_snippet_or_tab()
@@ -1544,9 +1544,9 @@ endfunction
 
 function! s:realtime_dev_agent_restore_show_window(previous) abort
   if a:previous && s:window_find() != -1
-    let g:realtime_dev_agent_show_window = 1
+    let g:pingu_show_window = 1
   else
-    let g:realtime_dev_agent_show_window = 0
+    let g:pingu_show_window = 0
   endif
 endfunction
 
@@ -1603,9 +1603,9 @@ function! s:window_insert_followup() abort
   write
   call cursor(l:issue.lnum + 1, 1)
   redraw
-  if g:realtime_dev_agent_realtime_on_change
+  if g:pingu_realtime_on_change
     let l:analysis_mode = s:analysis_mode_for_request(v:true)
-    call s:start_async_realtime_check_with_fallback(bufnr(l:issue.filename), g:realtime_dev_agent_realtime_open_qf, 0, l:analysis_mode, v:true)
+    call s:start_async_realtime_check_with_fallback(bufnr(l:issue.filename), g:pingu_realtime_open_qf, 0, l:analysis_mode, v:true)
   else
     call s:realtime_dev_agent_window_check()
   endif
@@ -1750,11 +1750,11 @@ function! s:lsp_auto_fix_enabled() abort
   if !has('nvim') || !exists('*luaeval')
     return v:false
   endif
-  return str2nr(string(get(g:, 'realtime_dev_agent_lsp_auto_fix_enabled', has('nvim') ? 1 : 0))) > 0
+  return str2nr(string(get(g:, 'pingu_lsp_auto_fix_enabled', has('nvim') ? 1 : 0))) > 0
 endfunction
 
 function! s:lsp_auto_fix_max_per_check() abort
-  let l:max_items = get(g:, 'realtime_dev_agent_lsp_auto_fix_max_per_check', 3)
+  let l:max_items = get(g:, 'pingu_lsp_auto_fix_max_per_check', 3)
   if type(l:max_items) != v:t_number
     let l:max_items = str2nr(string(l:max_items))
   endif
@@ -1762,7 +1762,7 @@ function! s:lsp_auto_fix_max_per_check() abort
 endfunction
 
 function! s:lsp_auto_fix_timeout_ms() abort
-  let l:timeout_ms = get(g:, 'realtime_dev_agent_lsp_auto_fix_timeout_ms', 400)
+  let l:timeout_ms = get(g:, 'pingu_lsp_auto_fix_timeout_ms', 400)
   if type(l:timeout_ms) != v:t_number
     let l:timeout_ms = str2nr(string(l:timeout_ms))
   endif
@@ -1770,7 +1770,7 @@ function! s:lsp_auto_fix_timeout_ms() abort
 endfunction
 
 function! s:lsp_auto_fix_max_severity() abort
-  let l:raw = get(g:, 'realtime_dev_agent_lsp_auto_fix_max_severity', 'warning')
+  let l:raw = get(g:, 'pingu_lsp_auto_fix_max_severity', 'warning')
   if type(l:raw) == v:t_number
     return min([4, max([1, l:raw])])
   endif
@@ -1806,7 +1806,7 @@ function! s:normalize_lsp_code_action_kind(kind) abort
 endfunction
 
 function! s:lsp_auto_fix_only_kinds() abort
-  let l:raw = get(g:, 'realtime_dev_agent_lsp_auto_fix_only', ['source.fixAll', 'source.organizeImports', 'quickfix'])
+  let l:raw = get(g:, 'pingu_lsp_auto_fix_only', ['source.fixAll', 'source.organizeImports', 'quickfix'])
   let l:items = []
   if type(l:raw) == v:t_list
     let l:items = copy(l:raw)
@@ -1832,18 +1832,18 @@ function! s:lsp_auto_fix_only_kinds() abort
 endfunction
 
 function! s:lsp_auto_fix_prefer_global() abort
-  return str2nr(string(get(g:, 'realtime_dev_agent_lsp_auto_fix_prefer_global', 1))) > 0
+  return str2nr(string(get(g:, 'pingu_lsp_auto_fix_prefer_global', 1))) > 0
 endfunction
 
 function! s:lsp_ai_fix_enabled() abort
   if !has('nvim') || !exists('*json_decode')
     return v:false
   endif
-  return str2nr(string(get(g:, 'realtime_dev_agent_lsp_ai_fix_enabled', has('nvim') ? 1 : 0))) > 0
+  return str2nr(string(get(g:, 'pingu_lsp_ai_fix_enabled', has('nvim') ? 1 : 0))) > 0
 endfunction
 
 function! s:lsp_ai_fix_max_per_check() abort
-  let l:max_items = get(g:, 'realtime_dev_agent_lsp_ai_fix_max_per_check', 1)
+  let l:max_items = get(g:, 'pingu_lsp_ai_fix_max_per_check', 1)
   if type(l:max_items) != v:t_number
     let l:max_items = str2nr(string(l:max_items))
   endif
@@ -1851,7 +1851,7 @@ function! s:lsp_ai_fix_max_per_check() abort
 endfunction
 
 function! s:lsp_ai_fix_allowed_severity(severity) abort
-  let l:raw = get(g:, 'realtime_dev_agent_lsp_ai_fix_severities', ['warning'])
+  let l:raw = get(g:, 'pingu_lsp_ai_fix_severities', ['warning'])
   let l:items = type(l:raw) == v:t_list ? copy(l:raw) : split('' . l:raw, ',')
   let l:label = tolower(s:lsp_severity_label(a:severity))
   return index(map(l:items, {_, item -> tolower(trim('' . item))}), l:label) != -1
@@ -2868,7 +2868,7 @@ function! s:clear_issue_line(file, lnum) abort
 endfunction
 
 function! s:issue_terminal_height() abort
-  let l:height = get(g:, 'realtime_dev_agent_terminal_height', 12)
+  let l:height = get(g:, 'pingu_terminal_height', 12)
   if type(l:height) != v:t_number
     let l:height = str2nr(string(l:height))
   endif
@@ -2879,7 +2879,7 @@ function! s:issue_terminal_height() abort
 endfunction
 
 function! s:issue_terminal_strategy() abort
-  let l:strategy = trim(get(g:, 'realtime_dev_agent_terminal_strategy', 'auto'))
+  let l:strategy = trim(get(g:, 'pingu_terminal_strategy', 'auto'))
   if empty(l:strategy)
     let l:strategy = 'auto'
   endif
@@ -2897,7 +2897,7 @@ function! s:issue_terminal_strategy() abort
 endfunction
 
 function! s:issue_terminal_risk_mode() abort
-  let l:mode = trim(get(g:, 'realtime_dev_agent_terminal_risk_mode', 'safe'))
+  let l:mode = trim(get(g:, 'pingu_terminal_risk_mode', 'safe'))
   if empty(l:mode)
     return 'safe'
   endif
@@ -3025,7 +3025,7 @@ function! s:issue_terminal_reanalyze(context) abort
   endif
 
   let l:analysis_mode = s:analysis_mode_for_request(v:false)
-  call s:start_async_realtime_check_with_fallback(l:target_buf, g:realtime_dev_agent_realtime_open_qf, 0, l:analysis_mode, v:false)
+  call s:start_async_realtime_check_with_fallback(l:target_buf, g:pingu_realtime_open_qf, 0, l:analysis_mode, v:false)
 endfunction
 
 function! s:issue_terminal_finish(context, exit_code) abort
@@ -3291,7 +3291,7 @@ function! s:apply_issue_run_command_hidden(issue, keep_focus_code) abort
 endfunction
 
 function! s:apply_issue_run_command(issue, keep_focus_code) abort
-  if !get(g:, 'realtime_dev_agent_terminal_actions_enabled', 1)
+  if !get(g:, 'pingu_terminal_actions_enabled', 1)
     echomsg '[Pingu] Acoes de terminal estao desligadas'
     return v:false
   endif
@@ -4294,10 +4294,10 @@ endfunction
 
 function! s:window_toggle() abort
   if s:window_find() == -1
-    let g:realtime_dev_agent_show_window = 1
+    let g:pingu_show_window = 1
     call s:window_open()
   else
-    let g:realtime_dev_agent_show_window = 0
+    let g:pingu_show_window = 0
     call s:window_close()
   endif
 endfunction
@@ -4323,7 +4323,7 @@ endfunction
 
 function! s:window_set_busy(file) abort
   " Feedback imediato enquanto o agente roda no modo interativo.
-  if !g:realtime_dev_agent_show_window
+  if !g:pingu_show_window
     return
   endif
 
@@ -4529,7 +4529,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
   let l:file = get(a:analysis, 'file', fnamemodify(bufname(a:bufnr), ':p'))
   if !get(a:analysis, 'ok', v:false)
     let l:is_missing_runtime = get(a:analysis, 'error', '') ==# 'runtime nao encontrado'
-    if g:realtime_dev_agent_show_window
+    if g:pingu_show_window
       if l:is_missing_runtime
         let l:error_lines = []
         call add(l:error_lines, 'Pingu')
@@ -4537,7 +4537,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
         call add(l:error_lines, '')
         call add(l:error_lines, 'Erro: runtime nao encontrado no PATH')
         call add(l:error_lines, 'Esperado: ' . s:realtime_dev_agent_script_label())
-        call add(l:error_lines, 'Ajuste g:realtime_dev_agent_script para um arquivo .js valido')
+        call add(l:error_lines, 'Ajuste g:pingu_script para um arquivo .js valido')
         call s:window_set_lines(l:error_lines)
       else
         let l:error_lines = []
@@ -4545,7 +4545,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
         call add(l:error_lines, 'Arquivo: ' . l:file)
         call add(l:error_lines, '')
         call add(l:error_lines, 'Erro: falha ao executar o agente')
-        call add(l:error_lines, 'Verifique o caminho do script em g:realtime_dev_agent_script e se o runtime esta no PATH.')
+        call add(l:error_lines, 'Verifique o caminho do script em g:pingu_script e se o runtime esta no PATH.')
         call s:window_set_lines(l:error_lines)
       endif
     endif
@@ -4564,7 +4564,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
 
   let l:qf = deepcopy(get(a:analysis, 'qf', []))
   let l:qf = s:merge_lsp_diagnostic_auto_fix_candidates(a:bufnr, l:file, l:qf)
-  if a:open_qf || g:realtime_dev_agent_show_window || !a:realtime_mode
+  if a:open_qf || g:pingu_show_window || !a:realtime_mode
     call setqflist([], 'r', {'title': 'Pingu'})
     call setqflist(l:qf, 'a')
   endif
@@ -4575,7 +4575,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
   let s:realtime_dev_agent_suppress_auto_fix_once = v:false
   let s:realtime_dev_agent_is_realtime_check = a:realtime_mode
   try
-    if g:realtime_dev_agent_auto_fix_enabled && !l:suppress_auto_fix
+    if g:pingu_auto_fix_enabled && !l:suppress_auto_fix
       let l:auto_fix_applied = s:realtime_dev_agent_apply_auto_fixes(l:qf, l:file, {
             \ 'bufnr': a:bufnr,
             \ 'open_qf': a:open_qf,
@@ -5066,7 +5066,7 @@ function! s:realtime_check_from_buffer(bufnr, open_qf, show_echo, ...) abort
     call s:remember_code_window(win_getid())
   endif
 
-  if g:realtime_dev_agent_show_window && !s:realtime_dev_agent_is_realtime_check
+  if g:pingu_show_window && !s:realtime_dev_agent_is_realtime_check
     call s:window_set_busy(l:file)
   endif
 
@@ -5116,7 +5116,7 @@ function! s:build_auto_fix_state(qf, file, opts) abort
     return {}
   endif
 
-  if !g:realtime_dev_agent_auto_fix_enabled
+  if !g:pingu_auto_fix_enabled
     return {}
   endif
 
@@ -5126,7 +5126,7 @@ function! s:build_auto_fix_state(qf, file, opts) abort
     return {}
   endif
 
-  let l:kinds = get(g:, 'realtime_dev_agent_auto_fix_kinds', [])
+  let l:kinds = get(g:, 'pingu_auto_fix_kinds', [])
   if type(l:kinds) != v:t_list
     let l:kinds = []
   endif
@@ -5215,12 +5215,12 @@ function! s:build_auto_fix_state(qf, file, opts) abort
   let l:file_snapshot = l:strict_validation ? s:capture_file_snapshot(l:affected_files) : {}
   let l:applied = 0
   let l:applied_items = []
-  let l:max_to_apply = get(g:, 'realtime_dev_agent_auto_fix_max_per_check', 0)
+  let l:max_to_apply = get(g:, 'pingu_auto_fix_max_per_check', 0)
   if type(l:max_to_apply) != v:t_number
     let l:max_to_apply = str2nr(string(l:max_to_apply))
   endif
   if l:realtime_mode
-    let l:realtime_limit = get(g:, 'realtime_dev_agent_realtime_auto_fix_max_per_check', 2)
+    let l:realtime_limit = get(g:, 'pingu_realtime_auto_fix_max_per_check', 2)
     if type(l:realtime_limit) != v:t_number
       let l:realtime_limit = str2nr(string(l:realtime_limit))
     endif
@@ -5625,14 +5625,14 @@ function! s:realtime_dev_agent_drain_pending_auto_fixes() abort
   let l:file = get(l:pending, 'file', fnamemodify(bufname(l:target_buf), ':p'))
   call s:realtime_dev_agent_apply_auto_fixes(l:items, l:file, {
         \ 'bufnr': l:target_buf,
-        \ 'open_qf': get(l:pending, 'open_qf', g:realtime_dev_agent_realtime_open_qf),
+        \ 'open_qf': get(l:pending, 'open_qf', g:pingu_realtime_open_qf),
         \ 'show_echo': get(l:pending, 'show_echo', 0),
         \ 'realtime_mode': get(l:pending, 'realtime_mode', v:true),
         \ })
 endfunction
 
 function! s:realtime_dev_agent_schedule_check(...) abort
-  if !g:realtime_dev_agent_realtime_on_change || !has('timers')
+  if !g:pingu_realtime_on_change || !has('timers')
     return
   endif
 
@@ -5670,7 +5670,7 @@ function! s:realtime_dev_agent_schedule_check(...) abort
     call timer_stop(s:realtime_dev_agent_realtime_timer)
   endif
 
-  let l:delay = g:realtime_dev_agent_realtime_delay
+  let l:delay = g:pingu_realtime_delay
   if type(l:delay) != v:t_number
     let l:delay = str2nr(string(l:delay))
   endif
@@ -5682,10 +5682,6 @@ endfunction
 
 function! PinguRunPendingCheck(timer_id) abort
   call s:realtime_dev_agent_run_pending_check(a:timer_id)
-endfunction
-
-function! RealtimeDevAgentRunPendingCheck(timer_id) abort
-  call PinguRunPendingCheck(a:timer_id)
 endfunction
 
 function! s:realtime_dev_agent_run_pending_check(timer_id) abort
@@ -5701,11 +5697,11 @@ function! s:realtime_dev_agent_run_pending_check(timer_id) abort
   endif
 
   let l:analysis_mode = s:analysis_mode_for_request(v:true)
-  call s:start_async_realtime_check_with_fallback(l:bufnr, g:realtime_dev_agent_realtime_open_qf, 0, l:analysis_mode, v:true)
+  call s:start_async_realtime_check_with_fallback(l:bufnr, g:pingu_realtime_open_qf, 0, l:analysis_mode, v:true)
 endfunction
 
 function! s:window_refresh(file, qf) abort
-  if !g:realtime_dev_agent_show_window
+  if !g:pingu_show_window
     return
   endif
 
@@ -5754,7 +5750,7 @@ function! s:window_refresh(file, qf) abort
   endfor
   let s:realtime_dev_agent_last_qf = a:qf
   call add(l:lines, '')
-  let l:command_line = 'Painel Pingu: ' . g:realtime_dev_agent_window_key . ' para abrir/atualizar'
+  let l:command_line = 'Painel Pingu: ' . g:pingu_window_key . ' para abrir/atualizar'
   let l:command_line = l:command_line . ' | <Tab>/i/a: aplicar | Enter: ir para item | f: follow-up | r: reanalisar | q: fechar'
   call add(l:lines, l:command_line)
   call s:window_set_lines(l:lines)
@@ -5817,13 +5813,13 @@ endfunction
 function! s:realtime_dev_agent_check() abort
   let l:bufnr = bufnr('%')
   let l:analysis_mode = s:analysis_mode_for_request(v:false)
-  let l:prev_show_window = g:realtime_dev_agent_show_window
+  let l:prev_show_window = g:pingu_show_window
   let l:prev_mode = get(s:, 'realtime_dev_agent_is_realtime_check', v:false)
-  let g:realtime_dev_agent_show_window = 0
+  let g:pingu_show_window = 0
   let s:realtime_dev_agent_is_realtime_check = v:false
   call s:stop_async_analysis_job()
   try
-    call s:start_async_realtime_check_with_fallback(l:bufnr, g:realtime_dev_agent_open_qf, 1, l:analysis_mode, v:false)
+    call s:start_async_realtime_check_with_fallback(l:bufnr, g:pingu_open_qf, 1, l:analysis_mode, v:false)
   finally
     call s:realtime_dev_agent_restore_show_window(l:prev_show_window)
     let s:realtime_dev_agent_is_realtime_check = l:prev_mode
@@ -5834,7 +5830,7 @@ function! s:realtime_dev_agent_window_check() abort
   let l:bufnr = bufnr('%')
   let l:analysis_mode = s:analysis_mode_for_request(v:false)
   let l:prev_mode = get(s:, 'realtime_dev_agent_is_realtime_check', v:false)
-  let g:realtime_dev_agent_show_window = 1
+  let g:pingu_show_window = 1
   let s:realtime_dev_agent_is_realtime_check = v:false
   call s:stop_async_analysis_job()
   try
@@ -5870,35 +5866,28 @@ command! PinguWindowCheck call s:realtime_dev_agent_window_check()
 command! PinguWindowClose call s:window_close()
 command! PinguWindowToggle call s:window_toggle()
 command! PinguLatencyMetrics call s:print_latency_metrics()
-command! PinguAutoFixEnable let g:realtime_dev_agent_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
-command! PinguAutoFixDisable let g:realtime_dev_agent_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'
-command! RealtimeDevAgentCheck PinguCheck
-command! RealtimeDevAgentWindowCheck PinguWindowCheck
-command! RealtimeDevAgentWindowClose PinguWindowClose
-command! RealtimeDevAgentWindowToggle PinguWindowToggle
-command! RealtimeDevAgentLatencyMetrics PinguLatencyMetrics
-command! RealtimeDevAgentAutoFixEnable PinguAutoFixEnable
-command! RealtimeDevAgentAutoFixDisable PinguAutoFixDisable
+command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
+command! PinguAutoFixDisable let g:pingu_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'
 
-if !empty(g:realtime_dev_agent_map_key)
+if !empty(g:pingu_map_key)
   " Atalho de analise rapida do arquivo atual.
   call s:set_global_normal_map(
-        \ g:realtime_dev_agent_map_key,
+        \ g:pingu_map_key,
         \ ':PinguCheck<CR>',
         \ 'Pingu: analisar arquivo atual',
         \ )
 endif
 
-if !empty(g:realtime_dev_agent_window_key)
+if !empty(g:pingu_window_key)
   " Atalho para executar analise no modo janela de interacao em tempo real.
   call s:set_global_normal_map(
-        \ g:realtime_dev_agent_window_key,
+        \ g:pingu_window_key,
         \ ':PinguWindowCheck<CR>',
         \ 'Pingu: abrir painel e analisar',
         \ )
 endif
 
-if g:realtime_dev_agent_start_on_editor_enter
+if g:pingu_start_on_editor_enter
   augroup realtime_dev_agent_startup
     autocmd!
     autocmd VimEnter,BufEnter * call s:realtime_dev_agent_start_current_buffer()
@@ -5917,10 +5906,10 @@ augroup END
 
 augroup realtime_dev_agent_open_review
   autocmd!
-  autocmd BufReadPost,BufNewFile * if g:realtime_dev_agent_review_on_open | call s:realtime_dev_agent_open_review() | endif
+  autocmd BufReadPost,BufNewFile * if g:pingu_review_on_open | call s:realtime_dev_agent_open_review() | endif
 augroup END
 
-if g:realtime_dev_agent_auto_on_save
+if g:pingu_auto_on_save
   " Auto check no save para acelerar a captura de problemas de rotina.
   augroup realtime_dev_agent
     autocmd!
@@ -5928,26 +5917,26 @@ if g:realtime_dev_agent_auto_on_save
   augroup END
 endif
 
-if g:realtime_dev_agent_realtime_on_change
+if g:pingu_realtime_on_change
   " Checagem em tempo real com debounce enquanto edita texto.
   augroup realtime_dev_agent_realtime
     autocmd!
-    if get(g:, 'realtime_dev_agent_realtime_on_buffer_load', 1)
-      autocmd BufReadPost,BufNewFile * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_schedule_check('buffer_load') | endif
+    if get(g:, 'pingu_realtime_on_buffer_load', 1)
+      autocmd BufReadPost,BufNewFile * if g:pingu_realtime_on_change | call s:realtime_dev_agent_schedule_check('buffer_load') | endif
     endif
     autocmd TextChanged * call s:realtime_dev_agent_schedule_check()
-    if get(g:, 'realtime_dev_agent_realtime_insert_mode', 0)
+    if get(g:, 'pingu_realtime_insert_mode', 0)
       autocmd TextChangedI * call s:realtime_dev_agent_schedule_check()
     endif
     if has('nvim') && exists('##DiagnosticChanged')
-      autocmd DiagnosticChanged * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_schedule_check('lsp_diagnostic') | endif
+      autocmd DiagnosticChanged * if g:pingu_realtime_on_change | call s:realtime_dev_agent_schedule_check('lsp_diagnostic') | endif
     endif
-    autocmd InsertLeave * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_drain_pending_auto_fixes() | call s:realtime_dev_agent_schedule_check() | endif
-    if get(g:, 'realtime_dev_agent_realtime_on_cursor_hold', 1)
-      autocmd CursorHold * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_schedule_check('cursor_context') | endif
+    autocmd InsertLeave * if g:pingu_realtime_on_change | call s:realtime_dev_agent_drain_pending_auto_fixes() | call s:realtime_dev_agent_schedule_check() | endif
+    if get(g:, 'pingu_realtime_on_cursor_hold', 1)
+      autocmd CursorHold * if g:pingu_realtime_on_change | call s:realtime_dev_agent_schedule_check('cursor_context') | endif
     endif
-    if get(g:, 'realtime_dev_agent_realtime_on_buf_enter', 1)
-      autocmd BufEnter * if g:realtime_dev_agent_realtime_on_change | call s:realtime_dev_agent_schedule_check('cursor_context') | endif
+    if get(g:, 'pingu_realtime_on_buf_enter', 1)
+      autocmd BufEnter * if g:pingu_realtime_on_change | call s:realtime_dev_agent_schedule_check('cursor_context') | endif
     endif
   augroup END
 endif
