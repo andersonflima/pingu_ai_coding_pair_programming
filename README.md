@@ -734,35 +734,37 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
 {
   "andersonflima/pingu_ai_codding_pair_programming",
   config = function()
-    vim.g.realtime_dev_agent_start_on_editor_enter = 1
-    vim.g.realtime_dev_agent_open_window_on_start = 0
-    vim.g.realtime_dev_agent_auto_fix_enabled = 1
-    vim.g.realtime_dev_agent_target_scope = "current_file"
-    vim.g.realtime_dev_agent_auto_fix_scope = "near_cursor"
-    vim.g.realtime_dev_agent_auto_fix_near_cursor_radius = 24
-    vim.g.realtime_dev_agent_auto_fix_cluster_gap = 8
-    vim.g.realtime_dev_agent_auto_fix_visual_mode = "preserve"
-    vim.g.realtime_dev_agent_review_on_open = 1
-    vim.g.realtime_dev_agent_realtime_on_change = 1
-    vim.g.realtime_dev_agent_realtime_on_cursor_hold = 0
-    vim.g.realtime_dev_agent_realtime_on_buf_enter = 0
-    vim.g.realtime_dev_agent_realtime_on_buffer_load = 1
-    vim.g.realtime_dev_agent_realtime_insert_mode = 0
-    vim.g.realtime_dev_agent_realtime_async = 1
-    vim.g.realtime_dev_agent_realtime_use_daemon = 1
-    vim.g.realtime_dev_agent_realtime_focus_scope_enabled = 1
-    vim.g.realtime_dev_agent_auto_on_save = 1
-    vim.g.realtime_dev_agent_auto_check_max_lines = 600
-    vim.g.realtime_dev_agent_analysis_cache_max_entries = 24
-    vim.g.realtime_dev_agent_latency_metrics_enabled = 0
-    vim.g.realtime_dev_agent_latency_metrics_max_entries = 50
-    vim.g.realtime_dev_agent_realtime_auto_fix_max_per_check = 2
-    vim.g.realtime_dev_agent_auto_fix_doc_cursor_context_only = 0
-    vim.g.realtime_dev_agent_realtime_doc_cursor_context_only = 1
-    vim.g.realtime_dev_agent_auto_fix_local_cursor_context_only = 1
+    vim.g.pingu_start_on_editor_enter = 1
+    vim.g.pingu_open_window_on_start = 0
+    vim.g.pingu_auto_fix_enabled = 1
+    vim.g.pingu_target_scope = "current_file"
+    vim.g.pingu_auto_fix_scope = "near_cursor"
+    vim.g.pingu_auto_fix_near_cursor_radius = 24
+    vim.g.pingu_auto_fix_cluster_gap = 8
+    vim.g.pingu_auto_fix_visual_mode = "preserve"
+    vim.g.pingu_review_on_open = 1
+    vim.g.pingu_realtime_on_change = 1
+    vim.g.pingu_realtime_on_cursor_hold = 0
+    vim.g.pingu_realtime_on_buf_enter = 0
+    vim.g.pingu_realtime_on_buffer_load = 1
+    vim.g.pingu_realtime_insert_mode = 0
+    vim.g.pingu_realtime_async = 1
+    vim.g.pingu_realtime_use_daemon = 1
+    vim.g.pingu_realtime_focus_scope_enabled = 1
+    vim.g.pingu_auto_on_save = 1
+    vim.g.pingu_auto_check_max_lines = 600
+    vim.g.pingu_analysis_cache_max_entries = 24
+    vim.g.pingu_latency_metrics_enabled = 0
+    vim.g.pingu_latency_metrics_max_entries = 50
+    vim.g.pingu_realtime_auto_fix_max_per_check = 2
+    vim.g.pingu_auto_fix_doc_cursor_context_only = 0
+    vim.g.pingu_realtime_doc_cursor_context_only = 1
+    vim.g.pingu_auto_fix_local_cursor_context_only = 1
   end,
 }
 ```
+
+As variaveis `g:pingu_*` sao a configuracao principal do plugin. As variaveis antigas `g:realtime_dev_agent_*` continuam aceitas como aliases para preservar configuracoes existentes durante a migracao.
 
 ### `vim-plug`
 
@@ -774,54 +776,54 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 
 - inicia no primeiro buffer suportado
 - mantem o painel fechado por padrao
-- por padrao usa `let g:realtime_dev_agent_target_scope = 'current_file'`; use `workspace` apenas com opt-in explicito
-- `let g:realtime_dev_agent_open_window_on_start = 0` mantem o agente ativo sem abrir painel
-- `let g:realtime_dev_agent_open_window_on_start = 1` reabre o painel no startup automatico
-- `let g:realtime_dev_agent_start_on_editor_enter = 0` desliga o startup automatico
-- `let g:realtime_dev_agent_review_on_open = 1` mantem revisao automatica ao abrir arquivos
-- `let g:realtime_dev_agent_target_scope = 'current_file'` mantem analise e correcoes no arquivo aberto, mas ainda permite `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`
-- `let g:realtime_dev_agent_target_scope = 'workspace'` mantem acoes multi-arquivo amplas fora desse conjunto seguro
+- por padrao usa `let g:pingu_target_scope = 'current_file'`; use `workspace` apenas com opt-in explicito
+- `let g:pingu_open_window_on_start = 0` mantem o agente ativo sem abrir painel
+- `let g:pingu_open_window_on_start = 1` reabre o painel no startup automatico
+- `let g:pingu_start_on_editor_enter = 0` desliga o startup automatico
+- `let g:pingu_review_on_open = 1` mantem revisao automatica ao abrir arquivos
+- `let g:pingu_target_scope = 'current_file'` mantem analise e correcoes no arquivo aberto, mas ainda permite `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`
+- `let g:pingu_target_scope = 'workspace'` mantem acoes multi-arquivo amplas fora desse conjunto seguro
 - por padrao, o runtime ignora diretorios de dependencia e cache como `.venv/`, `venv/`, `site-packages/`, `__pycache__/`, `node_modules/`, `vendor/`, `dist/`, `build/` e caches de ferramentas
-- `let g:realtime_dev_agent_auto_fix_scope = 'near_cursor'` aplica apenas o trecho mais proximo do cursor
-- `let g:realtime_dev_agent_auto_fix_scope = 'file'` volta para o comportamento de arquivo inteiro por ciclo
-- `let g:realtime_dev_agent_auto_fix_scope = 'cursor_only'` restringe ao cursor imediato
-- `let g:realtime_dev_agent_auto_fix_near_cursor_radius = 24` controla a distancia maxima entre cursor e trecho elegivel
-- `let g:realtime_dev_agent_auto_fix_cluster_gap = 8` controla a distancia maxima entre issues do mesmo trecho
-- `let g:realtime_dev_agent_realtime_on_cursor_hold = 0` evita reanalise enquanto o cursor fica parado; use `1` apenas se quiser checagem por pausa de cursor
-- `let g:realtime_dev_agent_realtime_on_buf_enter = 0` evita reanalise ao alternar buffers; use `1` apenas se quiser checagem a cada entrada no arquivo
-- `let g:realtime_dev_agent_realtime_on_buffer_load = 1` dispara analise assim que o buffer e carregado (arquivo aberto/criado)
-- `let g:realtime_dev_agent_auto_on_save = 1` consolida comentarios, fixes locais, blueprint seguro e testes adjacentes automaticamente no save
-- `let g:realtime_dev_agent_auto_fix_visual_mode = 'preserve'` reduz ruido visual durante o batch
-- `let g:realtime_dev_agent_realtime_insert_mode = 0` concentra a analise ao sair do insert mode para reduzir travamentos durante digitacao
-- `let g:realtime_dev_agent_realtime_async = 1` usa job assincrono no Neovim para evitar congelar a UI durante o loop automatico
-- `let g:realtime_dev_agent_realtime_use_daemon = 1` reaproveita um runtime residente no Neovim para reduzir spawn por analise realtime
-- `let g:realtime_dev_agent_realtime_focus_scope_enabled = 1` limita a analise leve realtime ao bloco atual do cursor
-- `let g:realtime_dev_agent_node_path = '/caminho/absoluto/para/node'` fixa o runtime quando o PATH do Neovim difere do shell
-- `let g:realtime_dev_agent_auto_check_max_lines = 600` limita checks automaticos a arquivos menores
-- `let g:realtime_dev_agent_analysis_cache_max_entries = 24` reaproveita a ultima analise do mesmo texto e reduz relancamento do agente
-- `let g:realtime_dev_agent_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
-- `let g:realtime_dev_agent_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
+- `let g:pingu_auto_fix_scope = 'near_cursor'` aplica apenas o trecho mais proximo do cursor
+- `let g:pingu_auto_fix_scope = 'file'` volta para o comportamento de arquivo inteiro por ciclo
+- `let g:pingu_auto_fix_scope = 'cursor_only'` restringe ao cursor imediato
+- `let g:pingu_auto_fix_near_cursor_radius = 24` controla a distancia maxima entre cursor e trecho elegivel
+- `let g:pingu_auto_fix_cluster_gap = 8` controla a distancia maxima entre issues do mesmo trecho
+- `let g:pingu_realtime_on_cursor_hold = 0` evita reanalise enquanto o cursor fica parado; use `1` apenas se quiser checagem por pausa de cursor
+- `let g:pingu_realtime_on_buf_enter = 0` evita reanalise ao alternar buffers; use `1` apenas se quiser checagem a cada entrada no arquivo
+- `let g:pingu_realtime_on_buffer_load = 1` dispara analise assim que o buffer e carregado (arquivo aberto/criado)
+- `let g:pingu_auto_on_save = 1` consolida comentarios, fixes locais, blueprint seguro e testes adjacentes automaticamente no save
+- `let g:pingu_auto_fix_visual_mode = 'preserve'` reduz ruido visual durante o batch
+- `let g:pingu_realtime_insert_mode = 0` concentra a analise ao sair do insert mode para reduzir travamentos durante digitacao
+- `let g:pingu_realtime_async = 1` usa job assincrono no Neovim para evitar congelar a UI durante o loop automatico
+- `let g:pingu_realtime_use_daemon = 1` reaproveita um runtime residente no Neovim para reduzir spawn por analise realtime
+- `let g:pingu_realtime_focus_scope_enabled = 1` limita a analise leve realtime ao bloco atual do cursor
+- `let g:pingu_node_path = '/caminho/absoluto/para/node'` fixa o runtime quando o PATH do Neovim difere do shell
+- `let g:pingu_auto_check_max_lines = 600` limita checks automaticos a arquivos menores
+- `let g:pingu_analysis_cache_max_entries = 24` reaproveita a ultima analise do mesmo texto e reduz relancamento do agente
+- `let g:pingu_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
+- `let g:pingu_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
-- `let g:realtime_dev_agent_realtime_auto_fix_max_per_check = 2` reduz o lote automatico por ciclo realtime para manter o editor fluido
-- `let g:realtime_dev_agent_auto_fix_strict_validation = 0` no Neovim evita reanalise e guard sincronos apos cada lote automatico; use `1` quando preferir validacao estrita mesmo com maior latencia
-- `let g:realtime_dev_agent_auto_fix_doc_cursor_context_only = 0` deixa `function_doc`, `class_doc`, `variable_doc` e `flow_comment` elegiveis no arquivo inteiro
-- `let g:realtime_dev_agent_realtime_doc_cursor_context_only = 1` restringe esses comentarios ao bloco atual durante realtime, evitando edicoes longe do cursor enquanto voce navega ou digita
-- `let g:realtime_dev_agent_auto_fix_local_cursor_context_only = 1` restringe `debug_output`, syntax local, `trailing_whitespace`, `function_spec`, `markdown_title`, `terraform_required_version` e `dockerfile_workdir` ao bloco textual atual
-- `let g:realtime_dev_agent_auto_fix_doc_cursor_context_max_lines = 80` controla o tamanho maximo desse bloco automatico
+- `let g:pingu_realtime_auto_fix_max_per_check = 2` reduz o lote automatico por ciclo realtime para manter o editor fluido
+- `let g:pingu_auto_fix_strict_validation = 0` no Neovim evita reanalise e guard sincronos apos cada lote automatico; use `1` quando preferir validacao estrita mesmo com maior latencia
+- `let g:pingu_auto_fix_doc_cursor_context_only = 0` deixa `function_doc`, `class_doc`, `variable_doc` e `flow_comment` elegiveis no arquivo inteiro
+- `let g:pingu_realtime_doc_cursor_context_only = 1` restringe esses comentarios ao bloco atual durante realtime, evitando edicoes longe do cursor enquanto voce navega ou digita
+- `let g:pingu_auto_fix_local_cursor_context_only = 1` restringe `debug_output`, syntax local, `trailing_whitespace`, `function_spec`, `markdown_title`, `terraform_required_version` e `dockerfile_workdir` ao bloco textual atual
+- `let g:pingu_auto_fix_doc_cursor_context_max_lines = 80` controla o tamanho maximo desse bloco automatico
 - no LazyVim/Neovim, auto-fixes pendentes calculados durante insert mode sao descartados no `InsertLeave` quando o `changedtick` do buffer muda, evitando que uma correcao antiga sobrescreva texto digitado antes de apertar `Esc`
 - com os defaults atuais no Vim, o auto-fix realtime continua priorizando correcoes locais para syntax, higiene e comentarios no contexto do cursor, valida o lote antes de concluir e mantem o escopo no arquivo atual; no `save`, o agente pode incluir `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`, enquanto `terminal_task` continua fora do auto-fix padrao e sob controle explicito do runtime de terminal
 
 ### Terminal no Vim / Neovim
 
-- `let g:realtime_dev_agent_terminal_actions_enabled = 0` desliga `terminal_task`
-- `let g:realtime_dev_agent_terminal_risk_mode = 'safe'` (default)
-- `let g:realtime_dev_agent_terminal_risk_mode = 'workspace_write'`
-- `let g:realtime_dev_agent_terminal_risk_mode = 'all'`
+- `let g:pingu_terminal_actions_enabled = 0` desliga `terminal_task`
+- `let g:pingu_terminal_risk_mode = 'safe'` (default)
+- `let g:pingu_terminal_risk_mode = 'workspace_write'`
+- `let g:pingu_terminal_risk_mode = 'all'`
 - comandos como teste, build, install e scripts locais exigem `workspace_write`
-- `let g:realtime_dev_agent_terminal_strategy = 'background'` (default)
-- `let g:realtime_dev_agent_terminal_strategy = 'auto'`
-- `let g:realtime_dev_agent_terminal_strategy = 'toggleterm'`
-- `let g:realtime_dev_agent_terminal_strategy = 'native'`
+- `let g:pingu_terminal_strategy = 'background'` (default)
+- `let g:pingu_terminal_strategy = 'auto'`
+- `let g:pingu_terminal_strategy = 'toggleterm'`
+- `let g:pingu_terminal_strategy = 'native'`
 
 ## Variáveis de ambiente
 
@@ -854,7 +856,7 @@ Importante:
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
 - quando uma correcao automatica (snippet local ou `lsp_code_action`) eh aplicada com sucesso, o buffer alvo eh salvo automaticamente no disco
-- `:PinguWindowCheck` (e o atalho `g:realtime_dev_agent_window_key`) mantem o painel aberto durante e apos a analise assincrona
+- `:PinguWindowCheck` (e o atalho `g:pingu_window_key`) mantem o painel aberto durante e apos a analise assincrona
 - `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote
 - Elixir ganhou deteccao adicional de bloco `do/end` pendente, cobrindo erros como `syntax error before: 'Logger'` quando faltam `end`s
 - Elixir agora detecta keyword de fechamento malformada (`eend`, `ennd`, `endd`) como `syntax_malformed_keyword` com auto-fix por `replace_line`
@@ -877,17 +879,17 @@ Importante:
 - `PINGU_AUTOFIX_LARGE_FILE_LINE_THRESHOLD=260` define a partir de quantas linhas o runtime encolhe o lote automatico
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS=0` limita quantas issues documentais sobem por ciclo; `0` remove o corte
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS_LARGE_FILE=4` limita docstrings/comentarios por ciclo em arquivo grande
-- no LazyVim, os equivalentes sao `g:realtime_dev_agent_auto_fix_large_file_line_threshold`, `g:realtime_dev_agent_auto_fix_large_file_radius` e `g:realtime_dev_agent_auto_fix_doc_max_per_check_large_file`
+- no LazyVim, os equivalentes sao `g:pingu_auto_fix_large_file_line_threshold`, `g:pingu_auto_fix_large_file_radius` e `g:pingu_auto_fix_doc_max_per_check_large_file`
 - no LazyVim, `debug_output` e `function_spec` cursor-local entram no lote automatico seguro sem depender da trilha live
-- `g:realtime_dev_agent_lsp_auto_fix_enabled=1` habilita aplicacao automatica de code action do LSP (default no Neovim)
-- `g:realtime_dev_agent_lsp_auto_fix_max_per_check=3` limita quantos diagnosticos do LSP entram por ciclo
-- `g:realtime_dev_agent_lsp_auto_fix_timeout_ms=400` define timeout da busca `textDocument/codeAction` por item
-- `g:realtime_dev_agent_lsp_auto_fix_max_severity='warning'` limita severidade elegivel (`error`, `warning`, `info`, `hint` ou `1..4`)
-- `g:realtime_dev_agent_lsp_auto_fix_only=['source.fixAll','source.organizeImports','quickfix']` controla a ordem/tipos de code action elegiveis
-- `g:realtime_dev_agent_lsp_auto_fix_prefer_global=1` prioriza tentativa de `fixAll`/`organizeImports` no escopo do arquivo antes do quickfix local
-- `g:realtime_dev_agent_lsp_ai_fix_enabled=1` habilita fallback com Copilot para warnings do LSP sem code action aplicavel (default no Neovim)
-- `g:realtime_dev_agent_lsp_ai_fix_max_per_check=1` limita chamadas ao provider externo por ciclo
-- `g:realtime_dev_agent_lsp_ai_fix_severities=['warning']` restringe quais severidades podem acionar o fallback assistido
+- `g:pingu_lsp_auto_fix_enabled=1` habilita aplicacao automatica de code action do LSP (default no Neovim)
+- `g:pingu_lsp_auto_fix_max_per_check=3` limita quantos diagnosticos do LSP entram por ciclo
+- `g:pingu_lsp_auto_fix_timeout_ms=400` define timeout da busca `textDocument/codeAction` por item
+- `g:pingu_lsp_auto_fix_max_severity='warning'` limita severidade elegivel (`error`, `warning`, `info`, `hint` ou `1..4`)
+- `g:pingu_lsp_auto_fix_only=['source.fixAll','source.organizeImports','quickfix']` controla a ordem/tipos de code action elegiveis
+- `g:pingu_lsp_auto_fix_prefer_global=1` prioriza tentativa de `fixAll`/`organizeImports` no escopo do arquivo antes do quickfix local
+- `g:pingu_lsp_ai_fix_enabled=1` habilita fallback com Copilot para warnings do LSP sem code action aplicavel (default no Neovim)
+- `g:pingu_lsp_ai_fix_max_per_check=1` limita chamadas ao provider externo por ciclo
+- `g:pingu_lsp_ai_fix_severities=['warning']` restringe quais severidades podem acionar o fallback assistido
 
 ## Como funciona internamente
 

@@ -56,6 +56,17 @@ test('runtime LazyVim usa defaults leves para preservar responsividade', () => {
   assert.match(pluginRuntime, /let g:realtime_dev_agent_auto_fix_strict_validation = has\('nvim'\) \? 0 : 1/);
 });
 
+test('runtime aceita variaveis g:pingu_* e preserva aliases legados', () => {
+  assert.match(pluginRuntime, /s:pingu_config_names = \[/);
+  assert.match(pluginRuntime, /'realtime_on_change'/);
+  assert.match(pluginRuntime, /'start_on_editor_enter'/);
+  assert.match(pluginRuntime, /function! s:sync_pingu_config_aliases\(prefer_pingu_only\) abort/);
+  assert.match(pluginRuntime, /let l:pingu_name = 'pingu_' \. l:name/);
+  assert.match(pluginRuntime, /let l:legacy_name = 'realtime_dev_agent_' \. l:name/);
+  assert.match(pluginRuntime, /call s:sync_pingu_config_aliases\(v:true\)/);
+  assert.match(pluginRuntime, /call s:sync_pingu_config_aliases\(v:false\)/);
+});
+
 test('runtime registra telemetria local opcional de latencia', () => {
   assert.match(pluginRuntime, /realtime_dev_agent_latency_metrics_enabled/);
   assert.match(pluginRuntime, /let g:realtime_dev_agent_latency_metrics_enabled = 0/);
@@ -108,17 +119,17 @@ test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', 
   fs.writeFileSync(scriptFile, [
     'set nomore',
     'set hidden',
-    'let g:realtime_dev_agent_start_on_editor_enter = 0',
-    'let g:realtime_dev_agent_open_window_on_start = 0',
-    'let g:realtime_dev_agent_show_window = 0',
-    'let g:realtime_dev_agent_review_on_open = 0',
-    'let g:realtime_dev_agent_realtime_on_change = 0',
-    'let g:realtime_dev_agent_realtime_on_buffer_load = 0',
-    'let g:realtime_dev_agent_realtime_async = 0',
-    'let g:realtime_dev_agent_non_blocking_mode = 0',
-    'let g:realtime_dev_agent_auto_fix_enabled = 1',
-    'let g:realtime_dev_agent_auto_fix_max_per_check = 1',
-    "let g:realtime_dev_agent_auto_fix_kinds = ['function_doc']",
+    'let g:pingu_start_on_editor_enter = 0',
+    'let g:pingu_open_window_on_start = 0',
+    'let g:pingu_show_window = 0',
+    'let g:pingu_review_on_open = 0',
+    'let g:pingu_realtime_on_change = 0',
+    'let g:pingu_realtime_on_buffer_load = 0',
+    'let g:pingu_realtime_async = 0',
+    'let g:pingu_non_blocking_mode = 0',
+    'let g:pingu_auto_fix_enabled = 1',
+    'let g:pingu_auto_fix_max_per_check = 1',
+    "let g:pingu_auto_fix_kinds = ['function_doc']",
     `execute 'set runtimepath^=' . fnameescape(${vimString(root)})`,
     'runtime plugin/realtime_dev_agent.vim',
     `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
