@@ -74,6 +74,17 @@ test('runtime registra telemetria local opcional de latencia', () => {
   assert.match(internalRuntime, /'source': 'sync'/);
 });
 
+test('runtime expoe indicador Pingu para statusline', () => {
+  assert.match(pluginRuntime, /let g:pingu_statusline_enabled = 1/);
+  assert.match(pluginRuntime, /let g:pingu_statusline_icon = '🐧'/);
+  assert.match(internalRuntime, /function! PinguStatusline\(\) abort/);
+  assert.match(internalRuntime, /function! s:install_statusline_component\(\) abort/);
+  assert.match(internalRuntime, /function! s:install_neovim_lualine_global\(\) abort/);
+  assert.match(internalRuntime, /PinguStatusline\(\)/);
+  assert.match(internalRuntime, /Pingu\.\.\./);
+  assert.match(internalRuntime, /call s:status_set_running\('auto-fix'\)/);
+});
+
 test('runtime descarta requests antigos do daemon para o mesmo buffer', () => {
   assert.match(internalRuntime, /function! s:drop_daemon_pending_requests_for_buffer\(bufnr\) abort/);
   assert.match(internalRuntime, /call s:drop_daemon_pending_requests_for_buffer\(a:bufnr\)/);
