@@ -313,7 +313,7 @@ if !exists('g:pingu_statusline_enabled')
 endif
 
 if !exists('g:pingu_statusline_icon')
-  let g:pingu_statusline_icon = '🐧'
+  let g:pingu_statusline_icon = ''
 endif
 
 if !exists('g:pingu_statusline_show_when_idle')
@@ -321,7 +321,7 @@ if !exists('g:pingu_statusline_show_when_idle')
 endif
 
 if !exists('g:pingu_statusline_auto')
-  let g:pingu_statusline_auto = 1
+  let g:pingu_statusline_auto = 0
 endif
 
 if !exists('g:pingu_realtime_open_qf')
@@ -360,6 +360,11 @@ endif
 if !exists('g:pingu_auto_fix_enabled')
   " 1 aplica snippets automaticamente; 0 exige aceitação com <Tab>.
   let g:pingu_auto_fix_enabled = 1
+endif
+
+if !exists('g:pingu_undo_fix_history_max')
+  " Quantidade maxima de snapshots de correcao mantidos por arquivo para rollback manual.
+  let g:pingu_undo_fix_history_max = 30
 endif
 
 if !exists('g:pingu_lsp_auto_fix_enabled')

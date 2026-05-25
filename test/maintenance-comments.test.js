@@ -81,3 +81,25 @@ test('nao reporta comentario de manutencao para import CommonJS', () => {
 
   assert.deepEqual(importCommentIssues, []);
 });
+
+test('nao reporta variable_doc para campos de tabela em configuracao Lua', () => {
+  const source = [
+    'return {',
+    '  {',
+    '    "nvim-cmp",',
+    '    init = function()',
+    '      vim.g.pingu_open_window_on_start = 0',
+    '    end,',
+    '    lazy = false,',
+    '    keys = { { "<leader>cc", "<cmd>Neogen<cr>", desc = "Neogen Comment" } },',
+    '    opts = { position = "right" },',
+    '  },',
+    '}',
+  ].join('\n');
+
+  const issues = analyzeText('plugins.lua', source)
+    .filter((issue) => issue.kind === 'variable_doc')
+    .filter((issue) => [4, 7, 8, 9].includes(issue.line));
+
+  assert.deepEqual(issues, []);
+});

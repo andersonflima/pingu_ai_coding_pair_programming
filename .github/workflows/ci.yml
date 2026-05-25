@@ -14,6 +14,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,23 +33,50 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      - name: Install Doppler CLI (optional)
+        if: env.DOPPLER_TOKEN != ''
+        run: |
+          curl -Ls https://cli.doppler.com/install.sh | sh
+          echo "$HOME/.doppler/bin" >> "$GITHUB_PATH"
+
       - name: Run Vim smoke
-        run: npm run smoke:vim
+        run: |
+          if [ -n "${DOPPLER_TOKEN:-}" ]; then
+            doppler run -- npm run smoke:vim
+          else
+            npm run smoke:vim
+          fi
 
       - name: Run checks
-        run: npm run check
+        run: |
+          if [ -n "${DOPPLER_TOKEN:-}" ]; then
+            doppler run -- npm run check
+          else
+            npm run check
+          fi
 
       - name: Validate npm package contents
-        run: npm run pack:check
+        run: |
+          if [ -n "${DOPPLER_TOKEN:-}" ]; then
+            doppler run -- npm run pack:check
+          else
+            npm run pack:check
+          fi
 
       - name: Validate release version is persisted
         if: github.event_name == 'pull_request'
         run: |
-          npm run release:check
+          if [ -n "${DOPPLER_TOKEN:-}" ]; then
+            doppler run -- npm run release:check
+          else
+            npm run release:check
+          fi
           git diff --exit-code package.json package-lock.json CHANGELOG.md
 
   test-node-24:
     runs-on: ubuntu-latest
+    env:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -65,11 +94,32 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      - name: Install Doppler CLI (optional)
+        if: env.DOPPLER_TOKEN != ''
+        run: |
+          curl -Ls https://cli.doppler.com/install.sh | sh
+          echo "$HOME/.doppler/bin" >> "$GITHUB_PATH"
+
       - name: Run Vim smoke
-        run: npm run smoke:vim
+        run: |
+          if [ -n "${DOPPLER_TOKEN:-}" ]; then
+            doppler run -- npm run smoke:vim
+          else
+            npm run smoke:vim
+          fi
 
       - name: Run checks
-        run: npm run check
+        run: |
+          if [ -n "${DOPPLER_TOKEN:-}" ]; then
+            doppler run -- npm run check
+          else
+            npm run check
+          fi
 
       - name: Validate npm package contents
-        run: npm run pack:check
+        run: |
+          if [ -n "${DOPPLER_TOKEN:-}" ]; then
+            doppler run -- npm run pack:check
+          else
+            npm run pack:check
+          fi
