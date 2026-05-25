@@ -1,5 +1,5 @@
 {
-  "name": "pingu-dev-agent",
+  "name": "@andersonflima/pingu-dev-agent",
   "description": "Pingu - Dev Agent: agente de pair programming em tempo real para Vim, Neovim e LazyVim.",
   "version": "0.1.44",
   "license": "MIT",
@@ -23,10 +23,18 @@
   "bin": {
     "pingu": "realtime_dev_agent.js"
   },
+  "publishConfig": {
+    "access": "restricted"
+  },
   "scripts": {
     "check": "npm run lint && npm run check:vim-runtime && npm test",
     "check:vim-runtime": "node scripts/sync-vim-runtime.js --check",
     "ci:release": "npm run check && npm run pack:check && npm run release:check",
+    "doppler:doctor": "doppler configure debug",
+    "doppler:run:check": "doppler run -- npm run check",
+    "doppler:run:doctor": "doppler run -- node realtime_dev_agent.js doctor",
+    "doppler:run:nvim": "doppler run -- nvim",
+    "doppler:setup": "doppler setup",
     "pack:check": "npm pack --dry-run --json",
     "profile": "node scripts/profile-analyzer.js",
     "release:check": "node scripts/check-release-version.js",

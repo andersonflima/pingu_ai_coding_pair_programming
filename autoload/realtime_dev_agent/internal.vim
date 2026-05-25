@@ -29,6 +29,7 @@ let s:realtime_dev_agent_hidden_terminal_jobs = {}
 let s:realtime_dev_agent_auto_fix_timer = -1
 let s:realtime_dev_agent_auto_fix_state = {}
 let s:realtime_dev_agent_latency_metrics = []
+let s:realtime_dev_agent_fix_history = {}
 let s:pingu_status = {
       \ 'running': v:false,
       \ 'phase': 'idle',
@@ -2761,6 +2762,167 @@ function! s:restore_file_snapshot(snapshot) abort
   endfor
 endfunction
 
+function! s:undo_fix_history_max_entries() abort
+  let l:max_entries = get(g:, 'pingu_undo_fix_history_max', 30)
+  if type(l:max_entries) != v:t_number
+    let l:max_entries = str2nr(string(l:max_entries))
+  endif
+  return max([1, l:max_entries])
+endfunction
+
+function! s:push_fix_history_entry(scope_file, entry) abort
+  let l:scope_file = fnamemodify(a:scope_file, ':p')
+  if empty(l:scope_file)
+    return
+  endif
+
+  let l:history = get(s:realtime_dev_agent_fix_history, l:scope_file, [])
+  if type(l:history) != v:t_list
+    let l:history = []
+  endif
+  call add(l:history, deepcopy(a:entry))
+
+  let l:max_entries = s:undo_fix_history_max_entries()
+  if len(l:history) > l:max_entries
+    let l:history = l:history[(len(l:history) - l:max_entries):]
+  endif
+
+  let s:realtime_dev_agent_fix_history[l:scope_file] = l:history
+endfunction
+
+function! s:capture_issue_fix_snapshot(issue, source_file) abort
+  let l:scope_file = fnamemodify(a:source_file, ':p')
+  if empty(l:scope_file)
+    let l:scope_file = fnamemodify(get(a:issue, 'filename', ''), ':p')
+  endif
+
+  let l:affected_files = []
+  if !empty(l:scope_file) && index(l:affected_files, l:scope_file) == -1
+    call add(l:affected_files, l:scope_file)
+  endif
+
+  let l:action = s:issue_effective_action(a:issue)
+  if get(l:action, 'op', '') ==# 'write_file'
+    let l:target_file = fnamemodify(trim('' . get(l:action, 'target_file', '')), ':p')
+    if !empty(l:target_file) && index(l:affected_files, l:target_file) == -1
+      call add(l:affected_files, l:target_file)
+    endif
+  endif
+
+  if empty(l:affected_files)
+    return {}
+  endif
+
+  return {
+        \ 'scope_file': l:scope_file,
+        \ 'affected_files': l:affected_files,
+        \ 'snapshot': s:capture_file_snapshot(l:affected_files),
+        \ }
+endfunction
+
+function! s:record_issue_fix_snapshot(issue, snapshot_data) abort
+  if type(a:snapshot_data) != v:t_dict
+    return
+  endif
+  let l:snapshot = get(a:snapshot_data, 'snapshot', {})
+  if type(l:snapshot) != v:t_dict || empty(l:snapshot)
+    return
+  endif
+
+  let l:scope_file = fnamemodify(get(a:snapshot_data, 'scope_file', ''), ':p')
+  if empty(l:scope_file)
+    return
+  endif
+
+  let l:scope_buf = bufnr(l:scope_file)
+  let l:after_tick = l:scope_buf > 0 && bufloaded(l:scope_buf)
+        \ ? getbufvar(l:scope_buf, 'changedtick', -1)
+        \ : -1
+
+  call s:push_fix_history_entry(l:scope_file, {
+        \ 'snapshot': deepcopy(l:snapshot),
+        \ 'affected_files': copy(get(a:snapshot_data, 'affected_files', [])),
+        \ 'after_changedtick': l:after_tick,
+        \ 'kind': get(a:issue, 'kind', ''),
+        \ 'op': get(s:issue_effective_action(a:issue), 'op', ''),
+        \ 'recorded_at': localtime(),
+        \ })
+endfunction
+
+function! s:restore_issue_fix_snapshot(entry) abort
+  let l:snapshot = get(a:entry, 'snapshot', {})
+  if type(l:snapshot) != v:t_dict || empty(l:snapshot)
+    return v:false
+  endif
+
+  call s:restore_file_snapshot(l:snapshot)
+
+  for l:file in get(a:entry, 'affected_files', [])
+    if empty(l:file)
+      continue
+    endif
+    call s:drop_analysis_cache_for_file(l:file)
+    let l:bufnr = bufnr(l:file)
+    if l:bufnr > 0 && bufloaded(l:bufnr) && getbufvar(l:bufnr, '&buftype', '') ==# ''
+      call s:auto_save_buffer_if_modified(l:bufnr, l:file)
+    endif
+  endfor
+
+  return v:true
+endfunction
+
+function! s:undo_last_pingu_fix(force) abort
+  if s:realtime_dev_agent_auto_fix_busy
+    echomsg '[Pingu] Aguarde o fim do auto-fix para reverter'
+    return
+  endif
+
+  let l:scope_file = fnamemodify(bufname('%'), ':p')
+  if empty(l:scope_file)
+    echomsg '[Pingu] Nenhum arquivo ativo para reverter'
+    return
+  endif
+
+  let l:history = get(s:realtime_dev_agent_fix_history, l:scope_file, [])
+  if type(l:history) != v:t_list || empty(l:history)
+    echomsg '[Pingu] Nenhuma correcao registrada para reverter neste arquivo'
+    return
+  endif
+
+  let l:entry = remove(l:history, -1)
+  if !a:force
+    let l:scope_buf = bufnr(l:scope_file)
+    let l:expected_tick = get(l:entry, 'after_changedtick', -1)
+    if l:expected_tick >= 0 && l:scope_buf > 0 && bufloaded(l:scope_buf)
+      let l:current_tick = getbufvar(l:scope_buf, 'changedtick', -1)
+      if l:current_tick !=# l:expected_tick
+        call add(l:history, l:entry)
+        let s:realtime_dev_agent_fix_history[l:scope_file] = l:history
+        echohl WarningMsg
+        echomsg '[Pingu] Buffer mudou apos o auto-fix; use :PinguUndoFix! para forcar a reversao'
+        echohl None
+        return
+      endif
+    endif
+  endif
+
+  if empty(l:history)
+    call remove(s:realtime_dev_agent_fix_history, l:scope_file)
+  else
+    let s:realtime_dev_agent_fix_history[l:scope_file] = l:history
+  endif
+
+  if !s:restore_issue_fix_snapshot(l:entry)
+    call s:push_fix_history_entry(l:scope_file, l:entry)
+    echohl WarningMsg
+    echomsg '[Pingu] Falha ao restaurar snapshot da correcao'
+    echohl None
+    return
+  endif
+
+  echomsg printf('[Pingu] Reversao aplicada em %d arquivo(s)', len(get(l:entry, 'affected_files', [])))
+endfunction
+
 function! s:build_guard_file_entries(file_paths) abort
   let l:entries = []
   for l:file in a:file_paths
@@ -3512,6 +3674,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   let l:snippet_raw = get(l:issue, 'snippet', '')
   let l:op = get(l:action, 'op', '')
   let l:restore_view = {}
+  let l:undo_snapshot = {}
   let l:active_buf = bufnr('%')
   let l:active_file = fnamemodify(bufname(l:active_buf), ':p')
   let l:target_file = fnamemodify(l:filename, ':p')
@@ -3545,7 +3708,12 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   endif
 
   if l:op ==# 'write_file'
-    return s:apply_issue_write_file(l:issue, l:snippet_lines)
+    let l:undo_snapshot = s:capture_issue_fix_snapshot(l:issue, l:target_file)
+    let l:write_applied = s:apply_issue_write_file(l:issue, l:snippet_lines)
+    if l:write_applied
+      call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
+    endif
+    return l:write_applied
   endif
 
   if a:keep_focus_code
@@ -3613,6 +3781,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
     return v:false
   endif
   let l:snippet_text = join(l:snippet_lines, "\n")
+  let l:undo_snapshot = s:capture_issue_fix_snapshot(l:issue, l:target_file)
 
   if l:op ==# 'replace_range'
     if s:apply_issue_replace_range(l:target_buf, l:action, l:snippet_lines)
@@ -3623,6 +3792,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
         call winrestview(l:restore_view)
       endif
       call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
+      call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
       return v:true
     endif
     return v:false
@@ -3635,6 +3805,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
         call winrestview(l:restore_view)
       endif
       call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
+      call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
       return v:true
     endif
     let l:normalized_current = substitute(l:line_content, '^\s*', '', '')
@@ -3667,6 +3838,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
     endif
   endif
   call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
+  call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
   return v:true
 endfunction
 
@@ -5943,6 +6115,7 @@ command! PinguCheck call s:realtime_dev_agent_check()
 command! PinguWindowCheck call s:realtime_dev_agent_window_check()
 command! PinguWindowClose call s:window_close()
 command! PinguWindowToggle call s:window_toggle()
+command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
 command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
 command! PinguAutoFixDisable let g:pingu_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'

@@ -362,6 +362,11 @@ if !exists('g:pingu_auto_fix_enabled')
   let g:pingu_auto_fix_enabled = 1
 endif
 
+if !exists('g:pingu_undo_fix_history_max')
+  " Quantidade maxima de snapshots de correcao mantidos por arquivo para rollback manual.
+  let g:pingu_undo_fix_history_max = 30
+endif
+
 if !exists('g:pingu_lsp_auto_fix_enabled')
   " 1 tenta aplicar code actions de diagnosticos do LSP durante o lote automatico.
   let g:pingu_lsp_auto_fix_enabled = has('nvim') ? 1 : 0

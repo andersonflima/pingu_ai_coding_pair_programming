@@ -95,9 +95,18 @@ test('runtime descarta requests antigos do daemon para o mesmo buffer', () => {
 test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /command! PinguCheck call s:realtime_dev_agent_check\(\)/);
   assert.match(internalRuntime, /command! PinguWindowCheck call s:realtime_dev_agent_window_check\(\)/);
+  assert.match(internalRuntime, /command! -bang PinguUndoFix call s:undo_last_pingu_fix\(<bang>0\)/);
   assert.doesNotMatch(internalRuntime, /command! RealtimeDevAgent/);
   assert.match(internalRuntime, /':PinguCheck<CR>'/);
   assert.match(internalRuntime, /':PinguWindowCheck<CR>'/);
+});
+
+test('runtime registra historico para rollback manual de auto-fix', () => {
+  assert.match(pluginRuntime, /let g:pingu_undo_fix_history_max = 30/);
+  assert.match(internalRuntime, /let s:realtime_dev_agent_fix_history = \{\}/);
+  assert.match(internalRuntime, /function! s:capture_issue_fix_snapshot\(issue, source_file\) abort/);
+  assert.match(internalRuntime, /function! s:undo_last_pingu_fix\(force\) abort/);
+  assert.match(internalRuntime, /:PinguUndoFix!/);
 });
 
 test('runtime realtime guarda comentarios por identidade para evitar reaplicacao em loop', () => {
@@ -162,6 +171,59 @@ test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', 
   assert.equal(payload.afterText, payload.beforeText);
   assert.equal(payload.currentLineText, payload.beforeText);
   assert.ok(payload.lineCount >= source.trimEnd().split('\n').length);
+});
+
+test('runtime permite reverter a ultima correcao aplicada pelo Pingu', { skip: !commandExists('nvim') }, () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-vim-undo-fix-'));
+  const sourceFile = path.join(tempDir, 'sample.js');
+  const scriptFile = path.join(tempDir, 'undo-fix.vim');
+  const outputFile = path.join(tempDir, 'result.json');
+  const source = [
+    'const value = 1   ',
+    'console.log(value)',
+    '',
+  ].join('\n');
+  fs.writeFileSync(sourceFile, source, 'utf8');
+  fs.writeFileSync(scriptFile, [
+    'set nomore',
+    'set hidden',
+    'let g:pingu_start_on_editor_enter = 0',
+    'let g:pingu_open_window_on_start = 0',
+    'let g:pingu_show_window = 0',
+    'let g:pingu_review_on_open = 0',
+    'let g:pingu_realtime_on_change = 0',
+    'let g:pingu_realtime_on_buffer_load = 0',
+    'let g:pingu_realtime_async = 0',
+    'let g:pingu_non_blocking_mode = 0',
+    'let g:pingu_auto_fix_enabled = 1',
+    'let g:pingu_auto_fix_max_per_check = 1',
+    "let g:pingu_auto_fix_kinds = ['trailing_whitespace']",
+    `execute 'set runtimepath^=' . fnameescape(${vimString(root)})`,
+    'runtime plugin/realtime_dev_agent.vim',
+    `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
+    'let b:before_line = getline(1)',
+    'silent PinguCheck',
+    'sleep 900m',
+    'let b:after_fix_line = getline(1)',
+    'silent PinguUndoFix',
+    'sleep 150m',
+    'let b:after_undo_line = getline(1)',
+    `call writefile([json_encode({'beforeLine': b:before_line, 'afterFixLine': b:after_fix_line, 'afterUndoLine': b:after_undo_line})], ${vimString(outputFile)})`,
+    'quitall!',
+    '',
+  ].join('\n'), 'utf8');
+
+  const result = spawnSync('nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-S', scriptFile], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 20000,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+  assert.equal(payload.beforeLine, 'const value = 1   ');
+  assert.equal(payload.afterFixLine, 'const value = 1');
+  assert.equal(payload.afterUndoLine, payload.beforeLine);
 });
 
 test('runtime evita segunda rodada automatica logo apos aplicar um lote', () => {
