@@ -102,7 +102,7 @@ Esse fluxo define:
 Quando o pacote estiver publicado no npm:
 
 ```bash
-npm install -g pingu-dev-agent
+npm install -g @andersonflima/pingu-dev-agent
 pingu doctor
 ```
 
@@ -567,6 +567,7 @@ Comandos principais no editor:
 - `:PinguWindowCheck`
 - `:PinguWindowClose`
 - `:PinguWindowToggle`
+- `:PinguUndoFix`
 - `:PinguLatencyMetrics`
 - `:PinguAutoFixEnable`
 - `:PinguAutoFixDisable`
@@ -574,10 +575,10 @@ Comandos principais no editor:
 Indicador de status:
 
 - o runtime expõe `PinguStatusline()` para statusline Vim/Neovim e `_G.PinguStatusline()` para componentes Lua
-- por padrao, `g:pingu_statusline_enabled = 1` e `g:pingu_statusline_icon = '🐧'`
-- quando uma analise ou auto-fix esta rodando, o indicador mostra `🐧 Pingu...`
-- quando a ultima analise encontrou sugestoes, o indicador mostra a contagem, por exemplo `🐧 Pingu 3`
-- para desativar a integracao automatica com statusline nativa, use `let g:pingu_statusline_auto = 0`
+- por padrao, `g:pingu_statusline_enabled = 1` e `g:pingu_statusline_icon = ''`
+- quando uma analise ou auto-fix esta rodando, o indicador mostra ` Pingu...`
+- quando a ultima analise encontrou sugestoes, o indicador mostra a contagem, por exemplo ` Pingu 3`
+- para adicionar automaticamente o indicador na statusline nativa, use `let g:pingu_statusline_auto = 1`
 
 Exemplo com `lualine.nvim` no LazyVim:
 
@@ -776,7 +777,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
     vim.g.pingu_latency_metrics_enabled = 0
     vim.g.pingu_latency_metrics_max_entries = 50
     vim.g.pingu_statusline_enabled = 1
-    vim.g.pingu_statusline_icon = "🐧"
+    vim.g.pingu_statusline_icon = ""
     vim.g.pingu_realtime_auto_fix_max_per_check = 2
     vim.g.pingu_auto_fix_doc_cursor_context_only = 0
     vim.g.pingu_realtime_doc_cursor_context_only = 1
@@ -825,9 +826,12 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
 - `let g:pingu_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
 - `let g:pingu_statusline_enabled = 1` habilita o indicador de status `PinguStatusline()`
-- `let g:pingu_statusline_icon = '🐧'` define o icone exibido na status bar
-- `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; no `lualine`, use `_G.PinguStatusline()` como componente
+- `let g:pingu_statusline_icon = ''` define o icone exibido na status bar
+- `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; por padrao fica desligado para evitar duplicidade em setups com `lualine`
+- `let g:pingu_undo_fix_history_max = 30` limita quantos snapshots de correcoes do Pingu ficam disponiveis por arquivo para rollback manual
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
+- `:PinguUndoFix` reverte a ultima correcao aplicada pelo Pingu no arquivo atual
+- `:PinguUndoFix!` força a reversao mesmo se o buffer tiver mudado depois da correcao
 - `let g:pingu_realtime_auto_fix_max_per_check = 2` reduz o lote automatico por ciclo realtime para manter o editor fluido
 - `let g:pingu_auto_fix_strict_validation = 0` no Neovim evita reanalise e guard sincronos apos cada lote automatico; use `1` quando preferir validacao estrita mesmo com maior latencia
 - `let g:pingu_auto_fix_doc_cursor_context_only = 0` deixa `function_doc`, `class_doc`, `variable_doc` e `flow_comment` elegiveis no arquivo inteiro
@@ -864,11 +868,59 @@ Variáveis comuns:
 - `PINGU_FLOW_COMMENT_MAX_LINES`
 - `PINGU_LIGHT_ANALYSIS_DEEP_PASS_MAX_LINES`
 
+Provider de IA:
+
+- `PINGU_AI_PROVIDER=copilot` (default): mantém o comportamento legado via Copilot CLI
+- `PINGU_AI_PROVIDER=openai`: força uso do provider OpenAI
+- `PINGU_AI_PROVIDER=auto`: tenta OpenAI primeiro e usa Copilot como fallback
+
+Variáveis do provider OpenAI:
+
+- `OPENAI_API_KEY` chave da API
+- `PINGU_OPENAI_MODEL` modelo usado no provider (`gpt-4o-mini` por default)
+- `PINGU_OPENAI_BASE_URL` endpoint base (default: `https://api.openai.com/v1`)
+- `PINGU_OPENAI_TIMEOUT_MS` timeout da chamada HTTP
+- `PINGU_OPENAI_COMMAND` comando HTTP síncrono (default: `curl`)
+- `PINGU_OPENAI_DISABLED=1` desliga o provider OpenAI
+
+Variáveis do provider Copilot:
+
+- `PINGU_COPILOT_COMMAND` comando do provider (default: `copilot`)
+- `PINGU_COPILOT_TIMEOUT_MS` timeout da chamada ao provider
+- `PINGU_COPILOT_FAILURE_COOLDOWN_MS` cooldown de falha do provider
+- `PINGU_COPILOT_DISABLED=1` desliga o provider Copilot
+
+### Doppler
+
+O repositório já inclui `doppler.yaml` para bootstrap local do projeto/config.
+
+Setup local:
+
+```bash
+doppler setup
+doppler run -- node realtime_dev_agent.js doctor
+doppler run -- nvim
+```
+
+Comandos npm prontos:
+
+- `npm run doppler:setup`
+- `npm run doppler:doctor`
+- `npm run doppler:run:doctor`
+- `npm run doppler:run:check`
+- `npm run doppler:run:nvim`
+
+No Doppler, configure ao menos:
+
+- `OPENAI_API_KEY`
+- `PINGU_AI_PROVIDER` (`openai`, `copilot` ou `auto`)
+- opcional: `PINGU_OPENAI_MODEL`, `PINGU_OPENAI_BASE_URL`, `PINGU_OPENAI_TIMEOUT_MS`
+
 Importante:
 
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
-- se o comando `copilot` estiver disponível no ambiente, o runtime pode usar geração assistida automaticamente
+- por default (`PINGU_AI_PROVIDER=copilot`), o runtime mantém o provider legado; para OpenAI, configure `PINGU_AI_PROVIDER=openai` (ou `auto`)
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
@@ -914,6 +966,13 @@ Importante:
 - `g:pingu_lsp_ai_fix_enabled=1` habilita fallback com Copilot para warnings do LSP sem code action aplicavel (default no Neovim)
 - `g:pingu_lsp_ai_fix_max_per_check=1` limita chamadas ao provider externo por ciclo
 - `g:pingu_lsp_ai_fix_severities=['warning']` restringe quais severidades podem acionar o fallback assistido
+
+### CI/CD com Doppler (opcional)
+
+O workflow de CI (`.github/workflows/ci.yml`) já suporta Doppler de forma opcional:
+
+- se `DOPPLER_TOKEN` estiver definido nos secrets do repositório, a pipeline instala Doppler CLI e executa smoke/check/pack com `doppler run -- ...`
+- sem `DOPPLER_TOKEN`, a pipeline continua com o fluxo normal sem Doppler
 
 ## Como funciona internamente
 

@@ -73,10 +73,10 @@ jobs:
 
       - name: Publish to npm with Trusted Publisher
         if: env.HAS_NPM_TOKEN != 'true'
-        run: npm publish --access public
+        run: npm publish
 
       - name: Publish to npm with token
         if: env.HAS_NPM_TOKEN == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish
