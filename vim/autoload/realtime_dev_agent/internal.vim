@@ -4295,6 +4295,10 @@ function! s:realtime_issue_still_relevant(item, target_buf, lnum, line_content) 
       return v:false
     endif
 
+    if l:kind ==# 'prompt_task'
+      return v:true
+    endif
+
     if !s:declaration_authority_matches_current(a:item, l:target_buf, l:line_no, l:snippet_lines)
       return v:false
     endif
@@ -4817,6 +4821,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
     call setqflist(l:qf, 'a')
   endif
   let s:realtime_dev_agent_last_qf = l:qf
+  call s:update_pingu_issue_hints_for_buffer(a:bufnr, l:qf)
   let l:auto_fix_applied = 0
   let l:previous_mode = s:realtime_dev_agent_is_realtime_check
   let l:suppress_auto_fix = s:realtime_dev_agent_suppress_auto_fix_once
@@ -4843,6 +4848,7 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
     if a:open_qf
       cclose
     endif
+    call s:clear_pingu_issue_hints_for_buffer(a:bufnr)
     call s:window_refresh(l:file, l:qf)
     if a:show_echo
       echo '[Pingu] Nenhuma sugestao encontrada'
@@ -6090,6 +6096,397 @@ function! s:realtime_dev_agent_window_check() abort
   endtry
 endfunction
 
+function! s:pingu_prompt(line1, line2, args, range_count) abort
+  let l:bufnr = bufnr('%')
+  if l:bufnr <= 0 || !bufloaded(l:bufnr)
+    echomsg '[Pingu] Nenhum buffer ativo para prompt'
+    return
+  endif
+
+  let l:file = fnamemodify(bufname(l:bufnr), ':p')
+  if empty(l:file)
+    echomsg '[Pingu] Buffer sem arquivo associado'
+    return
+  endif
+
+  let l:prompt = trim('' . a:args)
+  if empty(l:prompt)
+    let l:prompt = input('[Pingu] Prompt: ')
+  endif
+  if empty(trim(l:prompt))
+    echomsg '[Pingu] Prompt cancelado'
+    return
+  endif
+
+  let l:start_line = a:range_count > 0 ? a:line1 : line('.')
+  let l:end_line = a:range_count > 0 ? a:line2 : line('.')
+  if l:start_line > l:end_line
+    let [l:start_line, l:end_line] = [l:end_line, l:start_line]
+  endif
+
+  let l:runner = s:realtime_dev_agent_script_runner()
+  let l:script = s:realtime_dev_agent_script_path()
+  if empty(l:runner) || empty(l:script)
+    echomsg '[Pingu] Runtime nao encontrado no PATH'
+    return
+  endif
+
+  let l:payload = {
+        \ 'file': l:file,
+        \ 'language': &filetype,
+        \ 'prompt': l:prompt,
+        \ 'lines': getbufline(l:bufnr, 1, '$'),
+        \ 'selectedText': join(getbufline(l:bufnr, l:start_line, l:end_line), "\n"),
+        \ 'startLine': l:start_line,
+        \ 'endLine': l:end_line,
+        \ 'cursorLine': line('.'),
+        \ 'cursorColumn': col('.'),
+        \ }
+  let l:argv = [l:runner, l:script, '--prompt-task']
+  let l:output = s:run_systemlist(l:argv, s:project_root(l:file), json_encode(l:payload))
+  if v:shell_error != 0
+    echomsg '[Pingu] Falha ao executar prompt manual'
+    return
+  endif
+
+  let l:raw = join(l:output, "\n")
+  if empty(trim(l:raw))
+    echomsg '[Pingu] Prompt sem resposta'
+    return
+  endif
+
+  try
+    let l:decoded = json_decode(l:raw)
+  catch
+    echomsg '[Pingu] Resposta invalida do prompt'
+    return
+  endtry
+
+  if type(l:decoded) != v:t_dict || !get(l:decoded, 'ok', v:false)
+    let l:reason = type(l:decoded) == v:t_dict ? get(l:decoded, 'reason', 'provider_unavailable') : 'invalid_response'
+    echomsg '[Pingu] Prompt nao aplicado: ' . l:reason
+    return
+  endif
+
+  let l:issue = get(l:decoded, 'issue', {})
+  if type(l:issue) != v:t_dict || empty(trim('' . get(l:issue, 'snippet', '')))
+    echomsg '[Pingu] Prompt sem patch aplicavel'
+    return
+  endif
+  let l:issue.filename = get(l:issue, 'filename', get(l:issue, 'file', l:file))
+  let l:issue.lnum = max([1, str2nr(string(get(l:issue, 'lnum', get(l:issue, 'line', l:start_line))))])
+  let l:issue.kind = get(l:issue, 'kind', 'prompt_task')
+  if !has_key(l:issue, 'action') || type(get(l:issue, 'action', {})) != v:t_dict
+    let l:issue.action = {'op': 'replace_range'}
+  endif
+
+  if s:apply_issue_snippet(l:issue, v:false)
+    echo '[Pingu] Prompt aplicado'
+  else
+    echomsg '[Pingu] Prompt nao alterou o buffer'
+  endif
+endfunction
+
+function! s:pingu_hints_enabled() abort
+  if has('nvim') && exists('*nvim_list_uis') && empty(nvim_list_uis())
+    return v:false
+  endif
+  return has('nvim')
+        \ && exists('*nvim_create_namespace')
+        \ && exists('*nvim_buf_set_extmark')
+        \ && str2nr(string(get(g:, 'pingu_hints_enabled', has('nvim') ? 1 : 0))) > 0
+endfunction
+
+function! s:pingu_hints_max_lines() abort
+  let l:value = str2nr(string(get(g:, 'pingu_hints_max_lines', 1200)))
+  return l:value <= 0 ? 1200 : l:value
+endfunction
+
+function! s:pingu_hints_namespace() abort
+  if !exists('s:pingu_hints_namespace') || s:pingu_hints_namespace < 0
+    let s:pingu_hints_namespace = nvim_create_namespace('pingu_hints')
+  endif
+  return s:pingu_hints_namespace
+endfunction
+
+function! s:define_pingu_hint_highlights() abort
+  silent! highlight default link PinguHintCode DiagnosticVirtualTextInfo
+  silent! highlight default link PinguHintFix DiagnosticVirtualTextWarn
+  silent! highlight default link PinguHintContext DiagnosticVirtualTextHint
+  silent! highlight default link PinguHintTest DiagnosticVirtualTextInfo
+  silent! highlight default link PinguHintTerminal DiagnosticVirtualTextWarn
+endfunction
+
+function! s:pingu_hint_strip_comment(line) abort
+  let l:body = trim('' . a:line)
+  let l:body = substitute(l:body, '^\s*<!--\s*', '', '')
+  let l:body = substitute(l:body, '\s*-->\s*$', '', '')
+  let l:body = substitute(l:body, '^\s*/\*\s*', '', '')
+  let l:body = substitute(l:body, '\s*\*/\s*$', '', '')
+  let l:body = substitute(l:body, '^\s*\%(//\|#\|--\|"\|%%\)\s*', '', '')
+  return trim(l:body)
+endfunction
+
+function! s:pingu_hint_intent_label(intent) abort
+  let l:intent = tolower(trim('' . a:intent))
+  if index(['code'], l:intent) != -1
+    return ['Pingu code', 'PinguHintCode']
+  endif
+  if index(['fix', 'refactor', 'refatora', 'corrige', 'corrigir'], l:intent) != -1
+    return ['Pingu fix', 'PinguHintFix']
+  endif
+  if index(['context', 'ctx', 'blueprint', 'scaffold'], l:intent) != -1
+    return ['Pingu context', 'PinguHintContext']
+  endif
+  if index(['test', 'tests', 'unit-test', 'unit-tests'], l:intent) != -1
+    return ['Pingu test', 'PinguHintTest']
+  endif
+  if index(['terminal', 'term', 'shell', 'cmd', 'command', 'run'], l:intent) != -1
+    return ['Pingu terminal', 'PinguHintTerminal']
+  endif
+  return []
+endfunction
+
+function! s:pingu_hint_for_line(line) abort
+  let l:body = s:pingu_hint_strip_comment(a:line)
+  if empty(l:body) || l:body =~# '^\\s'
+    return []
+  endif
+
+  let l:directive = matchlist(l:body, '\c^@\?pingu\%(:\s*\|\s\+\)\([A-Za-z][A-Za-z_-]*\)\s\+.\+$')
+  if !empty(l:directive)
+    return s:pingu_hint_intent_label(l:directive[1])
+  endif
+
+  let l:symbol = matchstr(l:body, '^\%(:::\|::\|\*\*\|[:*]\)\ze\s*.\+$')
+  if empty(l:symbol)
+    return []
+  endif
+
+  if l:symbol ==# ':::' || l:symbol ==# '**'
+    return ['Pingu context', 'PinguHintContext']
+  endif
+  if l:symbol ==# '*'
+    return ['Pingu terminal', 'PinguHintTerminal']
+  endif
+  return ['Pingu code', 'PinguHintCode']
+endfunction
+
+function! s:update_pingu_hints_for_buffer(bufnr) abort
+  if !s:pingu_hints_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return
+  endif
+
+  let l:ns = s:pingu_hints_namespace()
+  try
+    call nvim_buf_clear_namespace(a:bufnr, l:ns, 0, -1)
+  catch
+    return
+  endtry
+
+  if getbufvar(a:bufnr, '&buftype') !=# ''
+    return
+  endif
+
+  let l:last = min([len(getbufline(a:bufnr, 1, '$')), s:pingu_hints_max_lines()])
+  if l:last <= 0
+    return
+  endif
+
+  call s:define_pingu_hint_highlights()
+  let l:lines = getbufline(a:bufnr, 1, l:last)
+  let l:index = 0
+  for l:line in l:lines
+    let l:hint = s:pingu_hint_for_line(l:line)
+    if !empty(l:hint)
+      try
+        call nvim_buf_set_extmark(a:bufnr, l:ns, l:index, 0, {
+              \ 'virt_text': [[printf('  %s', l:hint[0]), l:hint[1]]],
+              \ 'virt_text_pos': 'eol',
+              \ 'hl_mode': 'combine',
+              \ })
+      catch
+      endtry
+    endif
+    let l:index += 1
+  endfor
+endfunction
+
+function! s:update_pingu_hints_current_buffer() abort
+  call s:update_pingu_hints_for_buffer(bufnr('%'))
+endfunction
+
+function! s:pingu_issue_hints_enabled() abort
+  if has('nvim') && exists('*nvim_list_uis') && empty(nvim_list_uis())
+    return v:false
+  endif
+  return has('nvim')
+        \ && exists('*nvim_create_namespace')
+        \ && exists('*nvim_buf_set_extmark')
+        \ && str2nr(string(get(g:, 'pingu_issue_hints_enabled', has('nvim') ? 1 : 0))) > 0
+endfunction
+
+function! s:pingu_issue_hints_namespace() abort
+  if !exists('s:pingu_issue_hints_namespace') || s:pingu_issue_hints_namespace < 0
+    let s:pingu_issue_hints_namespace = nvim_create_namespace('pingu_issue_hints')
+  endif
+  return s:pingu_issue_hints_namespace
+endfunction
+
+function! s:define_pingu_issue_hint_highlights() abort
+  silent! highlight default link PinguIssueHintError DiagnosticVirtualTextError
+  silent! highlight default link PinguIssueHintWarn DiagnosticVirtualTextWarn
+  silent! highlight default link PinguIssueHintInfo DiagnosticVirtualTextInfo
+  silent! highlight default link PinguIssueHintHint DiagnosticVirtualTextHint
+endfunction
+
+function! s:pingu_issue_hint_highlight(severity) abort
+  let l:severity = tolower(trim('' . a:severity))
+  if l:severity ==# 'error'
+    return 'PinguIssueHintError'
+  endif
+  if l:severity ==# 'warning' || l:severity ==# 'warn'
+    return 'PinguIssueHintWarn'
+  endif
+  if l:severity ==# 'hint'
+    return 'PinguIssueHintHint'
+  endif
+  return 'PinguIssueHintInfo'
+endfunction
+
+function! s:pingu_issue_hint_text(issue) abort
+  let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:severity = empty(l:parts[0]) ? 'info' : l:parts[0]
+  let l:message = empty(l:parts[1]) ? get(a:issue, 'kind', 'issue') : l:parts[1]
+  let l:suggestion = l:parts[2]
+  let l:action = s:issue_effective_action(a:issue)
+  let l:fixable = !empty(get(a:issue, 'snippet', ''))
+        \ || index(['run_command', 'lsp_code_action', 'lsp_ai_fix'], get(l:action, 'op', '')) != -1
+  let l:text = printf('Pingu %s: %s', l:severity, l:message)
+  if !empty(l:suggestion)
+    let l:text .= ' -> ' . l:suggestion
+  endif
+  if l:fixable
+    let l:text .= ' [fix]'
+  endif
+  return [substitute(l:text, '\s\+', ' ', 'g'), s:pingu_issue_hint_highlight(l:severity)]
+endfunction
+
+function! s:update_pingu_issue_hints_for_buffer(bufnr, qf) abort
+  if !s:pingu_issue_hints_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return
+  endif
+
+  let l:ns = s:pingu_issue_hints_namespace()
+  try
+    call nvim_buf_clear_namespace(a:bufnr, l:ns, 0, -1)
+  catch
+    return
+  endtry
+
+  if getbufvar(a:bufnr, '&buftype') !=# ''
+    return
+  endif
+
+  call s:define_pingu_issue_hint_highlights()
+  let l:file = fnamemodify(bufname(a:bufnr), ':p')
+  let l:last = len(getbufline(a:bufnr, 1, '$'))
+  let l:seen = {}
+  for l:item in (type(a:qf) == v:t_list ? a:qf : [])
+    if fnamemodify(get(l:item, 'filename', ''), ':p') !=# l:file
+      continue
+    endif
+    let l:lnum = str2nr(string(get(l:item, 'lnum', 0)))
+    if l:lnum < 1 || l:lnum > l:last
+      continue
+    endif
+    let l:key = string(l:lnum)
+    if has_key(l:seen, l:key)
+      continue
+    endif
+    let l:seen[l:key] = 1
+    let l:hint = s:pingu_issue_hint_text(l:item)
+    try
+      call nvim_buf_set_extmark(a:bufnr, l:ns, l:lnum - 1, 0, {
+            \ 'virt_text': [[printf('  %s', l:hint[0]), l:hint[1]]],
+            \ 'virt_text_pos': 'eol',
+            \ 'hl_mode': 'combine',
+            \ })
+    catch
+    endtry
+  endfor
+endfunction
+
+function! s:clear_pingu_issue_hints_for_buffer(bufnr) abort
+  if !has('nvim') || !exists('*nvim_buf_clear_namespace') || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return
+  endif
+  try
+    call nvim_buf_clear_namespace(a:bufnr, s:pingu_issue_hints_namespace(), 0, -1)
+  catch
+  endtry
+endfunction
+
+function! s:pingu_auto_fix_now() abort
+  if empty(s:realtime_dev_agent_last_qf)
+    echomsg '[Pingu] Nenhuma sugestao disponivel para auto-fix'
+    return
+  endif
+  let l:file = fnamemodify(bufname('%'), ':p')
+  if empty(l:file)
+    echomsg '[Pingu] Buffer sem arquivo associado'
+    return
+  endif
+  let l:previous = get(g:, 'pingu_auto_fix_enabled', 0)
+  let g:pingu_auto_fix_enabled = 1
+  try
+    let l:applied = s:realtime_dev_agent_apply_auto_fixes(s:realtime_dev_agent_last_qf, l:file, {
+          \ 'bufnr': bufnr('%'),
+          \ 'open_qf': g:pingu_open_qf,
+          \ 'show_echo': 1,
+          \ 'realtime_mode': v:false,
+          \ })
+  finally
+    let g:pingu_auto_fix_enabled = l:previous
+  endtry
+  if l:applied == 0
+    echomsg '[Pingu] Nenhum auto-fix aplicavel no contexto atual'
+  endif
+endfunction
+
+function! s:issue_has_applicable_fix(issue) abort
+  if empty(a:issue) || type(a:issue) != v:t_dict
+    return v:false
+  endif
+  let l:action = s:issue_effective_action(a:issue)
+  return !empty(get(a:issue, 'snippet', ''))
+        \ || index(['run_command', 'lsp_code_action', 'lsp_ai_fix'], get(l:action, 'op', '')) != -1
+endfunction
+
+function! s:pingu_fix_current_issue() abort
+  let l:issue = s:get_buffer_issue_at_cursor()
+  if empty(l:issue)
+    echomsg '[Pingu] Nenhuma sugestao na linha atual'
+    return
+  endif
+  if !s:issue_has_applicable_fix(l:issue)
+    echomsg '[Pingu] Sugestao sem correcao automatica aplicavel'
+    return
+  endif
+  if s:realtime_dev_agent_auto_fix_busy
+    echomsg '[Pingu] Aguarde o fim do auto-fix atual'
+    return
+  endif
+  if s:apply_issue_snippet(l:issue, v:false)
+    echo '[Pingu] Correcao aplicada na linha atual'
+    call s:clear_pingu_issue_hints_for_buffer(bufnr('%'))
+    let l:analysis_mode = s:analysis_mode_for_request(v:false)
+    call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
+  else
+    echomsg '[Pingu] Correcao nao alterou o buffer'
+  endif
+endfunction
+
 function! s:set_global_normal_map(lhs, rhs, desc) abort
   if empty(a:lhs) || empty(a:rhs)
     return
@@ -6111,10 +6508,35 @@ function! s:set_global_normal_map(lhs, rhs, desc) abort
   execute 'nnoremap <silent> ' . a:lhs . ' ' . a:rhs
 endfunction
 
+function! s:set_global_visual_map(lhs, rhs, desc) abort
+  if empty(a:lhs) || empty(a:rhs)
+    return
+  endif
+
+  if has('nvim') && exists('*nvim_set_keymap')
+    try
+      call nvim_set_keymap('v', a:lhs, a:rhs, {
+            \ 'noremap': v:true,
+            \ 'silent': v:true,
+            \ 'desc': a:desc,
+            \ })
+      return
+    catch
+      " Fallback para map tradicional quando a API de desc nao estiver disponível.
+    endtry
+  endif
+
+  execute 'xnoremap <silent> ' . a:lhs . ' ' . a:rhs
+endfunction
+
 command! PinguCheck call s:realtime_dev_agent_check()
 command! PinguWindowCheck call s:realtime_dev_agent_window_check()
 command! PinguWindowClose call s:window_close()
 command! PinguWindowToggle call s:window_toggle()
+command! -range -nargs=* PinguPrompt call s:pingu_prompt(<line1>, <line2>, <q-args>, <range>)
+command! PinguHintsRefresh call s:update_pingu_hints_current_buffer()
+command! PinguAutoFixNow call s:pingu_auto_fix_now()
+command! PinguFixCurrent call s:pingu_fix_current_issue()
 command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
 command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
@@ -6141,6 +6563,29 @@ if !empty(g:pingu_window_key)
         \ )
 endif
 
+if !empty(g:pingu_fix_current_key)
+  " Atalho para aplicar a correcao disponivel na linha atual.
+  call s:set_global_normal_map(
+        \ g:pingu_fix_current_key,
+        \ ':PinguFixCurrent<CR>',
+        \ 'Pingu: corrigir sugestao da linha atual',
+        \ )
+endif
+
+if !empty(g:pingu_prompt_key)
+  " Atalho para prompt manual no cursor ou no range visual selecionado.
+  call s:set_global_normal_map(
+        \ g:pingu_prompt_key,
+        \ ':PinguPrompt<CR>',
+        \ 'Pingu: prompt manual no cursor',
+        \ )
+  call s:set_global_visual_map(
+        \ g:pingu_prompt_key,
+        \ ':<C-U>''<,''>PinguPrompt<CR>',
+        \ 'Pingu: prompt manual na selecao',
+        \ )
+endif
+
 if g:pingu_start_on_editor_enter
   augroup realtime_dev_agent_startup
     autocmd!
@@ -6156,6 +6601,12 @@ augroup END
 augroup realtime_dev_agent_runtime_cleanup
   autocmd!
   autocmd VimLeavePre * call s:stop_async_analysis_job() | call s:stop_analysis_daemon()
+augroup END
+
+augroup pingu_hints
+  autocmd!
+  autocmd ColorScheme * silent! call s:define_pingu_hint_highlights() | silent! call s:define_pingu_issue_hint_highlights()
+  autocmd BufEnter,BufWinEnter,BufWritePost,InsertLeave,TextChanged,TextChangedI * silent! call s:update_pingu_hints_current_buffer()
 augroup END
 
 augroup realtime_dev_agent_open_review
