@@ -16,6 +16,12 @@ test('cli parser trata lsp-ai-fix como JSON de runtime', () => {
   assert.equal(args.output, 'json');
 });
 
+test('cli parser trata prompt-task como JSON de runtime', () => {
+  const args = parseArgs(['--prompt-task']);
+  assert.equal(args.promptTaskMode, true);
+  assert.equal(args.output, 'json');
+});
+
 test('cli parser trata --format como alias de output', () => {
   const args = parseArgs(['--format', 'vim', 'sample.js']);
   assert.equal(args.output, 'vim');

@@ -51,6 +51,9 @@ test('runtime LazyVim usa defaults leves para preservar responsividade', () => {
   assert.match(pluginRuntime, /let g:pingu_realtime_on_cursor_hold = 0/);
   assert.match(pluginRuntime, /let g:pingu_realtime_on_buf_enter = 0/);
   assert.match(pluginRuntime, /let g:pingu_realtime_insert_mode = 0/);
+  assert.match(pluginRuntime, /let g:pingu_auto_fix_enabled = 0/);
+  assert.match(pluginRuntime, /let g:pingu_lsp_auto_fix_enabled = 0/);
+  assert.match(pluginRuntime, /let g:pingu_lsp_ai_fix_enabled = 0/);
   assert.match(pluginRuntime, /let g:pingu_auto_check_max_lines = 600/);
   assert.match(pluginRuntime, /let g:pingu_realtime_delay = 900/);
   assert.match(pluginRuntime, /let g:pingu_auto_fix_strict_validation = has\('nvim'\) \? 0 : 1/);
@@ -95,10 +98,42 @@ test('runtime descarta requests antigos do daemon para o mesmo buffer', () => {
 test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /command! PinguCheck call s:realtime_dev_agent_check\(\)/);
   assert.match(internalRuntime, /command! PinguWindowCheck call s:realtime_dev_agent_window_check\(\)/);
+  assert.match(internalRuntime, /command! PinguHintsRefresh call s:update_pingu_hints_current_buffer\(\)/);
+  assert.match(internalRuntime, /command! PinguAutoFixNow call s:pingu_auto_fix_now\(\)/);
+  assert.match(internalRuntime, /command! PinguFixCurrent call s:pingu_fix_current_issue\(\)/);
   assert.match(internalRuntime, /command! -bang PinguUndoFix call s:undo_last_pingu_fix\(<bang>0\)/);
   assert.doesNotMatch(internalRuntime, /command! RealtimeDevAgent/);
   assert.match(internalRuntime, /':PinguCheck<CR>'/);
   assert.match(internalRuntime, /':PinguWindowCheck<CR>'/);
+});
+
+test('runtime permite corrigir somente a issue da linha atual', () => {
+  assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>if'/);
+  assert.match(internalRuntime, /function! s:pingu_fix_current_issue\(\) abort/);
+  assert.match(internalRuntime, /s:get_buffer_issue_at_cursor\(\)/);
+  assert.match(internalRuntime, /s:issue_has_applicable_fix\(l:issue\)/);
+  assert.match(internalRuntime, /':PinguFixCurrent<CR>'/);
+});
+
+test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
+  assert.match(pluginRuntime, /let g:pingu_hints_enabled = has\('nvim'\) \? 1 : 0/);
+  assert.match(pluginRuntime, /let g:pingu_hints_max_lines = 1200/);
+  assert.match(internalRuntime, /function! s:pingu_hint_for_line\(line\) abort/);
+  assert.match(internalRuntime, /nvim_buf_set_extmark/);
+  assert.match(internalRuntime, /PinguHintCode/);
+  assert.match(internalRuntime, /PinguHintContext/);
+  assert.match(internalRuntime, /PinguHintTerminal/);
+  assert.match(internalRuntime, /augroup pingu_hints/);
+});
+
+test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () => {
+  assert.match(pluginRuntime, /let g:pingu_issue_hints_enabled = has\('nvim'\) \? 1 : 0/);
+  assert.match(internalRuntime, /function! s:update_pingu_issue_hints_for_buffer\(bufnr, qf\) abort/);
+  assert.match(internalRuntime, /pingu_issue_hints/);
+  assert.match(internalRuntime, /PinguIssueHintError/);
+  assert.match(internalRuntime, /PinguIssueHintWarn/);
+  assert.match(internalRuntime, /PinguIssueHintInfo/);
+  assert.match(internalRuntime, /call s:update_pingu_issue_hints_for_buffer\(a:bufnr, l:qf\)/);
 });
 
 test('runtime registra historico para rollback manual de auto-fix', () => {

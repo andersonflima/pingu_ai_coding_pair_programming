@@ -13,6 +13,13 @@
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
+  "prompt_task": {
+    "defaultAction": { "op": "replace_range" },
+    "autoFixDefault": false,
+    "autoFixPriority": 48,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
+  },
   "context_file": {
     "defaultAction": { "op": "write_file" },
     "autoFixDefault": true,

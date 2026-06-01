@@ -146,6 +146,33 @@ O runtime que atende a IDE e o CLI e o mesmo. Isso significa que os comentarios 
 
 ## Tipos de comentario acionavel
 
+### `@pingu` declara a intencao de forma explicita
+
+O formato recomendado para novos prompts em comentarios e `@pingu <intencao> <pedido>`:
+
+```javascript
+// @pingu code cria funcao soma
+// @pingu fix refatora essa funcao para ser pura
+// @pingu context bff para crud de usuario
+// @pingu test cobre casos de borda da funcao soma
+// @pingu terminal roda os testes unitarios
+```
+
+Tambem e aceito o formato `pingu: <intencao> <pedido>`:
+
+```python
+# pingu: code implementar funcao para calcular total do pedido
+```
+
+Intencoes suportadas:
+
+- `code`, `fix`, `refactor`: gera ou ajusta codigo (`comment_task`)
+- `context`, `ctx`, `blueprint`, `scaffold`: cria contexto persistente/scaffold (`context_file`)
+- `test`, `tests`, `unit-test`: gera um prompt de codigo orientado a testes (`comment_task`)
+- `terminal`, `shell`, `cmd`, `command`, `run`: prepara acao de terminal (`terminal_task`)
+
+Os marcadores simbolicos abaixo continuam suportados como atalhos compatíveis.
+
 ### `:` ou `::` gera ou ajusta codigo
 
 Use o prefixo de comentario da linguagem seguido de `:`:
@@ -235,6 +262,7 @@ Se voce quiser manter o comentario literal e impedir a acao do agente, use as va
 - `\s*`
 - `\s**`
 - `\s:::`
+- `\s@pingu`
 
 ## Exemplos reais de uso e output
 
@@ -567,6 +595,10 @@ Comandos principais no editor:
 - `:PinguWindowCheck`
 - `:PinguWindowClose`
 - `:PinguWindowToggle`
+- `:PinguPrompt`
+- `:PinguHintsRefresh`
+- `:PinguAutoFixNow`
+- `:PinguFixCurrent`
 - `:PinguUndoFix`
 - `:PinguLatencyMetrics`
 - `:PinguAutoFixEnable`
@@ -756,7 +788,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
   config = function()
     vim.g.pingu_start_on_editor_enter = 1
     vim.g.pingu_open_window_on_start = 0
-    vim.g.pingu_auto_fix_enabled = 1
+    vim.g.pingu_auto_fix_enabled = 0
     vim.g.pingu_target_scope = "current_file"
     vim.g.pingu_auto_fix_scope = "near_cursor"
     vim.g.pingu_auto_fix_near_cursor_radius = 24
@@ -806,7 +838,8 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_target_scope = 'current_file'` mantem analise e correcoes no arquivo aberto, mas ainda permite `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`
 - `let g:pingu_target_scope = 'workspace'` mantem acoes multi-arquivo amplas fora desse conjunto seguro
 - por padrao, o runtime ignora diretorios de dependencia e cache como `.venv/`, `venv/`, `site-packages/`, `__pycache__/`, `node_modules/`, `vendor/`, `dist/`, `build/` e caches de ferramentas
-- `let g:pingu_auto_fix_scope = 'near_cursor'` aplica apenas o trecho mais proximo do cursor
+- `let g:pingu_auto_fix_enabled = 0` mostra diagnosticos primeiro; use `:PinguAutoFixNow` para aplicar sob demanda ou `:PinguAutoFixEnable` para ligar auto-fix continuo
+- `let g:pingu_auto_fix_scope = 'near_cursor'` aplica apenas o trecho mais proximo do cursor quando auto-fix estiver habilitado
 - `let g:pingu_auto_fix_scope = 'file'` volta para o comportamento de arquivo inteiro por ciclo
 - `let g:pingu_auto_fix_scope = 'cursor_only'` restringe ao cursor imediato
 - `let g:pingu_auto_fix_near_cursor_radius = 24` controla a distancia maxima entre cursor e trecho elegivel
@@ -829,6 +862,15 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_statusline_icon = ''` define o icone exibido na status bar
 - `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; por padrao fica desligado para evitar duplicidade em setups com `lualine`
 - `let g:pingu_undo_fix_history_max = 30` limita quantos snapshots de correcoes do Pingu ficam disponiveis por arquivo para rollback manual
+- `let g:pingu_prompt_key = '<leader>ip'` aciona prompt manual assistido no cursor ou na selecao visual
+- `let g:pingu_fix_current_key = '<leader>if'` aplica a correcao disponivel na linha atual
+- `:PinguPrompt` abre um prompt manual para o contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para substituir precisamente o range selecionado
+- `let g:pingu_hints_enabled = 1` habilita virtual text no Neovim para destacar comentarios acionaveis do Pingu
+- `let g:pingu_hints_max_lines = 1200` limita quantas linhas sao escaneadas para hints inline
+- `let g:pingu_issue_hints_enabled = 1` habilita virtual text para erros/sugestoes encontrados pelo Pingu
+- `:PinguHintsRefresh` recalcula manualmente os hints inline do buffer atual
+- `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
+- `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `:PinguUndoFix` reverte a ultima correcao aplicada pelo Pingu no arquivo atual
 - `:PinguUndoFix!` força a reversao mesmo se o buffer tiver mudado depois da correcao
@@ -839,7 +881,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_auto_fix_local_cursor_context_only = 1` restringe `debug_output`, syntax local, `trailing_whitespace`, `function_spec`, `markdown_title`, `terraform_required_version` e `dockerfile_workdir` ao bloco textual atual
 - `let g:pingu_auto_fix_doc_cursor_context_max_lines = 80` controla o tamanho maximo desse bloco automatico
 - no LazyVim/Neovim, auto-fixes pendentes calculados durante insert mode sao descartados no `InsertLeave` quando o `changedtick` do buffer muda, evitando que uma correcao antiga sobrescreva texto digitado antes de apertar `Esc`
-- com os defaults atuais no Vim, o auto-fix realtime continua priorizando correcoes locais para syntax, higiene e comentarios no contexto do cursor, valida o lote antes de concluir e mantem o escopo no arquivo atual; no `save`, o agente pode incluir `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`, enquanto `terminal_task` continua fora do auto-fix padrao e sob controle explicito do runtime de terminal
+- com os defaults atuais no Vim/Neovim, o Pingu mostra diagnosticos e hints inline primeiro; o auto-fix fica sob comando explicito com `:PinguFixCurrent`, `:PinguAutoFixNow`, `:PinguAutoFixEnable` ou aplicacao pelo painel/quickfix
 
 ### Terminal no Vim / Neovim
 
@@ -922,6 +964,7 @@ Importante:
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
 - por default (`PINGU_AI_PROVIDER=copilot`), o runtime mantém o provider legado; para OpenAI, configure `PINGU_AI_PROVIDER=openai` (ou `auto`)
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
+- `prompt_task` usa o provider ativo para aplicar um patch local no range selecionado por `:PinguPrompt`; comandos de terminal sugeridos pelo provider nao sao executados por esse hotkey
 - se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
 - no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `source.fixAll`, `source.organizeImports` e `quickfix` sem abrir prompt
@@ -957,13 +1000,13 @@ Importante:
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS_LARGE_FILE=4` limita docstrings/comentarios por ciclo em arquivo grande
 - no LazyVim, os equivalentes sao `g:pingu_auto_fix_large_file_line_threshold`, `g:pingu_auto_fix_large_file_radius` e `g:pingu_auto_fix_doc_max_per_check_large_file`
 - no LazyVim, `debug_output` e `function_spec` cursor-local entram no lote automatico seguro sem depender da trilha live
-- `g:pingu_lsp_auto_fix_enabled=1` habilita aplicacao automatica de code action do LSP (default no Neovim)
+- `g:pingu_lsp_auto_fix_enabled=1` habilita aplicacao automatica de code action do LSP; por padrao fica desligado
 - `g:pingu_lsp_auto_fix_max_per_check=3` limita quantos diagnosticos do LSP entram por ciclo
 - `g:pingu_lsp_auto_fix_timeout_ms=400` define timeout da busca `textDocument/codeAction` por item
 - `g:pingu_lsp_auto_fix_max_severity='warning'` limita severidade elegivel (`error`, `warning`, `info`, `hint` ou `1..4`)
 - `g:pingu_lsp_auto_fix_only=['source.fixAll','source.organizeImports','quickfix']` controla a ordem/tipos de code action elegiveis
 - `g:pingu_lsp_auto_fix_prefer_global=1` prioriza tentativa de `fixAll`/`organizeImports` no escopo do arquivo antes do quickfix local
-- `g:pingu_lsp_ai_fix_enabled=1` habilita fallback com Copilot para warnings do LSP sem code action aplicavel (default no Neovim)
+- `g:pingu_lsp_ai_fix_enabled=1` habilita fallback com Copilot para warnings do LSP sem code action aplicavel; por padrao fica desligado
 - `g:pingu_lsp_ai_fix_max_per_check=1` limita chamadas ao provider externo por ciclo
 - `g:pingu_lsp_ai_fix_severities=['warning']` restringe quais severidades podem acionar o fallback assistido
 

@@ -344,6 +344,31 @@ if !exists('g:pingu_window_key')
   let g:pingu_window_key = '<leader>ia'
 endif
 
+if !exists('g:pingu_prompt_key')
+  " Atalho para prompt manual assistido no cursor ou selecao visual.
+  let g:pingu_prompt_key = '<leader>ip'
+endif
+
+if !exists('g:pingu_fix_current_key')
+  " Atalho para aplicar a correcao disponivel na linha atual.
+  let g:pingu_fix_current_key = '<leader>if'
+endif
+
+if !exists('g:pingu_hints_enabled')
+  " 1 mostra hints inline para comentarios acionaveis do Pingu no Neovim.
+  let g:pingu_hints_enabled = has('nvim') ? 1 : 0
+endif
+
+if !exists('g:pingu_hints_max_lines')
+  " Limite de linhas para procurar hints sem impactar buffers grandes.
+  let g:pingu_hints_max_lines = 1200
+endif
+
+if !exists('g:pingu_issue_hints_enabled')
+  " 1 mostra virtual text para diagnosticos encontrados pelo Pingu no Neovim.
+  let g:pingu_issue_hints_enabled = has('nvim') ? 1 : 0
+endif
+
 if !exists('g:pingu_show_window')
   " Mantem a janela visivel apenas quando o usuario pede modo painel.
   let g:pingu_show_window = 0
@@ -358,8 +383,8 @@ if !exists('g:pingu_window_name')
 endif
 
 if !exists('g:pingu_auto_fix_enabled')
-  " 1 aplica snippets automaticamente; 0 exige aceitação com <Tab>.
-  let g:pingu_auto_fix_enabled = 1
+  " 0 mostra diagnosticos primeiro; use :PinguAutoFixNow ou :PinguAutoFixEnable para aplicar.
+  let g:pingu_auto_fix_enabled = 0
 endif
 
 if !exists('g:pingu_undo_fix_history_max')
@@ -368,8 +393,8 @@ if !exists('g:pingu_undo_fix_history_max')
 endif
 
 if !exists('g:pingu_lsp_auto_fix_enabled')
-  " 1 tenta aplicar code actions de diagnosticos do LSP durante o lote automatico.
-  let g:pingu_lsp_auto_fix_enabled = has('nvim') ? 1 : 0
+  " 0 evita code actions automaticas do LSP por padrao.
+  let g:pingu_lsp_auto_fix_enabled = 0
 endif
 
 if !exists('g:pingu_lsp_auto_fix_max_per_check')
@@ -398,8 +423,8 @@ if !exists('g:pingu_lsp_auto_fix_prefer_global')
 endif
 
 if !exists('g:pingu_lsp_ai_fix_enabled')
-  " 1 permite fallback com Copilot para warnings do LSP sem code action aplicavel.
-  let g:pingu_lsp_ai_fix_enabled = has('nvim') ? 1 : 0
+  " 0 evita fallback assistido automatico para warnings do LSP por padrao.
+  let g:pingu_lsp_ai_fix_enabled = 0
 endif
 
 if !exists('g:pingu_lsp_ai_fix_max_per_check')

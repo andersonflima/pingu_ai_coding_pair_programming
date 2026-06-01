@@ -3,6 +3,7 @@
 ## Superficie Sensivel
 
 O Pingu roda no ambiente local do usuario e pode analisar arquivos, escrever no workspace e preparar comandos de terminal quando o fluxo estiver habilitado.
+O prompt manual `:PinguPrompt` pode reescrever o range selecionado no buffer via provider assistido, mas nao executa comandos de terminal diretamente.
 
 ## Contrato de Terminal
 
