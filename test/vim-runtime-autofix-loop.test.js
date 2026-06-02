@@ -504,6 +504,11 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(pluginRuntime, /pingu_lsp_ai_fix_severities = \['warning'\]/);
   assert.match(internalRuntime, /function! s:lsp_ai_fix_enabled\(\) abort/);
   assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix_explicit\(issue\) abort/);
+  assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix\(s:pingu_issue_ai_fix_candidate\(a:issue\)\)/);
+  assert.match(internalRuntime, /let l:previous_changedtick = getbufvar\(l:target_buf, 'changedtick'\)/);
+  assert.match(internalRuntime, /vim\.api\.nvim_buf_get_changedtick\(input\.bufnr\) ~= input\.changedtick/);
+  assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix_explicit\(l:issue\)/);
   assert.match(internalRuntime, /'kind': 'lsp_ai_fix'/);
   assert.match(internalRuntime, /'op': 'lsp_ai_fix'/);
   assert.match(internalRuntime, /'--lsp-ai-fix'/);

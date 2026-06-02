@@ -1010,13 +1010,14 @@ Importante:
 - se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
 - no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `source.fixAll`, `source.organizeImports` e `quickfix` sem abrir prompt
-- no Neovim, warnings do LSP sem `codeAction` aplicavel entram como `lsp_ai_fix` e podem usar Copilot para gerar uma edicao local minima; se o provider estiver indisponivel, o fluxo continua sem bloquear o editor
+- no Neovim, warnings do LSP sem `codeAction` aplicavel entram como `lsp_ai_fix` e podem usar o provider assistido para gerar uma edicao local minima; se o provider estiver indisponivel, o fluxo continua sem bloquear o editor
 - no Neovim, `g:pingu_diagnostic_takeover = 1` centraliza a exibicao de qualquer diagnostico publicado em `vim.diagnostic`; o manager precoce `00_pingu_diagnostic_manager.lua` intercepta `config`, `show` e `set` antes do runtime principal, bloqueia reativacoes posteriores de `virtual_text`, `virtual_lines`, `signs` e `underline`, agrega LSPs/linters por linha no arquivo inteiro, normaliza diagnostics de imports/modulos como erro visual quando necessario, mostra o item mais severo com `+N` para extras e mantem `:PinguFixCurrent` como comando de correcao local
 - no Neovim, o loop realtime tambem observa `DiagnosticChanged` e agenda nova rodada automaticamente quando o LSP atualiza lint/syntax sem edicao manual no buffer; o shadow text do Pingu usa o buffer do evento para atualizar linhas com problemas mesmo fora da janela visivel
 - quando houver `syntax_*` no arquivo e provider assistido estiver operacional, o runtime tenta consolidar um reparo unico de sintaxe no arquivo antes do fallback por item
 - quando o servidor exigir `codeAction/resolve`, o runtime resolve e executa a acao automaticamente antes de aplicar edits/comandos
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
+- quando o `apply` explicito de um diagnostico LSP executa uma code action que nao altera o buffer, o Pingu tenta o fallback assistido da mesma linha antes de reportar falha
 - quando uma correcao automatica (snippet local ou `lsp_code_action`) eh aplicada com sucesso, o buffer alvo eh salvo automaticamente no disco
 - `:PinguWindowCheck` (e o atalho `g:pingu_window_key`) abre o painel e o mantem aberto durante e apos a analise assincrona ate ele ser fechado explicitamente
 - `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote
@@ -1049,7 +1050,7 @@ Importante:
 - `g:pingu_lsp_auto_fix_max_severity='warning'` limita severidade elegivel (`error`, `warning`, `info`, `hint` ou `1..4`)
 - `g:pingu_lsp_auto_fix_only=['source.fixAll','source.organizeImports','quickfix']` controla a ordem/tipos de code action elegiveis
 - `g:pingu_lsp_auto_fix_prefer_global=1` prioriza tentativa de `fixAll`/`organizeImports` no escopo do arquivo antes do quickfix local
-- `g:pingu_lsp_ai_fix_enabled=1` habilita fallback com Copilot para warnings do LSP sem code action aplicavel; por padrao fica desligado
+- `g:pingu_lsp_ai_fix_enabled=1` habilita fallback assistido para warnings do LSP sem code action aplicavel; por padrao fica desligado
 - `g:pingu_lsp_ai_fix_max_per_check=1` limita chamadas ao provider externo por ciclo
 - `g:pingu_lsp_ai_fix_severities=['warning']` restringe quais severidades podem acionar o fallback assistido
 
