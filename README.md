@@ -883,7 +883,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_prompt_context_radius = 80` limita quantas linhas em volta do cursor/selecao sao enviadas no prompt manual
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
 - `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; use `a` para aplicar, `i` para corrigir com IA, `p` para abrir painel e `q` para fechar
-- `let g:pingu_issue_hover_delay_ms = 80` controla o tempo para abrir esse menu depois que o cursor para na linha; diagnostics LSP com range multilinha tambem acionam o menu em qualquer linha coberta
+- `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu depois que o cursor para na linha; diagnostics LSP com range multilinha tambem acionam o menu em qualquer linha coberta, sem exigir `<leader>`
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguPrompt` abre um prompt manual para o contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para substituir precisamente o range selecionado
 - `:PinguModel` permite alternar entre Copilot, OpenAI Codex e Auto sem reiniciar o editor; o daemon do Pingu e reiniciado para herdar o provider escolhido

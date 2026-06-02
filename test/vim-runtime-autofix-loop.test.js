@@ -164,7 +164,7 @@ test('runtime permite corrigir somente a issue da linha atual', () => {
 
 test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', () => {
   assert.match(pluginRuntime, /let g:pingu_issue_hover_hint = 1/);
-  assert.match(pluginRuntime, /let g:pingu_issue_hover_delay_ms = 80/);
+  assert.match(pluginRuntime, /let g:pingu_issue_hover_delay_ms = 30/);
   assert.match(internalRuntime, /function! s:issue_covers_line\(issue, line\) abort/);
   assert.match(internalRuntime, /get\(a:issue, 'end_lnum', l:start\)/);
   assert.match(internalRuntime, /function! s:get_buffer_issue_at_cursor_exact\(\) abort/);
@@ -175,6 +175,7 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /function! s:schedule_pingu_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:fire_pingu_issue_hover_menu\(timer, bufnr, lnum, changedtick\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_hover_action_hint\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_show_issue_hover_action_hint_if_current\(bufnr\) abort/);
   assert.match(internalRuntime, /s:pingu_qf_items_for_current_buffer\(\)/);
   assert.match(internalRuntime, /nvim_open_win/);
   assert.match(internalRuntime, /PinguFixCurrentAI/);
@@ -188,8 +189,8 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /autocmd InsertEnter,BufLeave \* if has\('nvim'\)/);
   assert.match(internalRuntime, /s:pingu_show_issue_hover_action_hint\(\)/);
   assert.match(internalRuntime, /let s:pingu_cursor_hover_issue_signature = ''/);
-  assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 80\)/);
-  assert.match(internalRuntime, /return max\(\[30, l:delay\]\)/);
+  assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 30\)/);
+  assert.match(internalRuntime, /return max\(\[10, l:delay\]\)/);
 });
 
 test('runtime permite interromper processamento ativo do Pingu', () => {
@@ -275,6 +276,7 @@ test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () 
   assert.match(internalRuntime, /let l:severity = s:pingu_effective_language_diagnostic_severity\(l:source, l:message, l:severity\)/);
   assert.match(internalRuntime, /let l:qf = s:pingu_issue_hint_items_for_buffer\(a:bufnr, l:file, a:qf\)/);
   assert.match(internalRuntime, /return s:merge_lsp_diagnostic_hint_items\(a:bufnr, l:file, l:non_lsp_qf\)/);
+  assert.match(internalRuntime, /call s:pingu_show_issue_hover_action_hint_if_current\(a:bufnr\)/);
   assert.match(internalRuntime, /suppress_handler\("virtual_text"\)/);
   assert.match(internalRuntime, /suppress_handler\("virtual_lines"\)/);
   assert.match(internalRuntime, /restore_handler\("virtual_text"\)/);
