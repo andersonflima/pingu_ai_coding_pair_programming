@@ -1578,6 +1578,10 @@ function! s:window_set_buffer_keymaps() abort
   nnoremap <buffer> <silent> i :call <SID>window_apply_suggestion()<CR>
   nnoremap <buffer> <silent> f :call <SID>window_insert_followup()<CR>
   nnoremap <buffer> <silent> <Tab> :call <SID>window_apply_suggestion()<CR>
+  augroup pingu_window_state
+    autocmd! * <buffer>
+    autocmd BufWinLeave <buffer> let g:pingu_show_window = 0
+  augroup END
   execute 'buffer ' . l:current
 endfunction
 
@@ -2096,15 +2100,56 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ 'end',
         \ '_G.__pingu_diagnostic_takeover = _G.__pingu_diagnostic_takeover or {}',
         \ 'local state = _G.__pingu_diagnostic_takeover',
-        \ 'if not state.captured then',
+        \ 'state.namespaces = state.namespaces or {}',
+        \ 'local function capture_global()',
+        \ '  if state.captured then',
+        \ '    return',
+        \ '  end',
         \ '  local ok, cfg = pcall(vim.diagnostic.config)',
         \ '  state.captured = true',
         \ '  state.virtual_text = ok and type(cfg) == "table" and cfg.virtual_text or nil',
+        \ '  state.virtual_lines = ok and type(cfg) == "table" and cfg.virtual_lines or nil',
         \ 'end',
+        \ 'local function each_namespace(callback)',
+        \ '  if type(vim.diagnostic.get_namespaces) ~= "function" then',
+        \ '    return',
+        \ '  end',
+        \ '  local ok, namespaces = pcall(vim.diagnostic.get_namespaces)',
+        \ '  if not ok or type(namespaces) ~= "table" then',
+        \ '    return',
+        \ '  end',
+        \ '  for ns_id, _ in pairs(namespaces) do',
+        \ '    if type(ns_id) == "number" then',
+        \ '      callback(ns_id)',
+        \ '    end',
+        \ '  end',
+        \ 'end',
+        \ 'local function capture_namespace(ns_id)',
+        \ '  local key = tostring(ns_id)',
+        \ '  if state.namespaces[key] ~= nil then',
+        \ '    return',
+        \ '  end',
+        \ '  local ok, cfg = pcall(vim.diagnostic.config, nil, ns_id)',
+        \ '  state.namespaces[key] = {',
+        \ '    virtual_text = ok and type(cfg) == "table" and cfg.virtual_text or nil,',
+        \ '    virtual_lines = ok and type(cfg) == "table" and cfg.virtual_lines or nil,',
+        \ '  }',
+        \ 'end',
+        \ 'capture_global()',
         \ 'if tonumber(input.enabled or 0) == 1 then',
-        \ '  vim.diagnostic.config({ virtual_text = false })',
+        \ '  vim.diagnostic.config({ virtual_text = false, virtual_lines = false })',
+        \ '  each_namespace(function(ns_id)',
+        \ '    capture_namespace(ns_id)',
+        \ '    vim.diagnostic.config({ virtual_text = false, virtual_lines = false }, ns_id)',
+        \ '  end)',
         \ 'elseif state.captured then',
-        \ '  vim.diagnostic.config({ virtual_text = state.virtual_text })',
+        \ '  vim.diagnostic.config({ virtual_text = state.virtual_text, virtual_lines = state.virtual_lines })',
+        \ '  each_namespace(function(ns_id)',
+        \ '    local cfg = state.namespaces[tostring(ns_id)]',
+        \ '    if type(cfg) == "table" then',
+        \ '      vim.diagnostic.config({ virtual_text = cfg.virtual_text, virtual_lines = cfg.virtual_lines }, ns_id)',
+        \ '    end',
+        \ '  end)',
         \ 'end',
         \ 'return true',
         \ ], "\n")
@@ -2112,6 +2157,31 @@ function! s:apply_pingu_diagnostic_takeover() abort
     call luaeval(l:script, l:payload)
   catch
   endtry
+endfunction
+
+function! s:refresh_pingu_diagnostic_hints_for_buffer(bufnr) abort
+  if !s:pingu_issue_hints_enabled() || !s:pingu_diagnostic_takeover_enabled()
+    return
+  endif
+  if a:bufnr <= 0 || !bufloaded(a:bufnr) || getbufvar(a:bufnr, '&buftype') !=# ''
+    return
+  endif
+
+  call s:apply_pingu_diagnostic_takeover()
+  let l:file = fnamemodify(bufname(a:bufnr), ':p')
+  let l:qf = []
+  for l:item in (type(s:realtime_dev_agent_last_qf) == v:t_list ? s:realtime_dev_agent_last_qf : [])
+    if fnamemodify(get(l:item, 'filename', ''), ':p') ==# l:file
+      call add(l:qf, deepcopy(l:item))
+    endif
+  endfor
+  let l:qf = s:merge_lsp_diagnostic_hint_items(a:bufnr, l:file, l:qf)
+  let s:realtime_dev_agent_last_qf = l:qf
+  call s:update_pingu_issue_hints_for_buffer(a:bufnr, l:qf)
+endfunction
+
+function! s:refresh_pingu_diagnostic_hints_current_buffer() abort
+  call s:refresh_pingu_diagnostic_hints_for_buffer(bufnr('%'))
 endfunction
 
 function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
@@ -4686,6 +4756,7 @@ function! s:build_followup_comment(file, instruction) abort
 endfunction
 
 function! s:window_close() abort
+  let g:pingu_show_window = 0
   let l:win = s:window_find()
   if l:win == -1
     return
@@ -7016,10 +7087,10 @@ if has('nvim')
     autocmd!
     autocmd VimEnter,BufEnter,BufWinEnter * silent! call s:apply_pingu_diagnostic_takeover()
     if exists('##LspAttach')
-      autocmd LspAttach * silent! call s:apply_pingu_diagnostic_takeover()
+      autocmd LspAttach * silent! call s:apply_pingu_diagnostic_takeover() | silent! call s:refresh_pingu_diagnostic_hints_current_buffer()
     endif
     if exists('##DiagnosticChanged')
-      autocmd DiagnosticChanged * silent! call s:apply_pingu_diagnostic_takeover()
+      autocmd DiagnosticChanged * silent! call s:apply_pingu_diagnostic_takeover() | silent! call s:refresh_pingu_diagnostic_hints_current_buffer()
     endif
   augroup END
 endif
