@@ -896,6 +896,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - no Neovim, `:PinguPrompt` executa o provider em background para nao bloquear o editor depois do Enter
 - `:PinguPrompt` preserva a indentacao relativa do bloco selecionado e remove apenas quebras de linha externas do snippet retornado
 - `let g:pingu_hints_enabled = 1` habilita virtual text no Neovim para destacar comentarios acionaveis do Pingu
+- hints inline usam apenas o icone `` como marcador visual; o texto `Pingu` nao aparece no shadow text
 - `let g:pingu_hints_max_lines = 1200` limita quantas linhas sao escaneadas para hints inline
 - `let g:pingu_issue_hints_enabled = 1` habilita virtual text para erros/sugestoes encontrados pelo Pingu
 - `let g:pingu_issue_hints_prefix = ''` controla o marcador do shadow text de diagnostico, por exemplo ` Elixir: Logger.dub/1 is undefined or private`
