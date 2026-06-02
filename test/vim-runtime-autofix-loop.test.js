@@ -277,6 +277,10 @@ test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () 
   assert.match(internalRuntime, /let l:qf = s:pingu_issue_hint_items_for_buffer\(a:bufnr, l:file, a:qf\)/);
   assert.match(internalRuntime, /return s:merge_lsp_diagnostic_hint_items\(a:bufnr, l:file, l:non_lsp_qf\)/);
   assert.match(internalRuntime, /call s:pingu_show_issue_hover_action_hint_if_current\(a:bufnr\)/);
+  assert.match(
+    internalRuntime,
+    /function! s:update_pingu_issue_hints_for_buffer\(bufnr, qf\) abort[\s\S]*call s:pingu_show_issue_hover_action_hint_if_current\(a:bufnr\)[\s\S]*endfunction/
+  );
   assert.match(internalRuntime, /suppress_handler\("virtual_text"\)/);
   assert.match(internalRuntime, /suppress_handler\("virtual_lines"\)/);
   assert.match(internalRuntime, /restore_handler\("virtual_text"\)/);
