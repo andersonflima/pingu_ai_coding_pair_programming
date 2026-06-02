@@ -585,6 +585,7 @@ Atalhos principais:
 - `<leader>pic`: analisa o arquivo atual
 - `<leader>pia`: abre ou fecha o painel
 - `<leader>pip`: abre prompt manual no cursor ou selecao visual
+- `<leader>pim`: escolhe o provider assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
@@ -599,6 +600,7 @@ Comandos principais no editor:
 - `:PinguWindowClose`
 - `:PinguWindowToggle`
 - `:PinguPrompt`
+- `:PinguModel`
 - `:PinguHintsRefresh`
 - `:PinguAutoFixNow`
 - `:PinguFixCurrent`
@@ -868,10 +870,13 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_map_key = '<leader>pic'` analisa o arquivo atual
 - `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
 - `let g:pingu_prompt_key = '<leader>pip'` aciona prompt manual assistido no cursor ou na selecao visual
+- `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider assistido da sessao
+- `let g:pingu_ai_provider = 'copilot'` define o provider inicial; use `codex`/`openai` para OpenAI Codex ou `auto` para fallback automatico
 - `let g:pingu_prompt_context_radius = 80` limita quantas linhas em volta do cursor/selecao sao enviadas no prompt manual
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguPrompt` abre um prompt manual para o contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para substituir precisamente o range selecionado
+- `:PinguModel` permite alternar entre Copilot, OpenAI Codex e Auto sem reiniciar o editor; o daemon do Pingu e reiniciado para herdar o provider escolhido
 - no Neovim, `:PinguPrompt` executa o provider em background para nao bloquear o editor depois do Enter
 - `:PinguPrompt` preserva a indentacao relativa do bloco selecionado e remove apenas quebras de linha externas do snippet retornado
 - `let g:pingu_hints_enabled = 1` habilita virtual text no Neovim para destacar comentarios acionaveis do Pingu
@@ -929,6 +934,7 @@ Provider de IA:
 
 - `PINGU_AI_PROVIDER=copilot` (default): mantém o comportamento legado via Copilot CLI
 - `PINGU_AI_PROVIDER=openai`: força uso do provider OpenAI
+- `PINGU_AI_PROVIDER=codex`: alias de editor para o provider OpenAI/Codex
 - `PINGU_AI_PROVIDER=auto`: tenta OpenAI primeiro e usa Copilot como fallback
 
 Variáveis do provider OpenAI:
@@ -978,6 +984,7 @@ Importante:
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
 - por default (`PINGU_AI_PROVIDER=copilot`), o runtime mantém o provider legado; para OpenAI, configure `PINGU_AI_PROVIDER=openai` (ou `auto`)
+- no editor, `:PinguModel`/`<leader>pim` alterna o provider da sessao; ao escolher OpenAI Codex, o Pingu usa o provider OpenAI herdado da configuracao ja disponivel no LazyVim
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - `prompt_task` usa o provider ativo para aplicar um patch local no range selecionado por `:PinguPrompt`; comandos de terminal sugeridos pelo provider nao sao executados por esse hotkey
 - `prompt_task` envia somente uma janela de contexto em volta do range (`g:pingu_prompt_context_radius`, padrao `80`) e preserva os espacos iniciais do snippet para nao quebrar indentacao

@@ -112,9 +112,21 @@ test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
   assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
+  assert.match(pluginRuntime, /let g:pingu_model_key = '<leader>pim'/);
+  assert.match(pluginRuntime, /let g:pingu_ai_provider = empty\(\$PINGU_AI_PROVIDER\) \? 'copilot' : \$PINGU_AI_PROVIDER/);
   assert.match(pluginRuntime, /let g:pingu_prompt_context_radius = 80/);
   assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(pluginRuntime, /let g:pingu_stop_key = '<leader>pis'/);
+});
+
+test('runtime permite escolher provider assistido do Pingu', () => {
+  assert.match(internalRuntime, /function! s:pingu_select_ai_provider\(\.\.\.\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_apply_ai_provider_env\(\) abort/);
+  assert.match(internalRuntime, /let \$PINGU_AI_PROVIDER = l:provider/);
+  assert.match(internalRuntime, /return l:provider ==# 'codex' \? 'openai' : l:provider/);
+  assert.match(internalRuntime, /command! -nargs=\? PinguModel call s:pingu_select_ai_provider\(<q-args>\)/);
+  assert.match(internalRuntime, /call s:stop_analysis_daemon\(\)/);
+  assert.match(internalRuntime, /':PinguModel<CR>'/);
 });
 
 test('runtime permite corrigir somente a issue da linha atual', () => {

@@ -349,6 +349,16 @@ if !exists('g:pingu_prompt_key')
   let g:pingu_prompt_key = '<leader>pip'
 endif
 
+if !exists('g:pingu_model_key')
+  " Atalho para escolher provider assistido da sessao.
+  let g:pingu_model_key = '<leader>pim'
+endif
+
+if !exists('g:pingu_ai_provider')
+  " Provider assistido da sessao: copilot, codex/openai ou auto.
+  let g:pingu_ai_provider = empty($PINGU_AI_PROVIDER) ? 'copilot' : $PINGU_AI_PROVIDER
+endif
+
 if !exists('g:pingu_prompt_context_radius')
   " Linhas de contexto em volta do cursor/selecao enviadas ao provider no prompt manual.
   let g:pingu_prompt_context_radius = 80
