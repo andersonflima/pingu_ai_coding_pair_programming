@@ -838,6 +838,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - por padrao usa `let g:pingu_target_scope = 'current_file'`; use `workspace` apenas com opt-in explicito
 - `let g:pingu_open_window_on_start = 0` mantem o agente ativo sem abrir painel
 - `let g:pingu_open_window_on_start = 1` reabre o painel no startup automatico
+- fechar o painel com `q`, `:PinguWindowClose` ou fechamento manual do split mantem o painel fechado ate novo `<leader>pia`/`:PinguWindowCheck`
 - `let g:pingu_start_on_editor_enter = 0` desliga o startup automatico
 - `let g:pingu_review_on_open = 1` mantem revisao automatica ao abrir arquivos
 - `let g:pingu_target_scope = 'current_file'` mantem analise e correcoes no arquivo aberto, mas ainda permite `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`
@@ -885,7 +886,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_issue_hints_prefix = ''` controla o marcador do shadow text de diagnostico, por exemplo ` Pingu error: Logger.dub/1 is undefined or private`
 - `let g:pingu_issue_hints_priority = 10000` define prioridade alta para o shadow text do Pingu sobre outros virtual texts
 - `let g:pingu_issue_hints_position = 'eol'` controla a posicao do shadow text (`eol`, `right_align`, `overlay` ou `inline`)
-- `let g:pingu_diagnostic_takeover = 1` faz o Pingu assumir o virtual text de LSPs/linters via `vim.diagnostic`, desligando apenas o `virtual_text` nativo e mantendo signs/underline
+- `let g:pingu_diagnostic_takeover = 1` faz o Pingu assumir o virtual text de LSPs/linters via `vim.diagnostic`, desligando `virtual_text`/`virtual_lines` nativos globais e por namespace, mantendo signs/underline
 - `let g:pingu_diagnostic_takeover_max_items = 80` limita quantos diagnosticos externos entram no agregador visual por buffer
 - `:PinguHintsRefresh` recalcula manualmente os hints inline do buffer atual
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
@@ -992,14 +993,14 @@ Importante:
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
 - no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `source.fixAll`, `source.organizeImports` e `quickfix` sem abrir prompt
 - no Neovim, warnings do LSP sem `codeAction` aplicavel entram como `lsp_ai_fix` e podem usar Copilot para gerar uma edicao local minima; se o provider estiver indisponivel, o fluxo continua sem bloquear o editor
-- no Neovim, `g:pingu_diagnostic_takeover = 1` centraliza o virtual text de diagnosticos publicados em `vim.diagnostic`; o Pingu agrega LSPs/linters por linha, mostra o item mais severo com `+N` para extras e mantém `:PinguFixCurrent` como comando de correcao local
+- no Neovim, `g:pingu_diagnostic_takeover = 1` centraliza o virtual text de diagnosticos publicados em `vim.diagnostic`; o Pingu desliga shadow text nativo global e por namespace, agrega LSPs/linters por linha, mostra o item mais severo com `+N` para extras e mantém `:PinguFixCurrent` como comando de correcao local
 - no Neovim, o loop realtime tambem observa `DiagnosticChanged` e agenda nova rodada automaticamente quando o LSP atualiza lint/syntax sem edicao manual no buffer
 - quando houver `syntax_*` no arquivo e provider assistido estiver operacional, o runtime tenta consolidar um reparo unico de sintaxe no arquivo antes do fallback por item
 - quando o servidor exigir `codeAction/resolve`, o runtime resolve e executa a acao automaticamente antes de aplicar edits/comandos
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
 - quando uma correcao automatica (snippet local ou `lsp_code_action`) eh aplicada com sucesso, o buffer alvo eh salvo automaticamente no disco
-- `:PinguWindowCheck` (e o atalho `g:pingu_window_key`) mantem o painel aberto durante e apos a analise assincrona
+- `:PinguWindowCheck` (e o atalho `g:pingu_window_key`) abre o painel e o mantem aberto durante e apos a analise assincrona ate ele ser fechado explicitamente
 - `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote
 - Elixir ganhou deteccao adicional de bloco `do/end` pendente, cobrindo erros como `syntax error before: 'Logger'` quando faltam `end`s
 - Elixir agora detecta keyword de fechamento malformada (`eend`, `ennd`, `endd`) como `syntax_malformed_keyword` com auto-fix por `replace_line`

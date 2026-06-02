@@ -108,6 +108,13 @@ test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /':PinguWindowCheck<CR>'/);
 });
 
+test('runtime mantem painel Pingu fechado apos fechamento manual', () => {
+  assert.match(internalRuntime, /function! s:window_close\(\) abort\n  let g:pingu_show_window = 0/);
+  assert.match(internalRuntime, /augroup pingu_window_state/);
+  assert.match(internalRuntime, /autocmd BufWinLeave <buffer> let g:pingu_show_window = 0/);
+  assert.match(internalRuntime, /function! s:window_refresh\(file, qf\) abort\n  if !g:pingu_show_window\n    return\n  endif/);
+});
+
 test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
   assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
@@ -181,8 +188,12 @@ test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () 
   assert.match(internalRuntime, /PinguIssueHintError/);
   assert.match(internalRuntime, /PinguIssueHintWarn/);
   assert.match(internalRuntime, /PinguIssueHintInfo/);
-  assert.match(internalRuntime, /vim\.diagnostic\.config\(\{ virtual_text = false \}\)/);
+  assert.match(internalRuntime, /vim\.diagnostic\.config\(\{ virtual_text = false, virtual_lines = false \}\)/);
+  assert.match(internalRuntime, /vim\.diagnostic\.get_namespaces/);
+  assert.match(internalRuntime, /vim\.diagnostic\.config\(\{ virtual_text = false, virtual_lines = false \}, ns_id\)/);
+  assert.match(internalRuntime, /function! s:refresh_pingu_diagnostic_hints_current_buffer\(\) abort/);
   assert.match(internalRuntime, /augroup pingu_diagnostic_takeover/);
+  assert.match(internalRuntime, /DiagnosticChanged \* silent! call s:apply_pingu_diagnostic_takeover\(\) \| silent! call s:refresh_pingu_diagnostic_hints_current_buffer\(\)/);
   assert.match(internalRuntime, /'priority': l:priority/);
   assert.match(internalRuntime, /let l:severity = empty\(l:parts\[0\]\) \? 'error' : l:parts\[0\]/);
   assert.match(internalRuntime, /printf\('%s Pingu %s: %s'/);
