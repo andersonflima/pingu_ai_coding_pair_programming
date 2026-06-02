@@ -23,6 +23,7 @@ let s:realtime_dev_agent_async_analysis_job = -1
 let s:realtime_dev_agent_async_analysis_context = {}
 let s:pingu_prompt_job = -1
 let s:pingu_prompt_context = {}
+let s:pingu_diagnostic_hints_refresh_timers = []
 let s:realtime_dev_agent_daemon_job = -1
 let s:realtime_dev_agent_daemon_request_seq = 0
 let s:realtime_dev_agent_daemon_pending = {}
@@ -619,7 +620,7 @@ function! s:install_neovim_lualine_global() abort
   if !has('nvim')
     return
   endif
-  silent! call luaeval('rawset(_G, "PinguStatusline", function() return vim.fn.PinguStatusline() end)')
+  silent! call luaeval('(function() rawset(_G, "PinguStatusline", function() return vim.fn.PinguStatusline() end) return true end)()')
 endfunction
 
 function! s:prepared_analysis_request(bufnr, ...) abort
@@ -2014,6 +2015,30 @@ function! s:lsp_severity_label(severity) abort
   return 'INFO'
 endfunction
 
+function! s:pingu_effective_language_diagnostic_severity(source, message, severity) abort
+  let l:message = tolower(trim('' . a:message))
+  let l:severity = str2nr(string(a:severity))
+  let l:error_patterns = [
+        \ '\v(undefined or private|missing or private function)',
+        \ '\v(is undefined|undefined (function|method|variable|constant|type|class|module|property|name))',
+        \ '\v(not defined|is not defined|name ''.+'' is not defined)',
+        \ '\v(cannot find (name|module|symbol|package|type)|cannot resolve (symbol|module|import))',
+        \ '\v(unresolved (reference|import|module|name|symbol))',
+        \ '\v(no such (file|module|package)|module not found|package .+ is not in std)',
+        \ '\v(has no (member|method|attribute|field)|no member named|no method named|unknown field)',
+        \ '\v(private (method|function)|method .+ is private|function .+ is private)',
+        \ '\v(use of undeclared identifier|undeclared (name|identifier)|unknown identifier)',
+        \ '\v(cannot find value|cannot find function|cannot find type)',
+        \ '\v(unresolved name|undefined local variable or method)',
+        \ ]
+  for l:pattern in l:error_patterns
+    if l:message =~# l:pattern
+      return 1
+    endif
+  endfor
+  return l:severity
+endfunction
+
 function! s:lsp_diagnostics_for_buffer(bufnr, ...) abort
   let l:max_severity = a:0 > 0 ? a:1 : s:lsp_auto_fix_max_severity()
   let l:require_auto_fix = a:0 > 1 ? a:2 : v:true
@@ -2035,21 +2060,38 @@ function! s:lsp_diagnostics_for_buffer(bufnr, ...) abort
         \ 'if type(vim) ~= "table" or type(vim.diagnostic) ~= "table" or type(vim.diagnostic.get) ~= "function" then',
         \ '  return {}',
         \ 'end',
-        \ 'local ok, diagnostics = pcall(vim.diagnostic.get, bufnr)',
+                \ 'local ok, diagnostics = pcall(vim.diagnostic.get, bufnr)',
         \ 'if not ok or type(diagnostics) ~= "table" then',
         \ '  return {}',
+        \ 'end',
+        \ 'local namespace_names = {}',
+        \ 'if type(vim.diagnostic.get_namespaces) == "function" then',
+        \ '  local ns_ok, namespaces = pcall(vim.diagnostic.get_namespaces)',
+        \ '  if ns_ok and type(namespaces) == "table" then',
+        \ '    for ns_id, meta in pairs(namespaces) do',
+        \ '      if type(ns_id) == "number" and type(meta) == "table" then',
+        \ '        namespace_names[ns_id] = meta.name ~= nil and tostring(meta.name) or ""',
+        \ '      end',
+        \ '    end',
+        \ '  end',
         \ 'end',
         \ 'local items = {}',
         \ 'for _, diag in ipairs(diagnostics) do',
         \ '  local sev = tonumber(diag.severity or 0) or 0',
         \ '  if sev > 0 and sev <= maxSeverity then',
+        \ '    local namespace = tonumber(diag.namespace or 0) or 0',
+        \ '    local source = diag.source ~= nil and tostring(diag.source) or ""',
+        \ '    if source == "" and namespace > 0 then',
+        \ '      source = namespace_names[namespace] or ""',
+        \ '    end',
         \ '    table.insert(items, {',
         \ '      lnum = (tonumber(diag.lnum or 0) or 0) + 1,',
         \ '      col = (tonumber(diag.col or 0) or 0) + 1,',
         \ '      severity = sev,',
         \ '      message = tostring(diag.message or ""),',
         \ '      code = diag.code ~= nil and tostring(diag.code) or "",',
-        \ '      source = diag.source ~= nil and tostring(diag.source) or "",',
+        \ '      source = source,',
+        \ '      namespace = namespace,',
         \ '    })',
         \ '  end',
         \ 'end',
@@ -2106,18 +2148,32 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ 'if not state.config_wrapped then',
         \ '  vim.diagnostic.config = function(opts, namespace)',
         \ '    local current = _G.__pingu_diagnostic_takeover',
-        \ '    if type(current) == "table" and current.enabled and not current.restoring and type(opts) == "table" then',
-        \ '      local next_opts = vim.tbl_extend("force", {}, opts)',
-        \ '      next_opts.virtual_text = false',
-        \ '      next_opts.virtual_lines = false',
-        \ '      return current.original_config(next_opts, namespace)',
+        \ '    local original = type(current) == "table" and current.original_config or state.original_config',
+        \ '    if type(current) == "table" and current.enabled and not current.restoring then',
+        \ '      if opts == nil then',
+        \ '        local cfg = original(nil, namespace)',
+        \ '        if type(cfg) == "table" then',
+        \ '          local next_cfg = vim.tbl_extend("force", {}, cfg)',
+        \ '          next_cfg.virtual_text = false',
+        \ '          next_cfg.virtual_lines = false',
+        \ '          return next_cfg',
+        \ '        end',
+        \ '        return cfg',
+        \ '      end',
+        \ '      if type(opts) == "table" then',
+        \ '        local next_opts = vim.tbl_extend("force", {}, opts)',
+        \ '        next_opts.virtual_text = false',
+        \ '        next_opts.virtual_lines = false',
+        \ '        return original(next_opts, namespace)',
+        \ '      end',
         \ '    end',
-        \ '    return current.original_config(opts, namespace)',
+        \ '    return original(opts, namespace)',
         \ '  end',
         \ '  state.config_wrapped = true',
         \ 'end',
         \ 'state.enabled = tonumber(input.enabled or 0) == 1',
         \ 'state.namespaces = state.namespaces or {}',
+        \ 'state.handlers = state.handlers or {}',
         \ 'local function capture_global()',
         \ '  if state.captured then',
         \ '    return',
@@ -2152,9 +2208,36 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '    virtual_lines = ok and type(cfg) == "table" and cfg.virtual_lines or nil,',
         \ '  }',
         \ 'end',
+        \ 'local function capture_handler(name)',
+        \ '  if type(vim.diagnostic.handlers) ~= "table" or state.handlers[name] ~= nil then',
+        \ '    return',
+        \ '  end',
+        \ '  local handler = vim.diagnostic.handlers[name]',
+        \ '  state.handlers[name] = type(handler) == "table" and { show = handler.show, hide = handler.hide } or false',
+        \ 'end',
+        \ 'local function suppress_handler(name)',
+        \ '  if type(vim.diagnostic.handlers) ~= "table" or type(vim.diagnostic.handlers[name]) ~= "table" then',
+        \ '    return',
+        \ '  end',
+        \ '  capture_handler(name)',
+        \ '  vim.diagnostic.handlers[name].show = function() end',
+        \ '  vim.diagnostic.handlers[name].hide = function() end',
+        \ 'end',
+        \ 'local function restore_handler(name)',
+        \ '  if type(vim.diagnostic.handlers) ~= "table" or type(vim.diagnostic.handlers[name]) ~= "table" then',
+        \ '    return',
+        \ '  end',
+        \ '  local handler = state.handlers[name]',
+        \ '  if type(handler) == "table" then',
+        \ '    vim.diagnostic.handlers[name].show = handler.show',
+        \ '    vim.diagnostic.handlers[name].hide = handler.hide',
+        \ '  end',
+        \ 'end',
         \ 'capture_global()',
         \ 'if tonumber(input.enabled or 0) == 1 then',
         \ '  vim.diagnostic.config({ virtual_text = false, virtual_lines = false })',
+        \ '  suppress_handler("virtual_text")',
+        \ '  suppress_handler("virtual_lines")',
         \ '  each_namespace(function(ns_id)',
         \ '    capture_namespace(ns_id)',
         \ '    vim.diagnostic.config({ virtual_text = false, virtual_lines = false }, ns_id)',
@@ -2168,6 +2251,8 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '      vim.diagnostic.config({ virtual_text = cfg.virtual_text, virtual_lines = cfg.virtual_lines }, ns_id)',
         \ '    end',
         \ '  end)',
+        \ '  restore_handler("virtual_text")',
+        \ '  restore_handler("virtual_lines")',
         \ '  state.restoring = false',
         \ 'end',
         \ 'return true',
@@ -2191,6 +2276,9 @@ function! s:refresh_pingu_diagnostic_hints_for_buffer(bufnr) abort
   let l:qf = []
   for l:item in (type(s:realtime_dev_agent_last_qf) == v:t_list ? s:realtime_dev_agent_last_qf : [])
     if fnamemodify(get(l:item, 'filename', ''), ':p') ==# l:file
+      if get(l:item, 'kind', '') ==# 'lsp_diagnostic'
+        continue
+      endif
       call add(l:qf, deepcopy(l:item))
     endif
   endfor
@@ -2199,13 +2287,38 @@ function! s:refresh_pingu_diagnostic_hints_for_buffer(bufnr) abort
   call s:update_pingu_issue_hints_for_buffer(a:bufnr, l:qf)
 endfunction
 
+function! s:fire_scheduled_pingu_diagnostic_hints_refresh(bufnr, timer) abort
+  let s:pingu_diagnostic_hints_refresh_timers = filter(
+        \ s:pingu_diagnostic_hints_refresh_timers,
+        \ {_, timer -> timer != a:timer}
+        \ )
+  call s:refresh_pingu_diagnostic_hints_for_buffer(a:bufnr)
+endfunction
+
+function! s:schedule_pingu_diagnostic_hints_refresh(bufnr) abort
+  if !s:pingu_issue_hints_enabled() || !s:pingu_diagnostic_takeover_enabled()
+    return
+  endif
+  let l:bufnr = a:bufnr > 0 ? a:bufnr : bufnr('%')
+  call s:refresh_pingu_diagnostic_hints_for_buffer(l:bufnr)
+  if exists('*timer_start')
+    for l:timer in s:pingu_diagnostic_hints_refresh_timers
+      call timer_stop(l:timer)
+    endfor
+    let s:pingu_diagnostic_hints_refresh_timers = []
+    for l:delay in [80, 250, 750]
+      call add(s:pingu_diagnostic_hints_refresh_timers, timer_start(l:delay, {timer -> s:fire_scheduled_pingu_diagnostic_hints_refresh(l:bufnr, timer)}))
+    endfor
+  endif
+endfunction
+
 function! s:refresh_pingu_diagnostic_hints_current_buffer() abort
-  call s:refresh_pingu_diagnostic_hints_for_buffer(bufnr('%'))
+  call s:schedule_pingu_diagnostic_hints_refresh(bufnr('%'))
 endfunction
 
 function! s:refresh_pingu_diagnostic_hints_event_buffer() abort
   let l:bufnr = str2nr(expand('<abuf>'))
-  call s:refresh_pingu_diagnostic_hints_for_buffer(l:bufnr > 0 ? l:bufnr : bufnr('%'))
+  call s:schedule_pingu_diagnostic_hints_refresh(l:bufnr > 0 ? l:bufnr : bufnr('%'))
 endfunction
 
 function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
@@ -2246,12 +2359,13 @@ function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
     if l:max_items > 0 && l:added >= l:max_items
       break
     endif
-    let l:lnum = max([1, str2nr(string(get(l:diag, 'lnum', 1)))])
-    let l:col = max([1, str2nr(string(get(l:diag, 'col', 1)))])
-    let l:message = trim('' . get(l:diag, 'message', 'Diagnostico do LSP'))
-    let l:severity = str2nr(string(get(l:diag, 'severity', 2)))
-    let l:source = trim('' . get(l:diag, 'source', 'LSP'))
-    let l:code = trim('' . get(l:diag, 'code', ''))
+            let l:lnum = max([1, str2nr(string(get(l:diag, 'lnum', 1)))])
+            let l:col = max([1, str2nr(string(get(l:diag, 'col', 1)))])
+            let l:message = trim('' . get(l:diag, 'message', 'Diagnostico do LSP'))
+            let l:severity = str2nr(string(get(l:diag, 'severity', 2)))
+            let l:source = trim('' . get(l:diag, 'source', 'LSP'))
+            let l:severity = s:pingu_effective_language_diagnostic_severity(l:source, l:message, l:severity)
+            let l:code = trim('' . get(l:diag, 'code', ''))
     let l:key = printf('%d|%d|%s|%s|%s', l:lnum, l:col, l:source, l:code, l:message)
     if has_key(l:seen, l:key)
       continue
@@ -6790,6 +6904,24 @@ function! s:pingu_issue_hint_text(issue, ...) abort
   return [substitute(l:text, '\s\+', ' ', 'g'), s:pingu_issue_hint_highlight(l:severity)]
 endfunction
 
+function! s:pingu_issue_hint_items_for_buffer(bufnr, file, qf) abort
+  let l:qf = type(a:qf) == v:t_list ? deepcopy(a:qf) : []
+  if !s:pingu_diagnostic_takeover_enabled()
+    return l:qf
+  endif
+
+  let l:file = fnamemodify(a:file, ':p')
+  let l:non_lsp_qf = []
+  for l:item in l:qf
+    if fnamemodify(get(l:item, 'filename', ''), ':p') ==# l:file
+          \ && get(l:item, 'kind', '') ==# 'lsp_diagnostic'
+      continue
+    endif
+    call add(l:non_lsp_qf, l:item)
+  endfor
+  return s:merge_lsp_diagnostic_hint_items(a:bufnr, l:file, l:non_lsp_qf)
+endfunction
+
 function! s:update_pingu_issue_hints_for_buffer(bufnr, qf) abort
   if !s:pingu_issue_hints_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
     return
@@ -6808,9 +6940,10 @@ function! s:update_pingu_issue_hints_for_buffer(bufnr, qf) abort
 
   call s:define_pingu_issue_hint_highlights()
   let l:file = fnamemodify(bufname(a:bufnr), ':p')
+  let l:qf = s:pingu_issue_hint_items_for_buffer(a:bufnr, l:file, a:qf)
   let l:last = len(getbufline(a:bufnr, 1, '$'))
   let l:by_line = {}
-  for l:item in (type(a:qf) == v:t_list ? a:qf : [])
+  for l:item in l:qf
     if fnamemodify(get(l:item, 'filename', ''), ':p') !=# l:file
       continue
     endif
