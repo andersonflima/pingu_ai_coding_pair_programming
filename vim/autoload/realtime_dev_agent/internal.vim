@@ -2678,7 +2678,6 @@ function! s:refresh_pingu_diagnostic_hints_for_buffer(bufnr) abort
   let l:qf = s:merge_lsp_diagnostic_hint_items(a:bufnr, l:file, l:qf)
   let s:realtime_dev_agent_last_qf = l:qf
   call s:update_pingu_issue_hints_for_buffer(a:bufnr, l:qf)
-  call s:pingu_show_issue_hover_action_hint_if_current(a:bufnr)
 endfunction
 
 function! s:fire_scheduled_pingu_diagnostic_hints_refresh(bufnr, timer) abort
@@ -7497,6 +7496,7 @@ function! s:update_pingu_issue_hints_for_buffer(bufnr, qf) abort
     catch
     endtry
   endfor
+  call s:pingu_show_issue_hover_action_hint_if_current(a:bufnr)
 endfunction
 
 function! s:clear_pingu_issue_hints_for_buffer(bufnr) abort
