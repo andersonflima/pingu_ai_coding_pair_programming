@@ -1979,14 +1979,19 @@ function! s:lsp_severity_label(severity) abort
   return 'INFO'
 endfunction
 
-function! s:lsp_diagnostics_for_buffer(bufnr) abort
-  if !s:lsp_auto_fix_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
+function! s:lsp_diagnostics_for_buffer(bufnr, ...) abort
+  let l:max_severity = a:0 > 0 ? a:1 : s:lsp_auto_fix_max_severity()
+  let l:require_auto_fix = a:0 > 1 ? a:2 : v:true
+  if l:require_auto_fix && !s:lsp_auto_fix_enabled()
+    return []
+  endif
+  if a:bufnr <= 0 || !bufloaded(a:bufnr)
     return []
   endif
 
   let l:payload = {
         \ 'bufnr': a:bufnr,
-        \ 'maxSeverity': s:lsp_auto_fix_max_severity(),
+        \ 'maxSeverity': l:max_severity,
         \ }
   let l:script = join([
         \ 'local input = _A or {}',
@@ -2028,6 +2033,131 @@ function! s:lsp_diagnostics_for_buffer(bufnr) abort
     return []
   endtry
   return type(l:items) == v:t_list ? l:items : []
+endfunction
+
+function! s:pingu_diagnostic_takeover_enabled() abort
+  if has('nvim') && exists('*nvim_list_uis') && empty(nvim_list_uis())
+    return v:false
+  endif
+  return has('nvim')
+        \ && exists('*luaeval')
+        \ && str2nr(string(get(g:, 'pingu_diagnostic_takeover', has('nvim') ? 1 : 0))) > 0
+endfunction
+
+function! s:pingu_diagnostic_takeover_max_items() abort
+  let l:max_items = get(g:, 'pingu_diagnostic_takeover_max_items', 80)
+  if type(l:max_items) != v:t_number
+    let l:max_items = str2nr(string(l:max_items))
+  endif
+  return max([0, l:max_items])
+endfunction
+
+function! s:apply_pingu_diagnostic_takeover() abort
+  if !has('nvim') || !exists('*luaeval')
+    return
+  endif
+
+  let l:payload = {'enabled': s:pingu_diagnostic_takeover_enabled() ? 1 : 0}
+  let l:script = join([
+        \ 'local input = _A or {}',
+        \ 'if type(vim) ~= "table" or type(vim.diagnostic) ~= "table" or type(vim.diagnostic.config) ~= "function" then',
+        \ '  return false',
+        \ 'end',
+        \ '_G.__pingu_diagnostic_takeover = _G.__pingu_diagnostic_takeover or {}',
+        \ 'local state = _G.__pingu_diagnostic_takeover',
+        \ 'if not state.captured then',
+        \ '  local ok, cfg = pcall(vim.diagnostic.config)',
+        \ '  state.captured = true',
+        \ '  state.virtual_text = ok and type(cfg) == "table" and cfg.virtual_text or nil',
+        \ 'end',
+        \ 'if tonumber(input.enabled or 0) == 1 then',
+        \ '  vim.diagnostic.config({ virtual_text = false })',
+        \ 'elseif state.captured then',
+        \ '  vim.diagnostic.config({ virtual_text = state.virtual_text })',
+        \ 'end',
+        \ 'return true',
+        \ ], "\n")
+  try
+    call luaeval(l:script, l:payload)
+  catch
+  endtry
+endfunction
+
+function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
+  if !s:pingu_diagnostic_takeover_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return a:qf
+  endif
+
+  let l:max_items = s:pingu_diagnostic_takeover_max_items()
+  if l:max_items <= 0
+    return a:qf
+  endif
+
+  let l:diagnostics = s:lsp_diagnostics_for_buffer(a:bufnr, 4, v:false)
+  if empty(l:diagnostics)
+    return a:qf
+  endif
+
+  let l:target_file = fnamemodify(a:file, ':p')
+  let l:seen = {}
+  for l:item in (type(a:qf) == v:t_list ? a:qf : [])
+    let l:item_file = fnamemodify(get(l:item, 'filename', ''), ':p')
+    if l:item_file !=# l:target_file
+      continue
+    endif
+    let l:item_key = printf('%d|%d|%s|%s|%s',
+          \ str2nr(string(get(l:item, 'lnum', 0))),
+          \ str2nr(string(get(l:item, 'col', 0))),
+          \ trim('' . get(l:item, 'lsp_source', get(l:item, 'source', ''))),
+          \ trim('' . get(l:item, 'lsp_code', get(l:item, 'code', ''))),
+          \ trim('' . get(l:item, 'lsp_message', get(l:item, 'text', '')))
+          \ )
+    let l:seen[l:item_key] = 1
+  endfor
+
+  let l:merged = copy(type(a:qf) == v:t_list ? a:qf : [])
+  let l:added = 0
+  for l:diag in l:diagnostics
+    if l:added >= l:max_items
+      break
+    endif
+    let l:lnum = max([1, str2nr(string(get(l:diag, 'lnum', 1)))])
+    let l:col = max([1, str2nr(string(get(l:diag, 'col', 1)))])
+    let l:message = trim('' . get(l:diag, 'message', 'Diagnostico do LSP'))
+    let l:severity = str2nr(string(get(l:diag, 'severity', 2)))
+    let l:source = trim('' . get(l:diag, 'source', 'LSP'))
+    let l:code = trim('' . get(l:diag, 'code', ''))
+    let l:key = printf('%d|%d|%s|%s|%s', l:lnum, l:col, l:source, l:code, l:message)
+    if has_key(l:seen, l:key)
+      continue
+    endif
+    let l:seen[l:key] = 1
+    let l:label = empty(l:source) ? 'LSP' : l:source
+    call add(l:merged, {
+          \ 'filename': l:target_file,
+          \ 'lnum': l:lnum,
+          \ 'col': l:col,
+          \ 'text': printf('[%s] %s: %s', s:lsp_severity_label(l:severity), l:label, l:message),
+          \ 'kind': 'lsp_diagnostic',
+          \ 'autofixPriority': 25,
+          \ 'lsp_source': l:source,
+          \ 'lsp_code': l:code,
+          \ 'lsp_message': l:message,
+          \ 'lsp_severity': l:severity,
+          \ 'snippet': '',
+          \ 'action': {
+          \   'op': 'lsp_code_action',
+          \   'only': s:lsp_only_kinds_for_diagnostic(l:source),
+          \   'timeout_ms': s:lsp_auto_fix_timeout_ms(),
+          \   'prefer_preferred': v:true,
+          \   'prefer_global': s:lsp_auto_fix_prefer_global(),
+          \   'scope': 'line',
+          \   'line': l:lnum,
+          \ },
+          \ })
+    let l:added += 1
+  endfor
+  return l:merged
 endfunction
 
 function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
@@ -4816,7 +4946,9 @@ function! s:realtime_check_handle_analysis(bufnr, analysis, open_qf, show_echo, 
   endif
 
   let l:qf = deepcopy(get(a:analysis, 'qf', []))
+  call s:apply_pingu_diagnostic_takeover()
   let l:qf = s:merge_lsp_diagnostic_auto_fix_candidates(a:bufnr, l:file, l:qf)
+  let l:qf = s:merge_lsp_diagnostic_hint_items(a:bufnr, l:file, l:qf)
   call s:status_set_idle(len(l:qf), '')
   if a:open_qf || g:pingu_show_window || !a:realtime_mode
     call setqflist([], 'r', {'title': 'Pingu'})
@@ -6444,6 +6576,22 @@ function! s:pingu_issue_hints_namespace() abort
   return s:pingu_issue_hints_namespace
 endfunction
 
+function! s:pingu_issue_hints_priority() abort
+  let l:priority = get(g:, 'pingu_issue_hints_priority', 10000)
+  if type(l:priority) != v:t_number
+    let l:priority = str2nr(string(l:priority))
+  endif
+  return max([0, l:priority])
+endfunction
+
+function! s:pingu_issue_hints_position() abort
+  let l:position = tolower(trim('' . get(g:, 'pingu_issue_hints_position', 'eol')))
+  if index(['eol', 'right_align', 'overlay', 'inline'], l:position) == -1
+    return 'eol'
+  endif
+  return l:position
+endfunction
+
 function! s:define_pingu_issue_hint_highlights() abort
   silent! highlight default link PinguIssueHintError DiagnosticVirtualTextError
   silent! highlight default link PinguIssueHintWarn DiagnosticVirtualTextWarn
@@ -6465,7 +6613,31 @@ function! s:pingu_issue_hint_highlight(severity) abort
   return 'PinguIssueHintInfo'
 endfunction
 
-function! s:pingu_issue_hint_text(issue) abort
+function! s:pingu_issue_severity_rank(issue) abort
+  let l:lsp_severity = str2nr(string(get(a:issue, 'lsp_severity', 0)))
+  if l:lsp_severity >= 1 && l:lsp_severity <= 4
+    return l:lsp_severity
+  endif
+
+  let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:severity = tolower(empty(l:parts[0]) ? 'error' : l:parts[0])
+  if l:severity ==# 'error'
+    return 1
+  endif
+  if l:severity ==# 'warning' || l:severity ==# 'warn'
+    return 2
+  endif
+  if l:severity ==# 'info' || l:severity ==# 'information'
+    return 3
+  endif
+  if l:severity ==# 'hint'
+    return 4
+  endif
+  return 3
+endfunction
+
+function! s:pingu_issue_hint_text(issue, ...) abort
+  let l:extra_count = a:0 > 0 ? max([0, str2nr(string(a:1))]) : 0
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:severity = empty(l:parts[0]) ? 'error' : l:parts[0]
   let l:message = empty(l:parts[1]) ? get(a:issue, 'kind', 'issue') : l:parts[1]
@@ -6475,6 +6647,9 @@ function! s:pingu_issue_hint_text(issue) abort
   let l:fixable = !empty(get(a:issue, 'snippet', ''))
         \ || index(['run_command', 'lsp_code_action', 'lsp_ai_fix'], get(l:action, 'op', '')) != -1
   let l:text = printf('%s Pingu %s: %s', empty(l:prefix) ? '' : l:prefix, l:severity, l:message)
+  if l:extra_count > 0
+    let l:text .= printf(' +%d', l:extra_count)
+  endif
   if !empty(l:suggestion)
     let l:text .= ' -> ' . l:suggestion
   endif
@@ -6503,7 +6678,7 @@ function! s:update_pingu_issue_hints_for_buffer(bufnr, qf) abort
   call s:define_pingu_issue_hint_highlights()
   let l:file = fnamemodify(bufname(a:bufnr), ':p')
   let l:last = len(getbufline(a:bufnr, 1, '$'))
-  let l:seen = {}
+  let l:by_line = {}
   for l:item in (type(a:qf) == v:t_list ? a:qf : [])
     if fnamemodify(get(l:item, 'filename', ''), ':p') !=# l:file
       continue
@@ -6513,18 +6688,37 @@ function! s:update_pingu_issue_hints_for_buffer(bufnr, qf) abort
       continue
     endif
     let l:key = string(l:lnum)
-    if has_key(l:seen, l:key)
-      continue
+    if !has_key(l:by_line, l:key)
+      let l:by_line[l:key] = []
     endif
-    let l:seen[l:key] = 1
     let l:hint_item = deepcopy(l:item)
     let l:hint_item.bufnr = a:bufnr
-    let l:hint = s:pingu_issue_hint_text(l:hint_item)
+    call add(l:by_line[l:key], l:hint_item)
+  endfor
+
+  let l:priority = s:pingu_issue_hints_priority()
+  let l:position = s:pingu_issue_hints_position()
+  for l:key in keys(l:by_line)
+    let l:items = l:by_line[l:key]
+    if empty(l:items)
+      continue
+    endif
+    let l:primary = l:items[0]
+    let l:primary_rank = s:pingu_issue_severity_rank(l:primary)
+    for l:candidate in l:items[1:]
+      let l:candidate_rank = s:pingu_issue_severity_rank(l:candidate)
+      if l:candidate_rank < l:primary_rank
+        let l:primary = l:candidate
+        let l:primary_rank = l:candidate_rank
+      endif
+    endfor
+    let l:hint = s:pingu_issue_hint_text(l:primary, len(l:items) - 1)
     try
-      call nvim_buf_set_extmark(a:bufnr, l:ns, l:lnum - 1, 0, {
+      call nvim_buf_set_extmark(a:bufnr, l:ns, str2nr(l:key) - 1, 0, {
             \ 'virt_text': [[printf('  %s', l:hint[0]), l:hint[1]]],
-            \ 'virt_text_pos': 'eol',
+            \ 'virt_text_pos': l:position,
             \ 'hl_mode': 'combine',
+            \ 'priority': l:priority,
             \ })
     catch
     endtry
@@ -6745,6 +6939,19 @@ augroup pingu_hints
   autocmd BufEnter,BufWinEnter,BufWritePost,InsertLeave,TextChanged,TextChangedI * silent! call s:update_pingu_hints_current_buffer()
 augroup END
 
+if has('nvim')
+  augroup pingu_diagnostic_takeover
+    autocmd!
+    autocmd VimEnter,BufEnter,BufWinEnter * silent! call s:apply_pingu_diagnostic_takeover()
+    if exists('##LspAttach')
+      autocmd LspAttach * silent! call s:apply_pingu_diagnostic_takeover()
+    endif
+    if exists('##DiagnosticChanged')
+      autocmd DiagnosticChanged * silent! call s:apply_pingu_diagnostic_takeover()
+    endif
+  augroup END
+endif
+
 augroup realtime_dev_agent_open_review
   autocmd!
   autocmd BufReadPost,BufNewFile * if g:pingu_review_on_open | call s:realtime_dev_agent_open_review() | endif
@@ -6782,4 +6989,5 @@ if g:pingu_realtime_on_change
   augroup END
 endif
 
+call s:apply_pingu_diagnostic_takeover()
 call s:set_code_buffer_tab_accept()
