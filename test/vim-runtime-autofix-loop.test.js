@@ -17,6 +17,10 @@ const pluginRuntime = fs.readFileSync(
   path.join(root, 'vim/plugin/realtime_dev_agent.vim'),
   'utf8',
 );
+const diagnosticManagerRuntime = fs.readFileSync(
+  path.join(root, 'vim/plugin/00_pingu_diagnostic_manager.lua'),
+  'utf8',
+);
 
 function commandExists(command) {
   const result = spawnSync('sh', ['-lc', `command -v ${shellQuote(command)}`], {
@@ -173,6 +177,8 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /function! s:restore_pingu_issue_hover_source\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue_with_ai\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_for_cursor\(\) abort/);
+  assert.match(internalRuntime, /function! s:install_pingu_issue_hover_source_maps\(bufnr\) abort/);
+  assert.match(internalRuntime, /function! s:clear_pingu_issue_hover_source_maps\(\) abort/);
   assert.match(internalRuntime, /function! s:schedule_pingu_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:fire_pingu_issue_hover_menu\(timer, bufnr, lnum, changedtick\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_hover_action_hint\(\) abort/);
@@ -189,6 +195,9 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /call s:restore_pingu_issue_hover_source\(\)/);
   assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("apply"\)/);
   assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("ai"\)/);
+  assert.match(internalRuntime, /call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 'n', l:lhs, l:rhs/);
+  assert.match(internalRuntime, /nvim_buf_del_keymap\(l:bufnr, 'n', l:lhs\)/);
   assert.match(internalRuntime, /<SID>pingu_issue_hover_action_for_cursor\(\)<CR>/);
   assert.match(internalRuntime, /'<LeftMouse>', '<LeftMouse>:/);
   assert.match(internalRuntime, /autocmd CursorHold \* if has\('nvim'\)/);
@@ -232,6 +241,17 @@ test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
 });
 
 test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () => {
+  assert.match(diagnosticManagerRuntime, /vim\.g\.pingu_diagnostic_manager_bootstrapped = 1/);
+  assert.match(diagnosticManagerRuntime, /state\.original_config = state\.original_config or diagnostic\.config/);
+  assert.match(diagnosticManagerRuntime, /state\.original_show = state\.original_show or diagnostic\.show/);
+  assert.match(diagnosticManagerRuntime, /state\.original_set = state\.original_set or diagnostic\.set/);
+  assert.match(diagnosticManagerRuntime, /local function mask_diagnostic_opts\(opts\)/);
+  assert.match(diagnosticManagerRuntime, /next_opts\.virtual_text = false/);
+  assert.match(diagnosticManagerRuntime, /next_opts\.virtual_lines = false/);
+  assert.match(diagnosticManagerRuntime, /next_opts\.signs = false/);
+  assert.match(diagnosticManagerRuntime, /next_opts\.underline = false/);
+  assert.match(diagnosticManagerRuntime, /diagnostic\.set = function\(namespace, bufnr, diagnostics, opts\)/);
+  assert.match(diagnosticManagerRuntime, /diagnostic\.config\(mask_diagnostic_opts\(\{\}\)\)/);
   assert.match(pluginRuntime, /let g:pingu_issue_hints_enabled = has\('nvim'\) \? 1 : 0/);
   assert.match(pluginRuntime, /let g:pingu_issue_hints_prefix = ''/);
   assert.match(pluginRuntime, /let g:pingu_issue_hints_priority = 10000/);
