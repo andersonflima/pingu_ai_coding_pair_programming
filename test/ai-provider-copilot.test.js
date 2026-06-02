@@ -105,6 +105,42 @@ test('resolveAiGeneratedTask handles fenced json payload', () => {
   assert.equal(result.action.command, 'echo ok');
 });
 
+test('resolveAiPromptTask preserves leading indentation in snippet', () => {
+  const provider = buildProvider({
+    spawnSync: (_command, args) => {
+      if (args[0] === '--version') {
+        return { status: 0, stdout: 'copilot 1.0.0', stderr: '' };
+      }
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          snippet: '\n      Logger.debug("a")\n      Logger.debug("b")\n',
+          message: 'ok',
+          suggestion: 'ok',
+          dependencies: [],
+          action: {
+            op: '',
+            target_file: '',
+            mkdir_p: false,
+            remove_trigger: false,
+            command: '',
+            description: '',
+          },
+        }),
+        stderr: '',
+      };
+    },
+  });
+
+  const result = provider.resolveAiPromptTask({ prompt: 'corrige logs' }, {});
+  assert.ok(result);
+  assert.equal(
+    result.snippet,
+    '      Logger.debug("a")\n      Logger.debug("b")',
+  );
+  assert.equal(result.mode, 'prompt_task');
+});
+
 test('hasOpenAiConfiguration enters temporary cooldown after runtime failure', () => {
   let versionCalls = 0;
   let promptCalls = 0;

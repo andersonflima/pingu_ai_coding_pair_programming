@@ -88,3 +88,53 @@ test('resolveAiGeneratedTask parses JSON content from OpenAI chat completion res
   assert.equal(result.mode, 'comment_task');
   assert.equal(promptCalls, 1);
 });
+
+test('resolveAiPromptTask preserves leading indentation in snippet', () => {
+  const provider = buildProvider({
+    spawnSync: (_command, args) => {
+      if (args[0] === '--version') {
+        return { status: 0, stdout: 'curl 8.0.0', stderr: '' };
+      }
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  snippet: '\n      Logger.debug("a")\n      Logger.debug("b")\n',
+                  message: 'ok',
+                  suggestion: 'ok',
+                  dependencies: [],
+                  action: {
+                    op: '',
+                    target_file: '',
+                    mkdir_p: false,
+                    remove_trigger: false,
+                    command: '',
+                    description: '',
+                  },
+                }),
+              },
+            },
+          ],
+        }),
+        stderr: '',
+      };
+    },
+  });
+
+  const env = {
+    OPENAI_API_KEY: 'test-key',
+    PINGU_OPENAI_COMMAND: 'curl',
+    PINGU_OPENAI_MODEL: 'gpt-4o-mini',
+  };
+
+  const result = provider.resolveAiPromptTask({ prompt: 'corrige logs' }, env);
+  assert.ok(result);
+  assert.equal(
+    result.snippet,
+    '      Logger.debug("a")\n      Logger.debug("b")',
+  );
+  assert.equal(result.mode, 'prompt_task');
+});
