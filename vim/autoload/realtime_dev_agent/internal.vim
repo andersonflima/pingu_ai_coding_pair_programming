@@ -24,6 +24,8 @@ let s:pingu_issue_hover_menu_winid = -1
 let s:pingu_issue_hover_menu_bufnr = -1
 let s:pingu_issue_hover_menu_timer = -1
 let s:pingu_issue_hover_source_context = {}
+let s:pingu_issue_hover_source_map_bufnr = -1
+let s:pingu_issue_hover_source_maps = []
 let s:realtime_dev_agent_async_analysis_job = -1
 let s:realtime_dev_agent_async_analysis_context = {}
 let s:pingu_prompt_job = -1
@@ -1854,6 +1856,7 @@ function! s:close_pingu_issue_hover_menu() abort
     call timer_stop(l:timer)
   endif
   let s:pingu_issue_hover_menu_timer = -1
+  call s:clear_pingu_issue_hover_source_maps()
   let l:winid = get(s:, 'pingu_issue_hover_menu_winid', -1)
   if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
     try
@@ -1877,6 +1880,82 @@ function! s:close_pingu_issue_hover_menu() abort
   endif
   let s:pingu_issue_hover_menu_winid = -1
   let s:pingu_issue_hover_menu_bufnr = -1
+endfunction
+
+function! s:pingu_issue_hover_source_actions() abort
+  return [
+        \ ['a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>'],
+        \ ['i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>'],
+        \ ['p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>'],
+        \ ['q', ':<C-U>PinguIssueHoverClose<CR>'],
+        \ ]
+endfunction
+
+function! s:buffer_local_normal_map(bufnr, lhs) abort
+  if !has('nvim') || !exists('*nvim_buf_get_keymap') || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return {}
+  endif
+  try
+    for l:map in nvim_buf_get_keymap(a:bufnr, 'n')
+      if get(l:map, 'lhs', '') ==# a:lhs
+        return l:map
+      endif
+    endfor
+  catch
+  endtry
+  return {}
+endfunction
+
+function! s:restore_buffer_local_normal_map(bufnr, map) abort
+  if type(a:map) != v:t_dict || empty(a:map) || empty(get(a:map, 'lhs', '')) || empty(get(a:map, 'rhs', ''))
+    return
+  endif
+  try
+    call nvim_buf_set_keymap(a:bufnr, 'n', get(a:map, 'lhs', ''), get(a:map, 'rhs', ''), {
+          \ 'noremap': get(a:map, 'noremap', 1) ? v:true : v:false,
+          \ 'silent': get(a:map, 'silent', 0) ? v:true : v:false,
+          \ 'expr': get(a:map, 'expr', 0) ? v:true : v:false,
+          \ 'nowait': get(a:map, 'nowait', 0) ? v:true : v:false,
+          \ })
+  catch
+  endtry
+endfunction
+
+function! s:clear_pingu_issue_hover_source_maps() abort
+  let l:bufnr = get(s:, 'pingu_issue_hover_source_map_bufnr', -1)
+  if l:bufnr > 0 && has('nvim') && exists('*nvim_buf_del_keymap') && bufloaded(l:bufnr)
+    for l:entry in get(s:, 'pingu_issue_hover_source_maps', [])
+      let l:lhs = get(l:entry, 'lhs', '')
+      if empty(l:lhs)
+        continue
+      endif
+      try
+        call nvim_buf_del_keymap(l:bufnr, 'n', l:lhs)
+      catch
+      endtry
+      call s:restore_buffer_local_normal_map(l:bufnr, get(l:entry, 'previous', {}))
+    endfor
+  endif
+  let s:pingu_issue_hover_source_map_bufnr = -1
+  let s:pingu_issue_hover_source_maps = []
+endfunction
+
+function! s:install_pingu_issue_hover_source_maps(bufnr) abort
+  if !has('nvim') || !exists('*nvim_buf_set_keymap') || a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return
+  endif
+  call s:clear_pingu_issue_hover_source_maps()
+  let s:pingu_issue_hover_source_map_bufnr = a:bufnr
+  let s:pingu_issue_hover_source_maps = []
+  for l:action in s:pingu_issue_hover_source_actions()
+    let l:lhs = l:action[0]
+    let l:rhs = l:action[1]
+    call add(s:pingu_issue_hover_source_maps, {'lhs': l:lhs, 'previous': s:buffer_local_normal_map(a:bufnr, l:lhs)})
+    try
+      call nvim_buf_set_keymap(a:bufnr, 'n', l:lhs, l:rhs, {'noremap': v:true, 'silent': v:true, 'nowait': v:true})
+    catch
+    endtry
+  endfor
 endfunction
 
 function! s:restore_pingu_issue_hover_source() abort
@@ -2040,6 +2119,7 @@ function! s:pingu_open_issue_hover_menu(issue) abort
         \ 'lnum': line('.'),
         \ 'col': col('.'),
         \ }
+  call s:install_pingu_issue_hover_source_maps(bufnr('%'))
   let l:lines = s:pingu_issue_hover_menu_lines(a:issue)
   let l:width = max(map(copy(l:lines), {_, line -> strdisplaywidth(line)}))
   let l:bufnr = nvim_create_buf(v:false, v:true)
