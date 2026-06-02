@@ -887,8 +887,8 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_issue_hints_priority = 10000` define prioridade alta para o shadow text do Pingu sobre outros virtual texts
 - `let g:pingu_issue_hints_position = 'eol'` controla a posicao do shadow text (`eol`, `right_align`, `overlay` ou `inline`)
 - `let g:pingu_diagnostic_takeover = 1` faz o Pingu assumir o virtual text de LSPs/linters via `vim.diagnostic`, desligando `virtual_text`/`virtual_lines` nativos globais e por namespace, mantendo signs/underline
-- `let g:pingu_diagnostic_takeover_max_items = 80` limita quantos diagnosticos externos entram no agregador visual por buffer
-- `:PinguHintsRefresh` recalcula manualmente os hints inline do buffer atual
+- `let g:pingu_diagnostic_takeover_max_items = -1` mostra diagnosticos externos do arquivo inteiro; use um numero positivo para limitar ou `0` para nao agregar diagnosticos LSP/linter no shadow text do Pingu
+- `:PinguHintsRefresh` recalcula manualmente todos os hints inline do buffer atual, incluindo diagnosticos LSP/linter assumidos pelo Pingu
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguStop` interrompe processamento ativo quando o runtime parecer preso ou estiver demorando demais
@@ -993,8 +993,8 @@ Importante:
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
 - no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `source.fixAll`, `source.organizeImports` e `quickfix` sem abrir prompt
 - no Neovim, warnings do LSP sem `codeAction` aplicavel entram como `lsp_ai_fix` e podem usar Copilot para gerar uma edicao local minima; se o provider estiver indisponivel, o fluxo continua sem bloquear o editor
-- no Neovim, `g:pingu_diagnostic_takeover = 1` centraliza o virtual text de diagnosticos publicados em `vim.diagnostic`; o Pingu desliga shadow text nativo global e por namespace, agrega LSPs/linters por linha, mostra o item mais severo com `+N` para extras e mantém `:PinguFixCurrent` como comando de correcao local
-- no Neovim, o loop realtime tambem observa `DiagnosticChanged` e agenda nova rodada automaticamente quando o LSP atualiza lint/syntax sem edicao manual no buffer
+- no Neovim, `g:pingu_diagnostic_takeover = 1` centraliza o virtual text de diagnosticos publicados em `vim.diagnostic`; o Pingu desliga shadow text nativo global e por namespace, bloqueia reativacoes posteriores de `virtual_text`/`virtual_lines`, agrega LSPs/linters por linha no arquivo inteiro, mostra o item mais severo com `+N` para extras e mantém `:PinguFixCurrent` como comando de correcao local
+- no Neovim, o loop realtime tambem observa `DiagnosticChanged` e agenda nova rodada automaticamente quando o LSP atualiza lint/syntax sem edicao manual no buffer; o shadow text do Pingu usa o buffer do evento para atualizar linhas com problemas mesmo fora da janela visivel
 - quando houver `syntax_*` no arquivo e provider assistido estiver operacional, o runtime tenta consolidar um reparo unico de sintaxe no arquivo antes do fallback por item
 - quando o servidor exigir `codeAction/resolve`, o runtime resolve e executa a acao automaticamente antes de aplicar edits/comandos
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`

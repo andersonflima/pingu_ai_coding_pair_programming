@@ -2080,11 +2080,11 @@ function! s:pingu_diagnostic_takeover_enabled() abort
 endfunction
 
 function! s:pingu_diagnostic_takeover_max_items() abort
-  let l:max_items = get(g:, 'pingu_diagnostic_takeover_max_items', 80)
+  let l:max_items = get(g:, 'pingu_diagnostic_takeover_max_items', -1)
   if type(l:max_items) != v:t_number
     let l:max_items = str2nr(string(l:max_items))
   endif
-  return max([0, l:max_items])
+  return l:max_items
 endfunction
 
 function! s:apply_pingu_diagnostic_takeover() abort
@@ -2100,6 +2100,23 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ 'end',
         \ '_G.__pingu_diagnostic_takeover = _G.__pingu_diagnostic_takeover or {}',
         \ 'local state = _G.__pingu_diagnostic_takeover',
+        \ 'if not state.original_config then',
+        \ '  state.original_config = vim.diagnostic.config',
+        \ 'end',
+        \ 'if not state.config_wrapped then',
+        \ '  vim.diagnostic.config = function(opts, namespace)',
+        \ '    local current = _G.__pingu_diagnostic_takeover',
+        \ '    if type(current) == "table" and current.enabled and not current.restoring and type(opts) == "table" then',
+        \ '      local next_opts = vim.tbl_extend("force", {}, opts)',
+        \ '      next_opts.virtual_text = false',
+        \ '      next_opts.virtual_lines = false',
+        \ '      return current.original_config(next_opts, namespace)',
+        \ '    end',
+        \ '    return current.original_config(opts, namespace)',
+        \ '  end',
+        \ '  state.config_wrapped = true',
+        \ 'end',
+        \ 'state.enabled = tonumber(input.enabled or 0) == 1',
         \ 'state.namespaces = state.namespaces or {}',
         \ 'local function capture_global()',
         \ '  if state.captured then',
@@ -2143,6 +2160,7 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '    vim.diagnostic.config({ virtual_text = false, virtual_lines = false }, ns_id)',
         \ '  end)',
         \ 'elseif state.captured then',
+        \ '  state.restoring = true',
         \ '  vim.diagnostic.config({ virtual_text = state.virtual_text, virtual_lines = state.virtual_lines })',
         \ '  each_namespace(function(ns_id)',
         \ '    local cfg = state.namespaces[tostring(ns_id)]',
@@ -2150,6 +2168,7 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '      vim.diagnostic.config({ virtual_text = cfg.virtual_text, virtual_lines = cfg.virtual_lines }, ns_id)',
         \ '    end',
         \ '  end)',
+        \ '  state.restoring = false',
         \ 'end',
         \ 'return true',
         \ ], "\n")
@@ -2184,13 +2203,18 @@ function! s:refresh_pingu_diagnostic_hints_current_buffer() abort
   call s:refresh_pingu_diagnostic_hints_for_buffer(bufnr('%'))
 endfunction
 
+function! s:refresh_pingu_diagnostic_hints_event_buffer() abort
+  let l:bufnr = str2nr(expand('<abuf>'))
+  call s:refresh_pingu_diagnostic_hints_for_buffer(l:bufnr > 0 ? l:bufnr : bufnr('%'))
+endfunction
+
 function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
   if !s:pingu_diagnostic_takeover_enabled() || a:bufnr <= 0 || !bufloaded(a:bufnr)
     return a:qf
   endif
 
   let l:max_items = s:pingu_diagnostic_takeover_max_items()
-  if l:max_items <= 0
+  if l:max_items == 0
     return a:qf
   endif
 
@@ -2219,7 +2243,7 @@ function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
   let l:merged = copy(type(a:qf) == v:t_list ? a:qf : [])
   let l:added = 0
   for l:diag in l:diagnostics
-    if l:added >= l:max_items
+    if l:max_items > 0 && l:added >= l:max_items
       break
     endif
     let l:lnum = max([1, str2nr(string(get(l:diag, 'lnum', 1)))])
@@ -6661,6 +6685,11 @@ function! s:update_pingu_hints_current_buffer() abort
   call s:update_pingu_hints_for_buffer(bufnr('%'))
 endfunction
 
+function! s:update_pingu_all_hints_current_buffer() abort
+  call s:update_pingu_hints_current_buffer()
+  call s:refresh_pingu_diagnostic_hints_current_buffer()
+endfunction
+
 function! s:pingu_issue_hints_enabled() abort
   if has('nvim') && exists('*nvim_list_uis') && empty(nvim_list_uis())
     return v:false
@@ -6987,7 +7016,7 @@ command! PinguWindowCheck call s:realtime_dev_agent_window_check()
 command! PinguWindowClose call s:window_close()
 command! PinguWindowToggle call s:window_toggle()
 command! -range -nargs=* PinguPrompt call s:pingu_prompt(<line1>, <line2>, <q-args>, <range>)
-command! PinguHintsRefresh call s:update_pingu_hints_current_buffer()
+command! PinguHintsRefresh call s:update_pingu_all_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()
 command! PinguStop call s:pingu_stop()
@@ -7079,18 +7108,18 @@ augroup END
 augroup pingu_hints
   autocmd!
   autocmd ColorScheme * silent! call s:define_pingu_hint_highlights() | silent! call s:define_pingu_issue_hint_highlights()
-  autocmd BufEnter,BufWinEnter,BufWritePost,InsertLeave,TextChanged,TextChangedI * silent! call s:update_pingu_hints_current_buffer()
+  autocmd BufEnter,BufWinEnter,BufWritePost,InsertLeave,TextChanged,TextChangedI * silent! call s:update_pingu_all_hints_current_buffer()
 augroup END
 
 if has('nvim')
   augroup pingu_diagnostic_takeover
     autocmd!
-    autocmd VimEnter,BufEnter,BufWinEnter * silent! call s:apply_pingu_diagnostic_takeover()
+    autocmd VimEnter,BufEnter,BufWinEnter * silent! call s:apply_pingu_diagnostic_takeover() | silent! call s:refresh_pingu_diagnostic_hints_event_buffer()
     if exists('##LspAttach')
-      autocmd LspAttach * silent! call s:apply_pingu_diagnostic_takeover() | silent! call s:refresh_pingu_diagnostic_hints_current_buffer()
+      autocmd LspAttach * silent! call s:apply_pingu_diagnostic_takeover() | silent! call s:refresh_pingu_diagnostic_hints_event_buffer()
     endif
     if exists('##DiagnosticChanged')
-      autocmd DiagnosticChanged * silent! call s:apply_pingu_diagnostic_takeover() | silent! call s:refresh_pingu_diagnostic_hints_current_buffer()
+      autocmd DiagnosticChanged * silent! call s:apply_pingu_diagnostic_takeover() | silent! call s:refresh_pingu_diagnostic_hints_event_buffer()
     endif
   augroup END
 endif
