@@ -23,6 +23,7 @@ let s:pingu_cursor_hover_issue_signature = ''
 let s:pingu_issue_hover_menu_winid = -1
 let s:pingu_issue_hover_menu_bufnr = -1
 let s:pingu_issue_hover_menu_timer = -1
+let s:pingu_issue_hover_source_context = {}
 let s:realtime_dev_agent_async_analysis_job = -1
 let s:realtime_dev_agent_async_analysis_context = {}
 let s:pingu_prompt_job = -1
@@ -1600,6 +1601,33 @@ function! s:set_code_buffer_tab_accept() abort
   else
     inoremap <buffer> <silent> <expr> <Tab> <SID>realtime_dev_agent_accept_snippet_or_tab()
   endif
+
+  if !empty(g:pingu_next_issue_key)
+    call s:set_buffer_normal_map(g:pingu_next_issue_key, ':PinguQfNext<CR>', 'Pingu: proximo diagnostico')
+  endif
+  if !empty(g:pingu_prev_issue_key)
+    call s:set_buffer_normal_map(g:pingu_prev_issue_key, ':PinguQfPrev<CR>', 'Pingu: diagnostico anterior')
+  endif
+endfunction
+
+function! s:set_buffer_normal_map(lhs, rhs, desc) abort
+  if empty(a:lhs) || empty(a:rhs) || &buftype !=# ''
+    return
+  endif
+
+  if has('nvim') && exists('*nvim_buf_set_keymap')
+    try
+      call nvim_buf_set_keymap(0, 'n', a:lhs, a:rhs, {
+            \ 'noremap': v:true,
+            \ 'silent': v:true,
+            \ 'desc': a:desc,
+            \ })
+      return
+    catch
+    endtry
+  endif
+
+  execute 'nnoremap <buffer> <silent> ' . a:lhs . ' ' . a:rhs
 endfunction
 
 function! s:realtime_dev_agent_accept_snippet_or_tab() abort
@@ -1753,6 +1781,19 @@ function! s:get_current_panel_issue() abort
   return l:issue
 endfunction
 
+function! s:issue_covers_line(issue, line) abort
+  let l:start = str2nr(string(get(a:issue, 'lnum', 0)))
+  if l:start <= 0
+    return v:false
+  endif
+  let l:end = str2nr(string(get(a:issue, 'end_lnum', l:start)))
+  if l:end < l:start
+    let l:end = l:start
+  endif
+  let l:line = str2nr(string(a:line))
+  return l:line >= l:start && l:line <= l:end
+endfunction
+
 function! s:get_buffer_issue_at_cursor() abort
   let l:file = fnamemodify(bufname('%'), ':p')
   let l:current_line = line('.')
@@ -1764,8 +1805,7 @@ function! s:get_buffer_issue_at_cursor() abort
     if get(l:item, 'filename', '') !=# l:file
       continue
     endif
-    let l:line = get(l:item, 'lnum', 0)
-    if l:line == l:current_line
+    if s:issue_covers_line(l:item, l:current_line)
       let l:exact_match = l:item
       break
     endif
@@ -1801,7 +1841,7 @@ function! s:get_buffer_issue_at_cursor_exact() abort
     if fnamemodify(get(l:item, 'filename', ''), ':p') !=# l:file
       continue
     endif
-    if get(l:item, 'lnum', 0) ==# l:current_line
+    if s:issue_covers_line(l:item, l:current_line)
       return l:item
     endif
   endfor
@@ -1823,6 +1863,34 @@ function! s:close_pingu_issue_hover_menu() abort
   endif
   let s:pingu_issue_hover_menu_winid = -1
   let s:pingu_issue_hover_menu_bufnr = -1
+endfunction
+
+function! s:restore_pingu_issue_hover_source() abort
+  let l:context = get(s:, 'pingu_issue_hover_source_context', {})
+  if type(l:context) != v:t_dict || empty(l:context)
+    return v:false
+  endif
+  let l:winid = str2nr(string(get(l:context, 'winid', -1)))
+  let l:bufnr = str2nr(string(get(l:context, 'bufnr', -1)))
+  let l:lnum = max([1, str2nr(string(get(l:context, 'lnum', 1)))])
+  let l:col = max([1, str2nr(string(get(l:context, 'col', 1)))])
+  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
+    try
+      call nvim_set_current_win(l:winid)
+      call cursor(l:lnum, l:col)
+      return v:true
+    catch
+    endtry
+  endif
+  if l:bufnr > 0 && bufloaded(l:bufnr)
+    try
+      execute 'buffer ' . l:bufnr
+      call cursor(l:lnum, l:col)
+      return v:true
+    catch
+    endtry
+  endif
+  return v:false
 endfunction
 
 function! s:pingu_issue_hover_signature(issue) abort
@@ -1884,6 +1952,7 @@ endfunction
 
 function! s:pingu_issue_hover_action(action) abort
   call s:close_pingu_issue_hover_menu()
+  call s:restore_pingu_issue_hover_source()
   let l:issue = s:get_buffer_issue_at_cursor_exact()
   if a:action ==# 'apply'
     call s:pingu_fix_current_issue()
@@ -1930,6 +1999,12 @@ function! s:pingu_open_issue_hover_menu(issue) abort
   endif
 
   call s:close_pingu_issue_hover_menu()
+  let s:pingu_issue_hover_source_context = {
+        \ 'winid': win_getid(),
+        \ 'bufnr': bufnr('%'),
+        \ 'lnum': line('.'),
+        \ 'col': col('.'),
+        \ }
   let l:lines = s:pingu_issue_hover_menu_lines(a:issue)
   let l:width = max(map(copy(l:lines), {_, line -> strdisplaywidth(line)}))
   let l:bufnr = nvim_create_buf(v:false, v:true)
@@ -1947,9 +2022,9 @@ function! s:pingu_open_issue_hover_menu(issue) abort
         \ 'focusable': v:true,
         \ 'zindex': 60,
         \ })
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>PinguIssueHoverClose<Bar>PinguFixCurrent<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'i', ':<C-U>PinguIssueHoverClose<Bar>PinguFixCurrentAI<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'p', ':<C-U>PinguIssueHoverClose<Bar>PinguWindowCheck<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>PinguIssueHoverClose<CR>', {'noremap': v:true, 'silent': v:true})
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
@@ -1980,11 +2055,11 @@ function! s:pingu_show_issue_hover_action_hint() abort
 endfunction
 
 function! s:pingu_issue_hover_delay_ms() abort
-  let l:delay = get(g:, 'pingu_issue_hover_delay_ms', 650)
+  let l:delay = get(g:, 'pingu_issue_hover_delay_ms', 80)
   if type(l:delay) != v:t_number
     let l:delay = str2nr(string(l:delay))
   endif
-  return max([120, l:delay])
+  return max([30, l:delay])
 endfunction
 
 function! s:schedule_pingu_issue_hover_menu() abort
@@ -2302,6 +2377,9 @@ function! s:pingu_effective_language_diagnostic_severity(source, message, severi
         \ '\v(is undefined|undefined (function|method|variable|constant|type|class|module|property|name))',
         \ '\v(not defined|is not defined|name ''.+'' is not defined)',
         \ '\v(cannot find (name|module|symbol|package|type)|cannot resolve (symbol|module|import))',
+        \ '\v(cannot find module|could not find (module|package|declaration file)|no module named)',
+        \ '\v(import .+ could not be resolved|could not resolve (import|module|package|dependency))',
+        \ '\v(failed to resolve import|unable to resolve (path|module|import|dependency))',
         \ '\v(unresolved (reference|import|module|name|symbol))',
         \ '\v(no such (file|module|package)|module not found|package .+ is not in std)',
         \ '\v(has no (member|method|attribute|field)|no member named|no method named|unknown field)',
@@ -2366,6 +2444,8 @@ function! s:lsp_diagnostics_for_buffer(bufnr, ...) abort
         \ '    table.insert(items, {',
         \ '      lnum = (tonumber(diag.lnum or 0) or 0) + 1,',
         \ '      col = (tonumber(diag.col or 0) or 0) + 1,',
+        \ '      end_lnum = (tonumber(diag.end_lnum or diag.lnum or 0) or 0) + 1,',
+        \ '      end_col = (tonumber(diag.end_col or diag.col or 0) or 0) + 1,',
         \ '      severity = sev,',
         \ '      message = tostring(diag.message or ""),',
         \ '      code = diag.code ~= nil and tostring(diag.code) or "",',
@@ -2424,6 +2504,9 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ 'if not state.original_config then',
         \ '  state.original_config = vim.diagnostic.config',
         \ 'end',
+        \ 'if type(vim.diagnostic.show) == "function" and not state.original_show then',
+        \ '  state.original_show = vim.diagnostic.show',
+        \ 'end',
         \ 'if not state.config_wrapped then',
         \ '  vim.diagnostic.config = function(opts, namespace)',
         \ '    local current = _G.__pingu_diagnostic_takeover',
@@ -2449,6 +2532,23 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '    return original(opts, namespace)',
         \ '  end',
         \ '  state.config_wrapped = true',
+        \ 'end',
+        \ 'if type(vim.diagnostic.show) == "function" and not state.show_wrapped then',
+        \ '  vim.diagnostic.show = function(namespace, bufnr, diagnostics, opts)',
+        \ '    local current = _G.__pingu_diagnostic_takeover',
+        \ '    local original = type(current) == "table" and current.original_show or state.original_show',
+        \ '    if type(original) ~= "function" then',
+        \ '      return nil',
+        \ '    end',
+        \ '    if type(current) == "table" and current.enabled and not current.restoring then',
+        \ '      local next_opts = type(opts) == "table" and vim.tbl_extend("force", {}, opts) or {}',
+        \ '      next_opts.virtual_text = false',
+        \ '      next_opts.virtual_lines = false',
+        \ '      return original(namespace, bufnr, diagnostics, next_opts)',
+        \ '    end',
+        \ '    return original(namespace, bufnr, diagnostics, opts)',
+        \ '  end',
+        \ '  state.show_wrapped = true',
         \ 'end',
         \ 'state.enabled = tonumber(input.enabled or 0) == 1',
         \ 'state.namespaces = state.namespaces or {}',
@@ -2532,6 +2632,10 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '  end)',
         \ '  restore_handler("virtual_text")',
         \ '  restore_handler("virtual_lines")',
+        \ '  if type(state.original_show) == "function" then',
+        \ '    vim.diagnostic.show = state.original_show',
+        \ '    state.show_wrapped = false',
+        \ '  end',
         \ '  state.restoring = false',
         \ 'end',
         \ 'return true',
@@ -2640,6 +2744,8 @@ function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
     endif
             let l:lnum = max([1, str2nr(string(get(l:diag, 'lnum', 1)))])
             let l:col = max([1, str2nr(string(get(l:diag, 'col', 1)))])
+            let l:end_lnum = max([l:lnum, str2nr(string(get(l:diag, 'end_lnum', l:lnum)))])
+            let l:end_col = max([1, str2nr(string(get(l:diag, 'end_col', l:col)))])
             let l:message = trim('' . get(l:diag, 'message', 'Diagnostico do LSP'))
             let l:severity = str2nr(string(get(l:diag, 'severity', 2)))
             let l:source = trim('' . get(l:diag, 'source', 'LSP'))
@@ -2655,6 +2761,8 @@ function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
           \ 'filename': l:target_file,
           \ 'lnum': l:lnum,
           \ 'col': l:col,
+          \ 'end_lnum': l:end_lnum,
+          \ 'end_col': l:end_col,
           \ 'text': printf('[%s] %s: %s', s:lsp_severity_label(l:severity), l:label, l:message),
           \ 'kind': 'lsp_diagnostic',
           \ 'autofixPriority': 25,
@@ -6779,23 +6887,86 @@ function! s:pingu_populate_current_buffer_qf() abort
   call setqflist([], 'r', {'title': 'Pingu'})
   call setqflist(l:qf, 'a')
   if get(g:, 'pingu_issue_qf_open', 1)
+    let l:source_winid = win_getid()
     copen
+    if exists('*win_gotoid')
+      silent! call win_gotoid(l:source_winid)
+    endif
   endif
   return v:true
 endfunction
 
+function! s:pingu_issue_lines_for_current_buffer() abort
+  let l:qf = s:pingu_qf_items_for_current_buffer()
+  let l:seen = {}
+  let l:items = []
+  for l:item in l:qf
+    let l:lnum = str2nr(string(get(l:item, 'lnum', 0)))
+    if l:lnum <= 0
+      continue
+    endif
+    let l:key = string(l:lnum)
+    if has_key(l:seen, l:key)
+      continue
+    endif
+    let l:seen[l:key] = 1
+    call add(l:items, deepcopy(l:item))
+  endfor
+  return sort(l:items, {left, right -> str2nr(string(get(left, 'lnum', 0))) - str2nr(string(get(right, 'lnum', 0)))})
+endfunction
+
+function! s:pingu_jump_to_issue(direction) abort
+  let l:items = s:pingu_issue_lines_for_current_buffer()
+  if empty(l:items)
+    echohl WarningMsg
+    echomsg '[Pingu] Nenhum diagnostico do Pingu para este arquivo'
+    echohl None
+    return v:false
+  endif
+
+  let l:current_line = line('.')
+  let l:target = {}
+  if a:direction >= 0
+    for l:item in l:items
+      if str2nr(string(get(l:item, 'lnum', 0))) > l:current_line
+        let l:target = l:item
+        break
+      endif
+    endfor
+    if empty(l:target)
+      let l:target = l:items[0]
+    endif
+  else
+    for l:item in reverse(copy(l:items))
+      if str2nr(string(get(l:item, 'lnum', 0))) < l:current_line
+        let l:target = l:item
+        break
+      endif
+    endfor
+    if empty(l:target)
+      let l:target = l:items[len(l:items) - 1]
+    endif
+  endif
+
+  let l:lnum = max([1, str2nr(string(get(l:target, 'lnum', 1)))])
+  let l:col = max([1, str2nr(string(get(l:target, 'col', 1)))])
+  call cursor(l:lnum, l:col)
+  normal! zv
+  call s:pingu_populate_current_buffer_qf()
+  call s:pingu_show_issue_hover_action_hint()
+  return v:true
+endfunction
+
 function! s:pingu_qf_next() abort
-  if !s:pingu_populate_current_buffer_qf()
+  if !s:pingu_jump_to_issue(1)
     return
   endif
-  silent! cnext
 endfunction
 
 function! s:pingu_qf_prev() abort
-  if !s:pingu_populate_current_buffer_qf()
+  if !s:pingu_jump_to_issue(-1)
     return
   endif
-  silent! cprev
 endfunction
 
 function! s:stop_pingu_prompt_job() abort
@@ -7610,7 +7781,7 @@ endif
 augroup pingu_issue_hover
   autocmd!
   autocmd CursorHold * if has('nvim') && exists('*nvim_get_mode') | call s:pingu_show_issue_hover_action_hint() | endif
-  autocmd CursorMoved,BufEnter * if has('nvim') | call s:schedule_pingu_issue_hover_menu() | endif
+  autocmd CursorMoved * if has('nvim') | call s:schedule_pingu_issue_hover_menu() | endif
   autocmd InsertEnter,BufLeave * if has('nvim') | call s:close_pingu_issue_hover_menu() | endif
 augroup END
 
