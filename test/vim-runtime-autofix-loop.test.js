@@ -112,6 +112,7 @@ test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
   assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
+  assert.match(pluginRuntime, /let g:pingu_prompt_context_radius = 80/);
   assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(pluginRuntime, /let g:pingu_stop_key = '<leader>pis'/);
 });
@@ -139,6 +140,7 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
   assert.match(internalRuntime, /jobstart\(l:command, \{/);
   assert.match(internalRuntime, /'on_stdout': function\('s:pingu_prompt_on_stdout'\)/);
   assert.match(internalRuntime, /'on_exit': function\('s:pingu_prompt_on_exit'\)/);
+  assert.match(internalRuntime, /'contextRadius': str2nr\(string\(get\(g:, 'pingu_prompt_context_radius', 80\)\)\)/);
   assert.match(internalRuntime, /if s:start_async_pingu_prompt\(l:argv, l:root, l:stdin_payload, l:context\)/);
 });
 

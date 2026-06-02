@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const {
   buildPromptTaskRequest,
   resolvePromptTask,
+  trimBoundaryNewlines,
 } = require('../lib/prompt-task');
 
 test('buildPromptTaskRequest captures selected range and constraints', () => {
@@ -24,7 +25,57 @@ test('buildPromptTaskRequest captures selected range and constraints', () => {
   assert.equal(request.prompt, 'corrige esse bloco');
   assert.equal(request.selectedText, 'const b = 2\nconsole.log(a + b)');
   assert.deepEqual(request.selection, { startLine: 2, endLine: 3 });
+  assert.deepEqual(request.context, { startLine: 1, endLine: 3, radius: 80 });
   assert.equal(request.constraints.some((item) => item.includes('range selecionado')), true);
+  assert.equal(request.constraints.some((item) => item.includes('indentacao relativa')), true);
+  assert.equal(request.constraints.some((item) => item.includes('espacos iniciais')), true);
+});
+
+test('buildPromptTaskRequest limits provider context around selected range', () => {
+  const lines = Array.from({ length: 20 }, (_value, index) => `line ${index + 1}`);
+  const request = buildPromptTaskRequest({
+    file: '/tmp/sample.ex',
+    language: 'elixir',
+    prompt: 'corrige bloco',
+    lines,
+    startLine: 10,
+    endLine: 11,
+    contextRadius: 2,
+  });
+
+  assert.deepEqual(request.lines, [
+    'line 8',
+    'line 9',
+    'line 10',
+    'line 11',
+    'line 12',
+    'line 13',
+  ]);
+  assert.deepEqual(request.context, { startLine: 8, endLine: 13, radius: 2 });
+  assert.equal(request.selectedText, 'line 10\nline 11');
+});
+
+test('buildPromptTaskRequest accepts zero context radius for selected range only', () => {
+  const request = buildPromptTaskRequest({
+    file: '/tmp/sample.ex',
+    language: 'elixir',
+    prompt: 'corrige bloco',
+    lines: ['line 1', 'line 2', 'line 3'],
+    startLine: 2,
+    endLine: 2,
+    contextRadius: 0,
+  });
+
+  assert.deepEqual(request.lines, ['line 2']);
+  assert.deepEqual(request.context, { startLine: 2, endLine: 2, radius: 0 });
+});
+
+test('trimBoundaryNewlines preserves indentation inside prompt snippets', () => {
+  const snippet = '\n      Logger.debug("a")\n      Logger.debug("b")\n';
+  assert.equal(
+    trimBoundaryNewlines(snippet),
+    '      Logger.debug("a")\n      Logger.debug("b")',
+  );
 });
 
 test('resolvePromptTask returns replace_range issue for provider snippet', () => {
@@ -51,11 +102,39 @@ test('resolvePromptTask returns replace_range issue for provider snippet', () =>
   assert.equal(result.issue.snippet, 'const b = 2;');
   assert.deepEqual(result.issue.action, {
     op: 'replace_range',
+    indent: '',
     range: {
       start: { line: 1, character: 0 },
       end: { line: 2, character: 0 },
     },
   });
+});
+
+test('resolvePromptTask preserves provider snippet indentation and exposes base indent', () => {
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiPromptTask: () => ({
+      snippet: '\n      Logger.debug("a")\n      Logger.debug("b")\n',
+      message: 'Bloco ajustado',
+      suggestion: 'Aplicar ajuste',
+      action: {},
+    }),
+  };
+
+  const result = resolvePromptTask({
+    file: '/tmp/sample.ex',
+    prompt: 'corrige logs',
+    lines: ['      Logger.debug("old")'],
+    startLine: 1,
+    endLine: 1,
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(
+    result.issue.snippet,
+    '      Logger.debug("a")\n      Logger.debug("b")',
+  );
+  assert.equal(result.issue.action.indent, '      ');
 });
 
 test('resolvePromptTask refuses direct terminal action from provider', () => {

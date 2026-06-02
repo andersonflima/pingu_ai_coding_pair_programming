@@ -6279,6 +6279,7 @@ function! s:pingu_prompt(line1, line2, args, range_count) abort
         \ 'endLine': l:end_line,
         \ 'cursorLine': line('.'),
         \ 'cursorColumn': col('.'),
+        \ 'contextRadius': str2nr(string(get(g:, 'pingu_prompt_context_radius', 80))),
         \ }
   let l:argv = [l:runner, l:script, '--prompt-task']
   let l:root = s:project_root(l:file)
