@@ -1982,6 +1982,27 @@ function! s:pingu_issue_hover_action(action) abort
   endif
 endfunction
 
+function! s:pingu_issue_hover_action_for_cursor() abort
+  let l:line = line('.')
+  if l:line == 2
+    call s:pingu_issue_hover_action('apply')
+    return
+  endif
+  if l:line == 3
+    call s:pingu_issue_hover_action('ai')
+    return
+  endif
+  if l:line == 4
+    call s:pingu_issue_hover_action('panel')
+    return
+  endif
+  if l:line == 5
+    call s:close_pingu_issue_hover_menu()
+    call s:restore_pingu_issue_hover_source()
+    return
+  endif
+endfunction
+
 function! s:pingu_issue_hover_menu_lines(issue) abort
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:message = empty(l:parts[1]) ? get(a:issue, 'kind', 'sugestao') : l:parts[1]
@@ -2041,6 +2062,8 @@ function! s:pingu_open_issue_hover_menu(issue) abort
   call nvim_buf_set_keymap(l:bufnr, 'n', 'i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>PinguIssueHoverClose<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_issue_hover_action_for_cursor()<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<LeftMouse>', '<LeftMouse>:<C-U>call <SID>pingu_issue_hover_action_for_cursor()<CR>', {'noremap': v:true, 'silent': v:true})
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = l:signature

@@ -172,6 +172,7 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /let s:pingu_issue_hover_source_context = {}/);
   assert.match(internalRuntime, /function! s:restore_pingu_issue_hover_source\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue_with_ai\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_action_for_cursor\(\) abort/);
   assert.match(internalRuntime, /function! s:schedule_pingu_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:fire_pingu_issue_hover_menu\(timer, bufnr, lnum, changedtick\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_hover_action_hint\(\) abort/);
@@ -188,6 +189,8 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /call s:restore_pingu_issue_hover_source\(\)/);
   assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("apply"\)/);
   assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("ai"\)/);
+  assert.match(internalRuntime, /<SID>pingu_issue_hover_action_for_cursor\(\)<CR>/);
+  assert.match(internalRuntime, /'<LeftMouse>', '<LeftMouse>:/);
   assert.match(internalRuntime, /autocmd CursorHold \* if has\('nvim'\)/);
   assert.match(internalRuntime, /autocmd CursorMoved \* if has\('nvim'\)/);
   assert.doesNotMatch(internalRuntime, /autocmd CursorMoved,BufEnter \*/);
