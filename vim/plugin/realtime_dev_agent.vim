@@ -379,6 +379,31 @@ if !exists('g:pingu_issue_hints_prefix')
   let g:pingu_issue_hints_prefix = ''
 endif
 
+if !exists('g:pingu_prompt_key')
+  " Atalho para prompt manual assistido no cursor ou selecao visual.
+  let g:pingu_prompt_key = '<leader>ip'
+endif
+
+if !exists('g:pingu_fix_current_key')
+  " Atalho para aplicar a correcao disponivel na linha atual.
+  let g:pingu_fix_current_key = '<leader>if'
+endif
+
+if !exists('g:pingu_hints_enabled')
+  " 1 mostra hints inline para comentarios acionaveis do Pingu no Neovim.
+  let g:pingu_hints_enabled = has('nvim') ? 1 : 0
+endif
+
+if !exists('g:pingu_hints_max_lines')
+  " Limite de linhas para procurar hints sem impactar buffers grandes.
+  let g:pingu_hints_max_lines = 1200
+endif
+
+if !exists('g:pingu_issue_hints_enabled')
+  " 1 mostra virtual text para diagnosticos encontrados pelo Pingu no Neovim.
+  let g:pingu_issue_hints_enabled = has('nvim') ? 1 : 0
+endif
+
 if !exists('g:pingu_show_window')
   " Mantem a janela visivel apenas quando o usuario pede modo painel.
   let g:pingu_show_window = 0
