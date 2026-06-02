@@ -588,6 +588,7 @@ Atalhos principais:
 - `<leader>pim`: escolhe o provider assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
+- ao manter o cursor por um tempo curto em uma linha com hint do Pingu, aparece um menu com `a` aplicar, `i` corrigir com IA e `p` abrir painel
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
@@ -604,6 +605,9 @@ Comandos principais no editor:
 - `:PinguHintsRefresh`
 - `:PinguAutoFixNow`
 - `:PinguFixCurrent`
+- `:PinguFixCurrentAI`
+- `:PinguQfNext`
+- `:PinguQfPrev`
 - `:PinguUndoFix`
 - `:PinguLatencyMetrics`
 - `:PinguAutoFixEnable`
@@ -872,9 +876,14 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
 - `let g:pingu_prompt_key = '<leader>pip'` aciona prompt manual assistido no cursor ou na selecao visual
 - `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider assistido da sessao
+- `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
+- `let g:pingu_prev_issue_key = '<C-k>'` ativa o atalho para o diagnostico/aviso anterior do Pingu no buffer atual
+- `let g:pingu_issue_qf_open = 1` abre quickfix ao navegar pelos diagnosticos do Pingu com `:PinguQfNext`/`:PinguQfPrev`
 - `let g:pingu_ai_provider = 'copilot'` define o provider inicial; use `codex`/`openai` para OpenAI Codex ou `auto` para fallback automatico
 - `let g:pingu_prompt_context_radius = 80` limita quantas linhas em volta do cursor/selecao sao enviadas no prompt manual
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
+- `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; use `a` para aplicar, `i` para corrigir com IA, `p` para abrir painel e `q` para fechar
+- `let g:pingu_issue_hover_delay_ms = 650` controla o tempo para abrir esse menu depois que o cursor para na linha
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguPrompt` abre um prompt manual para o contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para substituir precisamente o range selecionado
 - `:PinguModel` permite alternar entre Copilot, OpenAI Codex e Auto sem reiniciar o editor; o daemon do Pingu e reiniciado para herdar o provider escolhido
@@ -888,9 +897,12 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_issue_hints_position = 'eol'` controla a posicao do shadow text (`eol`, `right_align`, `overlay` ou `inline`)
 - `let g:pingu_diagnostic_takeover = 1` faz o Pingu assumir o virtual text de LSPs/linters via `vim.diagnostic`, desligando `virtual_text`/`virtual_lines` nativos globais e por namespace, mantendo signs/underline
 - `let g:pingu_diagnostic_takeover_max_items = -1` mostra diagnosticos externos do arquivo inteiro; use um numero positivo para limitar ou `0` para nao agregar diagnosticos LSP/linter no shadow text do Pingu
+- `g:pingu_diagnostic_source_labels` permite sobrescrever o rótulo exibido para os diagnostics de LSP agregados no takeover; por padrão usa `Pingu` (incluindo Elixir/ElixirLS e Dialyzer). Exemplo:
+  - `{'default': 'Pingu', 'elixirls': 'Pingu', 'filetype:elixir': 'Pingu'}`
 - `:PinguHintsRefresh` recalcula manualmente todos os hints inline do buffer atual, incluindo diagnosticos LSP/linter assumidos pelo Pingu
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
+- `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
 - `:PinguStop` interrompe processamento ativo quando o runtime parecer preso ou estiver demorando demais
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `:PinguUndoFix` reverte a ultima correcao aplicada pelo Pingu no arquivo atual

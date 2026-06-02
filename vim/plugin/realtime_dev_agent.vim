@@ -364,6 +364,21 @@ if !exists('g:pingu_prompt_context_radius')
   let g:pingu_prompt_context_radius = 80
 endif
 
+if !exists('g:pingu_next_issue_key')
+  " Atalho para navegar os diagnosticos do Pingu no buffer atual (proximo).
+  let g:pingu_next_issue_key = '<C-j>'
+endif
+
+if !exists('g:pingu_prev_issue_key')
+  " Atalho para navegar os diagnosticos do Pingu no buffer atual (anterior).
+  let g:pingu_prev_issue_key = '<C-k>'
+endif
+
+if !exists('g:pingu_issue_qf_open')
+  " Abre quickfix ao navegar diagnósticos do Pingu.
+  let g:pingu_issue_qf_open = 1
+endif
+
 if !exists('g:pingu_fix_current_key')
   " Atalho para aplicar a correcao disponivel na linha atual.
   let g:pingu_fix_current_key = '<leader>pif'
@@ -404,6 +419,16 @@ if !exists('g:pingu_issue_hints_position')
   let g:pingu_issue_hints_position = 'eol'
 endif
 
+if !exists('g:pingu_issue_hover_hint')
+  " 1 mostra uma mensagem de acao do Pingu quando o cursor esta sobre linha com issue aplicavel.
+  let g:pingu_issue_hover_hint = 1
+endif
+
+if !exists('g:pingu_issue_hover_delay_ms')
+  " Tempo para abrir o menu de acoes apos o cursor parar sobre uma linha com hint.
+  let g:pingu_issue_hover_delay_ms = 650
+endif
+
 if !exists('g:pingu_diagnostic_takeover')
   " 1 centraliza virtual text de LSP/linters no Pingu e desliga virtual_text nativo do vim.diagnostic.
   let g:pingu_diagnostic_takeover = has('nvim') ? 1 : 0
@@ -412,6 +437,17 @@ endif
 if !exists('g:pingu_diagnostic_takeover_max_items')
   " Limite de diagnosticos externos agregados por buffer; -1 mostra o arquivo inteiro.
   let g:pingu_diagnostic_takeover_max_items = -1
+endif
+
+if !exists('g:pingu_diagnostic_source_labels')
+  " Rótulos exibidos para diagnósticos LSP em takeover (chave 'default' é fallback).
+  let g:pingu_diagnostic_source_labels = {
+        \ 'default': 'Pingu',
+        \ 'elixirls': 'Pingu',
+        \ 'elixirlsp': 'Pingu',
+        \ 'dialyzer': 'Pingu',
+        \ 'filetype:elixir': 'Pingu',
+        \ }
 endif
 
 if !exists('g:pingu_show_window')

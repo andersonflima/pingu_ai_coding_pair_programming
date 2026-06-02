@@ -19,6 +19,10 @@ let s:realtime_dev_agent_started = v:false
 let s:realtime_dev_agent_visual_batch_context = {}
 let s:realtime_dev_agent_analysis_cache = {}
 let s:realtime_dev_agent_analysis_cache_order = []
+let s:pingu_cursor_hover_issue_signature = ''
+let s:pingu_issue_hover_menu_winid = -1
+let s:pingu_issue_hover_menu_bufnr = -1
+let s:pingu_issue_hover_menu_timer = -1
 let s:realtime_dev_agent_async_analysis_job = -1
 let s:realtime_dev_agent_async_analysis_context = {}
 let s:pingu_prompt_job = -1
@@ -1790,6 +1794,226 @@ function! s:get_buffer_issue_at_cursor() abort
   return {}
 endfunction
 
+function! s:get_buffer_issue_at_cursor_exact() abort
+  let l:file = fnamemodify(bufname('%'), ':p')
+  let l:current_line = line('.')
+  for l:item in s:pingu_qf_items_for_current_buffer()
+    if fnamemodify(get(l:item, 'filename', ''), ':p') !=# l:file
+      continue
+    endif
+    if get(l:item, 'lnum', 0) ==# l:current_line
+      return l:item
+    endif
+  endfor
+  return {}
+endfunction
+
+function! s:close_pingu_issue_hover_menu() abort
+  let l:timer = get(s:, 'pingu_issue_hover_menu_timer', -1)
+  if l:timer > 0 && exists('*timer_stop')
+    call timer_stop(l:timer)
+  endif
+  let s:pingu_issue_hover_menu_timer = -1
+  let l:winid = get(s:, 'pingu_issue_hover_menu_winid', -1)
+  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
+    try
+      call nvim_win_close(l:winid, v:true)
+    catch
+    endtry
+  endif
+  let s:pingu_issue_hover_menu_winid = -1
+  let s:pingu_issue_hover_menu_bufnr = -1
+endfunction
+
+function! s:pingu_issue_hover_signature(issue) abort
+  return printf('%s|%d|%s',
+        \ fnamemodify(bufname('%'), ':p'),
+        \ get(a:issue, 'lnum', 0),
+        \ substitute('' . get(a:issue, 'text', ''), '\n', ' ', 'g'))
+endfunction
+
+function! s:pingu_issue_ai_fix_candidate(issue) abort
+  let l:issue = deepcopy(a:issue)
+  let l:parts = s:issue_parse_parts(get(l:issue, 'text', ''))
+  let l:message = trim('' . get(l:issue, 'lsp_message', ''))
+  if empty(l:message)
+    let l:message = empty(l:parts[1]) ? get(l:issue, 'text', '') : l:parts[1]
+  endif
+  let l:issue.kind = 'lsp_ai_fix'
+  let l:issue.snippet = ''
+  let l:issue.lsp_message = l:message
+  let l:issue.lsp_source = trim('' . get(l:issue, 'lsp_source', 'Pingu'))
+  let l:issue.lsp_code = trim('' . get(l:issue, 'lsp_code', ''))
+  let l:issue.lsp_severity = str2nr(string(get(l:issue, 'lsp_severity', s:pingu_issue_severity_rank(l:issue))))
+  let l:issue.action = {'op': 'lsp_ai_fix', 'line': get(l:issue, 'lnum', line('.'))}
+  return l:issue
+endfunction
+
+function! s:pingu_apply_issue_with_ai(issue) abort
+  if empty(a:issue) || type(a:issue) != v:t_dict
+    echomsg '[Pingu] Nenhuma sugestao na linha atual'
+    return v:false
+  endif
+  if s:realtime_dev_agent_auto_fix_busy
+    echomsg '[Pingu] Aguarde o fim do auto-fix atual'
+    return v:false
+  endif
+
+  let l:previous = get(g:, 'pingu_lsp_ai_fix_enabled', 0)
+  let g:pingu_lsp_ai_fix_enabled = 1
+  try
+    let l:applied = s:apply_issue_snippet(s:pingu_issue_ai_fix_candidate(a:issue), v:false)
+  finally
+    let g:pingu_lsp_ai_fix_enabled = l:previous
+  endtry
+  if l:applied
+    echo '[Pingu] Correcao com IA aplicada na linha atual'
+    call s:clear_pingu_issue_hints_for_buffer(bufnr('%'))
+    let l:analysis_mode = s:analysis_mode_for_request(v:false)
+    call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
+    return v:true
+  endif
+  echomsg '[Pingu] Correcao com IA nao alterou o buffer'
+  return v:false
+endfunction
+
+function! s:pingu_fix_current_issue_with_ai() abort
+  let l:issue = s:get_buffer_issue_at_cursor()
+  call s:pingu_apply_issue_with_ai(l:issue)
+endfunction
+
+function! s:pingu_issue_hover_action(action) abort
+  call s:close_pingu_issue_hover_menu()
+  let l:issue = s:get_buffer_issue_at_cursor_exact()
+  if a:action ==# 'apply'
+    call s:pingu_fix_current_issue()
+    return
+  endif
+  if a:action ==# 'ai'
+    call s:pingu_apply_issue_with_ai(l:issue)
+    return
+  endif
+  if a:action ==# 'panel'
+    PinguWindowCheck
+    return
+  endif
+endfunction
+
+function! s:pingu_issue_hover_menu_lines(issue) abort
+  let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:message = empty(l:parts[1]) ? get(a:issue, 'kind', 'sugestao') : l:parts[1]
+  let l:message = substitute(l:message, '\s\+', ' ', 'g')
+  if strlen(l:message) > 68
+    let l:message = strpart(l:message, 0, 65) . '...'
+  endif
+  return [
+        \ 'Pingu: ' . l:message,
+        \ 'a  aplicar correcao sugerida',
+        \ 'i  corrigir com IA',
+        \ 'p  abrir painel',
+        \ 'q  fechar',
+        \ ]
+endfunction
+
+function! s:pingu_open_issue_hover_menu(issue) abort
+  if !has('nvim') || !exists('*nvim_open_win') || !exists('*nvim_create_buf')
+    let l:fix_key = get(g:, 'pingu_fix_current_key', '<leader>pif')
+    echomsg '[Pingu] Sugestao nesta linha: ' . l:fix_key . ' aplicar | :PinguFixCurrentAI corrigir com IA | ' . get(g:, 'pingu_window_key', '<leader>pia') . ' painel'
+    return
+  endif
+
+  let l:signature = s:pingu_issue_hover_signature(a:issue)
+  if s:pingu_cursor_hover_issue_signature ==# l:signature
+        \ && get(s:, 'pingu_issue_hover_menu_winid', -1) > 0
+        \ && nvim_win_is_valid(s:pingu_issue_hover_menu_winid)
+    return
+  endif
+
+  call s:close_pingu_issue_hover_menu()
+  let l:lines = s:pingu_issue_hover_menu_lines(a:issue)
+  let l:width = max(map(copy(l:lines), {_, line -> strdisplaywidth(line)}))
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
+  call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
+  call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
+  let l:winid = nvim_open_win(l:bufnr, v:true, {
+        \ 'relative': 'cursor',
+        \ 'row': 1,
+        \ 'col': 0,
+        \ 'width': l:width + 2,
+        \ 'height': len(l:lines),
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ 'focusable': v:true,
+        \ 'zindex': 60,
+        \ })
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>PinguIssueHoverClose<Bar>PinguFixCurrent<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'i', ':<C-U>PinguIssueHoverClose<Bar>PinguFixCurrentAI<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'p', ':<C-U>PinguIssueHoverClose<Bar>PinguWindowCheck<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>PinguIssueHoverClose<CR>', {'noremap': v:true, 'silent': v:true})
+  let s:pingu_issue_hover_menu_bufnr = l:bufnr
+  let s:pingu_issue_hover_menu_winid = l:winid
+  let s:pingu_cursor_hover_issue_signature = l:signature
+endfunction
+
+function! s:pingu_show_issue_hover_action_hint() abort
+  if !s:pingu_issue_hints_enabled()
+    call s:close_pingu_issue_hover_menu()
+    let s:pingu_cursor_hover_issue_signature = ''
+    return
+  endif
+
+  if str2nr(string(get(g:, 'pingu_issue_hover_hint', 1))) <= 0
+    call s:close_pingu_issue_hover_menu()
+    let s:pingu_cursor_hover_issue_signature = ''
+    return
+  endif
+
+  let l:issue = s:get_buffer_issue_at_cursor_exact()
+  if empty(l:issue)
+    call s:close_pingu_issue_hover_menu()
+    let s:pingu_cursor_hover_issue_signature = ''
+    return
+  endif
+
+  call s:pingu_open_issue_hover_menu(l:issue)
+endfunction
+
+function! s:pingu_issue_hover_delay_ms() abort
+  let l:delay = get(g:, 'pingu_issue_hover_delay_ms', 650)
+  if type(l:delay) != v:t_number
+    let l:delay = str2nr(string(l:delay))
+  endif
+  return max([120, l:delay])
+endfunction
+
+function! s:schedule_pingu_issue_hover_menu() abort
+  call s:close_pingu_issue_hover_menu()
+  if !has('nvim') || !exists('*timer_start') || str2nr(string(get(g:, 'pingu_issue_hover_hint', 1))) <= 0
+    return
+  endif
+  if mode() !=# 'n'
+    return
+  endif
+  let l:bufnr = bufnr('%')
+  let l:line = line('.')
+  let l:tick = getbufvar(l:bufnr, 'changedtick', -1)
+  let s:pingu_issue_hover_menu_timer = timer_start(s:pingu_issue_hover_delay_ms(), {timer -> s:fire_pingu_issue_hover_menu(timer, l:bufnr, l:line, l:tick)})
+endfunction
+
+function! s:fire_pingu_issue_hover_menu(timer, bufnr, lnum, changedtick) abort
+  if get(s:, 'pingu_issue_hover_menu_timer', -1) ==# a:timer
+    let s:pingu_issue_hover_menu_timer = -1
+  endif
+  if bufnr('%') !=# a:bufnr || line('.') !=# a:lnum || mode() !=# 'n'
+    return
+  endif
+  if getbufvar(a:bufnr, 'changedtick', -1) !=# a:changedtick
+    return
+  endif
+  call s:pingu_show_issue_hover_action_hint()
+endfunction
+
 function! s:issue_default_action(kind) abort
   let l:entry = s:issue_kind_entry(a:kind)
   let l:action = get(l:entry, 'defaultAction', {})
@@ -1980,6 +2204,61 @@ function! s:lsp_source_fixall_kind(source) abort
     return ''
   endif
   return 'source.fixAll.' . l:source
+endfunction
+
+function! s:pingu_diagnostic_source_label(bufnr, source) abort
+  let l:source = trim('' . a:source)
+  let l:source_key = substitute(tolower(l:source), '[^a-z0-9]+', '', 'g')
+  let l:configured = get(g:, 'pingu_diagnostic_source_labels', {'default': 'Pingu'})
+  if type(l:configured) != v:t_dict
+    return 'Pingu'
+  endif
+
+  let l:default = trim('' . get(l:configured, 'default', 'Pingu'))
+  if empty(l:default)
+    let l:default = 'Pingu'
+  endif
+
+  let l:filetype = tolower(trim('' . getbufvar(a:bufnr, '&filetype', '')))
+  if !empty(l:filetype)
+    let l:filetype_key = printf('filetype:%s', l:filetype)
+    if has_key(l:configured, l:filetype_key)
+      let l:label = trim('' . get(l:configured, l:filetype_key, ''))
+      if !empty(l:label)
+        return l:label
+      endif
+    endif
+  endif
+
+  if has_key(l:configured, l:source)
+    let l:label = trim('' . get(l:configured, l:source, ''))
+    if !empty(l:label)
+      return l:label
+    endif
+  endif
+
+  if !empty(l:source_key) && has_key(l:configured, l:source_key)
+    let l:label = trim('' . get(l:configured, l:source_key, ''))
+    if !empty(l:label)
+      return l:label
+    endif
+  endif
+
+  for [l:configured_source, l:configured_label] in items(l:configured)
+    let l:configured_source = tolower(trim('' . l:configured_source))
+    if l:configured_source ==# 'default'
+      continue
+    endif
+    if empty(trim('' . l:configured_label))
+      continue
+    endif
+    let l:configured_key = substitute(l:configured_source, '[^a-z0-9]+', '', 'g')
+    if l:configured_key ==# l:source_key
+      return trim('' . l:configured_label)
+    endif
+  endfor
+
+  return !empty(l:source) ? 'Pingu' : l:default
 endfunction
 
 function! s:lsp_only_kinds_for_diagnostic(source) abort
@@ -2371,7 +2650,7 @@ function! s:merge_lsp_diagnostic_hint_items(bufnr, file, qf) abort
       continue
     endif
     let l:seen[l:key] = 1
-    let l:label = empty(l:source) ? 'LSP' : l:source
+    let l:label = s:pingu_diagnostic_source_label(a:bufnr, l:source)
     call add(l:merged, {
           \ 'filename': l:target_file,
           \ 'lnum': l:lnum,
@@ -6470,6 +6749,55 @@ function! s:realtime_dev_agent_window_check() abort
   endtry
 endfunction
 
+function! s:pingu_qf_items_for_current_buffer() abort
+  let l:bufnr = bufnr('%')
+  if l:bufnr <= 0 || !bufloaded(l:bufnr) || &buftype !=# ''
+    return []
+  endif
+
+  let l:file = fnamemodify(bufname(l:bufnr), ':p')
+  let l:qf = []
+  for l:item in (type(s:realtime_dev_agent_last_qf) == v:t_list ? s:realtime_dev_agent_last_qf : [])
+    if fnamemodify(get(l:item, 'filename', ''), ':p') ==# l:file
+      call add(l:qf, deepcopy(l:item))
+    endif
+  endfor
+  let l:qf = s:merge_lsp_diagnostic_auto_fix_candidates(l:bufnr, l:file, l:qf)
+  let l:qf = s:merge_lsp_diagnostic_hint_items(l:bufnr, l:file, l:qf)
+  return l:qf
+endfunction
+
+function! s:pingu_populate_current_buffer_qf() abort
+  let l:qf = s:pingu_qf_items_for_current_buffer()
+  if empty(l:qf)
+    echohl WarningMsg
+    echomsg '[Pingu] Nenhum diagnostico do Pingu para este arquivo'
+    echohl None
+    return v:false
+  endif
+
+  call setqflist([], 'r', {'title': 'Pingu'})
+  call setqflist(l:qf, 'a')
+  if get(g:, 'pingu_issue_qf_open', 1)
+    copen
+  endif
+  return v:true
+endfunction
+
+function! s:pingu_qf_next() abort
+  if !s:pingu_populate_current_buffer_qf()
+    return
+  endif
+  silent! cnext
+endfunction
+
+function! s:pingu_qf_prev() abort
+  if !s:pingu_populate_current_buffer_qf()
+    return
+  endif
+  silent! cprev
+endfunction
+
 function! s:stop_pingu_prompt_job() abort
   let l:job = get(s:, 'pingu_prompt_job', -1)
   let s:pingu_prompt_job = -1
@@ -7152,6 +7480,10 @@ command! -range -nargs=* PinguPrompt call s:pingu_prompt(<line1>, <line2>, <q-ar
 command! PinguHintsRefresh call s:update_pingu_all_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()
+command! PinguFixCurrentAI call s:pingu_fix_current_issue_with_ai()
+command! PinguIssueHoverClose call s:close_pingu_issue_hover_menu()
+command! PinguQfNext call s:pingu_qf_next()
+command! PinguQfPrev call s:pingu_qf_prev()
 command! PinguStop call s:pingu_stop()
 command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
@@ -7221,6 +7553,24 @@ if !empty(g:pingu_model_key)
         \ )
 endif
 
+if !empty(g:pingu_next_issue_key)
+  " Atalho para navegar para o proximo diagnostico/aviso do Pingu no arquivo atual.
+  call s:set_global_normal_map(
+        \ g:pingu_next_issue_key,
+        \ ':PinguQfNext<CR>',
+        \ 'Pingu: proximo diagnostico',
+        \ )
+endif
+
+if !empty(g:pingu_prev_issue_key)
+  " Atalho para navegar para o diagnostico/aviso anterior do Pingu no arquivo atual.
+  call s:set_global_normal_map(
+        \ g:pingu_prev_issue_key,
+        \ ':PinguQfPrev<CR>',
+        \ 'Pingu: diagnostico anterior',
+        \ )
+endif
+
 if g:pingu_start_on_editor_enter
   augroup realtime_dev_agent_startup
     autocmd!
@@ -7256,6 +7606,13 @@ if has('nvim')
     endif
   augroup END
 endif
+
+augroup pingu_issue_hover
+  autocmd!
+  autocmd CursorHold * if has('nvim') && exists('*nvim_get_mode') | call s:pingu_show_issue_hover_action_hint() | endif
+  autocmd CursorMoved,BufEnter * if has('nvim') | call s:schedule_pingu_issue_hover_menu() | endif
+  autocmd InsertEnter,BufLeave * if has('nvim') | call s:close_pingu_issue_hover_menu() | endif
+augroup END
 
 augroup realtime_dev_agent_open_review
   autocmd!
