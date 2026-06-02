@@ -7553,19 +7553,19 @@ endfunction
 function! s:pingu_hint_intent_label(intent) abort
   let l:intent = tolower(trim('' . a:intent))
   if index(['code'], l:intent) != -1
-    return ['Pingu code', 'PinguHintCode']
+    return ['', 'PinguHintCode']
   endif
   if index(['fix', 'refactor', 'refatora', 'corrige', 'corrigir'], l:intent) != -1
-    return ['Pingu fix', 'PinguHintFix']
+    return ['', 'PinguHintFix']
   endif
   if index(['context', 'ctx', 'blueprint', 'scaffold'], l:intent) != -1
-    return ['Pingu context', 'PinguHintContext']
+    return ['', 'PinguHintContext']
   endif
   if index(['test', 'tests', 'unit-test', 'unit-tests'], l:intent) != -1
-    return ['Pingu test', 'PinguHintTest']
+    return ['', 'PinguHintTest']
   endif
   if index(['terminal', 'term', 'shell', 'cmd', 'command', 'run'], l:intent) != -1
-    return ['Pingu terminal', 'PinguHintTerminal']
+    return ['', 'PinguHintTerminal']
   endif
   return []
 endfunction
@@ -7587,12 +7587,12 @@ function! s:pingu_hint_for_line(line) abort
   endif
 
   if l:symbol ==# ':::' || l:symbol ==# '**'
-    return ['Pingu context', 'PinguHintContext']
+    return ['', 'PinguHintContext']
   endif
   if l:symbol ==# '*'
-    return ['Pingu terminal', 'PinguHintTerminal']
+    return ['', 'PinguHintTerminal']
   endif
-  return ['Pingu code', 'PinguHintCode']
+  return ['', 'PinguHintCode']
 endfunction
 
 function! s:update_pingu_hints_for_buffer(bufnr) abort
@@ -7734,7 +7734,7 @@ function! s:pingu_issue_hint_text(issue, ...) abort
   if get(a:issue, 'kind', '') ==# 'lsp_diagnostic'
     let l:text = printf('%s %s', empty(l:prefix) ? '' : l:prefix, l:message)
   else
-    let l:text = printf('%s Pingu %s: %s', empty(l:prefix) ? '' : l:prefix, l:severity, l:message)
+    let l:text = printf('%s %s: %s', empty(l:prefix) ? '' : l:prefix, l:severity, l:message)
   endif
   if l:extra_count > 0
     let l:text .= printf(' +%d', l:extra_count)

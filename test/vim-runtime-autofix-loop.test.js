@@ -237,6 +237,12 @@ test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
   assert.match(internalRuntime, /PinguHintCode/);
   assert.match(internalRuntime, /PinguHintContext/);
   assert.match(internalRuntime, /PinguHintTerminal/);
+  assert.match(internalRuntime, /return \['', 'PinguHintCode'\]/);
+  assert.match(internalRuntime, /return \['', 'PinguHintContext'\]/);
+  assert.match(internalRuntime, /return \['', 'PinguHintTerminal'\]/);
+  assert.doesNotMatch(internalRuntime, /return \['Pingu code'/);
+  assert.doesNotMatch(internalRuntime, /return \['Pingu context'/);
+  assert.doesNotMatch(internalRuntime, /return \['Pingu terminal'/);
   assert.match(internalRuntime, /augroup pingu_hints/);
 });
 
@@ -341,7 +347,8 @@ test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () 
   assert.match(internalRuntime, /let l:severity = empty\(l:parts\[0\]\) \? 'error' : l:parts\[0\]/);
   assert.match(internalRuntime, /if get\(a:issue, 'kind', ''\) ==# 'lsp_diagnostic'/);
   assert.match(internalRuntime, /printf\('%s %s', empty\(l:prefix\) \? '' : l:prefix, l:message\)/);
-  assert.match(internalRuntime, /printf\('%s Pingu %s: %s'/);
+  assert.match(internalRuntime, /printf\('%s %s: %s', empty\(l:prefix\) \? '' : l:prefix, l:severity, l:message\)/);
+  assert.doesNotMatch(internalRuntime, /printf\('%s Pingu %s: %s'/);
   assert.match(internalRuntime, /printf\(' \+%d', l:extra_count\)/);
   assert.match(internalRuntime, /call s:update_pingu_issue_hints_for_buffer\(a:bufnr, l:qf\)/);
 });
