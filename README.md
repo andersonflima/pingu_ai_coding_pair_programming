@@ -1018,6 +1018,7 @@ Importante:
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
 - quando o `apply` explicito de um diagnostico LSP executa uma code action que nao altera o buffer, o Pingu tenta o fallback assistido da mesma linha antes de reportar falha
+- para diagnostics LSP com chamada local obviamente incorreta, o Pingu tenta um fallback deterministico antes do provider assistido, por exemplo `Logger.dub(...)` para `Logger.debug(...)` em Elixir
 - quando uma correcao automatica (snippet local ou `lsp_code_action`) eh aplicada com sucesso, o buffer alvo eh salvo automaticamente no disco
 - `:PinguWindowCheck` (e o atalho `g:pingu_window_key`) abre o painel e o mantem aberto durante e apos a analise assincrona ate ele ser fechado explicitamente
 - `lsp_code_action` e issues `syntax_*` sao tratadas como escopo agnostico no realtime (nao ficam presas ao raio do cursor), reduzindo casos em que o erro existe mas nao entra no lote

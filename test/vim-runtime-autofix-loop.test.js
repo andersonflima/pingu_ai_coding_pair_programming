@@ -505,6 +505,16 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /function! s:lsp_ai_fix_enabled\(\) abort/);
   assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix\(issue\) abort/);
   assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix_explicit\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_local_fix_candidate\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_local_fix_candidate_for_line\(bufnr, lnum\) abort/);
+  assert.match(internalRuntime, /function! s:restore_issue_cursor_and_hints\(issue\) abort/);
+  assert.match(internalRuntime, /'Logger'/);
+  assert.match(internalRuntime, /'debug'/);
+  assert.match(internalRuntime, /let l:threshold = strlen\(l:name\) <= 4 \? 3 : 2/);
+  assert.match(internalRuntime, /let l:issue = s:pingu_lsp_local_fix_candidate_for_line\(bufnr\('%'\), line\('\.'\)\)/);
+  assert.match(internalRuntime, /let l:local_fix = s:pingu_lsp_local_fix_candidate\(l:issue\)/);
+  assert.match(internalRuntime, /call s:restore_issue_cursor_and_hints\(l:issue\)/);
+  assert.match(internalRuntime, /silent! call s:update_pingu_all_hints_current_buffer\(\)/);
   assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix\(s:pingu_issue_ai_fix_candidate\(a:issue\)\)/);
   assert.match(internalRuntime, /let l:previous_changedtick = getbufvar\(l:target_buf, 'changedtick'\)/);
   assert.match(internalRuntime, /vim\.api\.nvim_buf_get_changedtick\(input\.bufnr\) ~= input\.changedtick/);
