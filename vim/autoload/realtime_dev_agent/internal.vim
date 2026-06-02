@@ -21,6 +21,8 @@ let s:realtime_dev_agent_analysis_cache = {}
 let s:realtime_dev_agent_analysis_cache_order = []
 let s:realtime_dev_agent_async_analysis_job = -1
 let s:realtime_dev_agent_async_analysis_context = {}
+let s:pingu_prompt_job = -1
+let s:pingu_prompt_context = {}
 let s:realtime_dev_agent_daemon_job = -1
 let s:realtime_dev_agent_daemon_request_seq = 0
 let s:realtime_dev_agent_daemon_pending = {}
@@ -6096,6 +6098,142 @@ function! s:realtime_dev_agent_window_check() abort
   endtry
 endfunction
 
+function! s:stop_pingu_prompt_job() abort
+  let l:job = get(s:, 'pingu_prompt_job', -1)
+  let s:pingu_prompt_job = -1
+  let s:pingu_prompt_context = {}
+  if l:job > 0
+    silent! call jobstop(l:job)
+  endif
+endfunction
+
+function! s:pingu_prompt_on_stdout(job_id, data, event) abort
+  if a:job_id !=# get(s:, 'pingu_prompt_job', -1) || type(a:data) != v:t_list
+    return
+  endif
+  let s:pingu_prompt_context.stdout = get(s:pingu_prompt_context, 'stdout', []) + copy(a:data)
+endfunction
+
+function! s:pingu_prompt_on_stderr(job_id, data, event) abort
+  if a:job_id !=# get(s:, 'pingu_prompt_job', -1) || type(a:data) != v:t_list
+    return
+  endif
+  let s:pingu_prompt_context.stderr = get(s:pingu_prompt_context, 'stderr', []) + copy(a:data)
+endfunction
+
+function! s:pingu_prompt_apply_response(context, stdout, stderr, exit_code) abort
+  let l:bufnr = get(a:context, 'bufnr', -1)
+  let l:file = get(a:context, 'file', '')
+  if l:bufnr <= 0 || !bufloaded(l:bufnr)
+    return
+  endif
+  if getbufvar(l:bufnr, 'changedtick', -1) !=# get(a:context, 'changedtick', -1)
+    call s:status_set_idle(0, 'prompt descartado')
+    echomsg '[Pingu] Prompt descartado: buffer mudou durante o processamento'
+    return
+  endif
+
+  let l:stdout = filter(copy(a:stdout), {_, val -> type(val) == v:t_string && !empty(val)})
+  let l:stderr = filter(copy(a:stderr), {_, val -> type(val) == v:t_string && !empty(val)})
+  if a:exit_code != 0
+    call s:status_set_idle(0, join(l:stderr, "\n"))
+    echomsg '[Pingu] Falha ao executar prompt manual'
+    return
+  endif
+
+  let l:raw = join(l:stdout, "\n")
+  if empty(trim(l:raw))
+    call s:status_set_idle(0, 'prompt sem resposta')
+    echomsg '[Pingu] Prompt sem resposta'
+    return
+  endif
+
+  try
+    let l:decoded = json_decode(l:raw)
+  catch
+    call s:status_set_idle(0, 'resposta invalida')
+    echomsg '[Pingu] Resposta invalida do prompt'
+    return
+  endtry
+
+  if type(l:decoded) != v:t_dict || !get(l:decoded, 'ok', v:false)
+    let l:reason = type(l:decoded) == v:t_dict ? get(l:decoded, 'reason', 'provider_unavailable') : 'invalid_response'
+    call s:status_set_idle(0, l:reason)
+    echomsg '[Pingu] Prompt nao aplicado: ' . l:reason
+    return
+  endif
+
+  let l:issue = get(l:decoded, 'issue', {})
+  if type(l:issue) != v:t_dict || empty(trim('' . get(l:issue, 'snippet', '')))
+    call s:status_set_idle(0, 'prompt sem patch')
+    echomsg '[Pingu] Prompt sem patch aplicavel'
+    return
+  endif
+  let l:issue.filename = get(l:issue, 'filename', get(l:issue, 'file', l:file))
+  let l:issue.lnum = max([1, str2nr(string(get(l:issue, 'lnum', get(l:issue, 'line', get(a:context, 'start_line', 1)))))])
+  let l:issue.kind = get(l:issue, 'kind', 'prompt_task')
+  if !has_key(l:issue, 'action') || type(get(l:issue, 'action', {})) != v:t_dict
+    let l:issue.action = {'op': 'replace_range'}
+  endif
+
+  if s:apply_issue_snippet(l:issue, v:false)
+    call s:status_set_idle(1, '')
+    echo '[Pingu] Prompt aplicado'
+  else
+    call s:status_set_idle(0, 'prompt sem alteracao')
+    echomsg '[Pingu] Prompt nao alterou o buffer'
+  endif
+endfunction
+
+function! s:pingu_prompt_on_exit(job_id, code, event) abort
+  if a:job_id !=# get(s:, 'pingu_prompt_job', -1)
+    return
+  endif
+  let l:context = get(s:, 'pingu_prompt_context', {})
+  let s:pingu_prompt_job = -1
+  let s:pingu_prompt_context = {}
+  call s:pingu_prompt_apply_response(
+        \ l:context,
+        \ get(l:context, 'stdout', []),
+        \ get(l:context, 'stderr', []),
+        \ a:code,
+        \ )
+endfunction
+
+function! s:start_async_pingu_prompt(argv, root, payload, context) abort
+  if !has('nvim') || !exists('*jobstart')
+    return v:false
+  endif
+  call s:stop_pingu_prompt_job()
+  let l:command = s:project_command_argv(a:argv, a:root)
+  let s:pingu_prompt_context = extend(deepcopy(a:context), {
+        \ 'stdout': [],
+        \ 'stderr': [],
+        \ })
+  let l:job = jobstart(l:command, {
+        \ 'stdout_buffered': v:true,
+        \ 'stderr_buffered': v:true,
+        \ 'on_stdout': function('s:pingu_prompt_on_stdout'),
+        \ 'on_stderr': function('s:pingu_prompt_on_stderr'),
+        \ 'on_exit': function('s:pingu_prompt_on_exit'),
+        \ })
+  if l:job <= 0
+    let s:pingu_prompt_context = {}
+    return v:false
+  endif
+  let s:pingu_prompt_job = l:job
+  try
+    call chansend(l:job, a:payload)
+    call chanclose(l:job, 'stdin')
+  catch
+    call s:stop_pingu_prompt_job()
+    return v:false
+  endtry
+  call s:status_set_running('prompt')
+  echo '[Pingu] Prompt enviado'
+  return v:true
+endfunction
+
 function! s:pingu_prompt(line1, line2, args, range_count) abort
   let l:bufnr = bufnr('%')
   if l:bufnr <= 0 || !bufloaded(l:bufnr)
@@ -6143,48 +6281,20 @@ function! s:pingu_prompt(line1, line2, args, range_count) abort
         \ 'cursorColumn': col('.'),
         \ }
   let l:argv = [l:runner, l:script, '--prompt-task']
-  let l:output = s:run_systemlist(l:argv, s:project_root(l:file), json_encode(l:payload))
-  if v:shell_error != 0
-    echomsg '[Pingu] Falha ao executar prompt manual'
+  let l:root = s:project_root(l:file)
+  let l:stdin_payload = json_encode(l:payload)
+  let l:context = {
+        \ 'bufnr': l:bufnr,
+        \ 'file': l:file,
+        \ 'changedtick': getbufvar(l:bufnr, 'changedtick', -1),
+        \ 'start_line': l:start_line,
+        \ }
+  if s:start_async_pingu_prompt(l:argv, l:root, l:stdin_payload, l:context)
     return
   endif
 
-  let l:raw = join(l:output, "\n")
-  if empty(trim(l:raw))
-    echomsg '[Pingu] Prompt sem resposta'
-    return
-  endif
-
-  try
-    let l:decoded = json_decode(l:raw)
-  catch
-    echomsg '[Pingu] Resposta invalida do prompt'
-    return
-  endtry
-
-  if type(l:decoded) != v:t_dict || !get(l:decoded, 'ok', v:false)
-    let l:reason = type(l:decoded) == v:t_dict ? get(l:decoded, 'reason', 'provider_unavailable') : 'invalid_response'
-    echomsg '[Pingu] Prompt nao aplicado: ' . l:reason
-    return
-  endif
-
-  let l:issue = get(l:decoded, 'issue', {})
-  if type(l:issue) != v:t_dict || empty(trim('' . get(l:issue, 'snippet', '')))
-    echomsg '[Pingu] Prompt sem patch aplicavel'
-    return
-  endif
-  let l:issue.filename = get(l:issue, 'filename', get(l:issue, 'file', l:file))
-  let l:issue.lnum = max([1, str2nr(string(get(l:issue, 'lnum', get(l:issue, 'line', l:start_line))))])
-  let l:issue.kind = get(l:issue, 'kind', 'prompt_task')
-  if !has_key(l:issue, 'action') || type(get(l:issue, 'action', {})) != v:t_dict
-    let l:issue.action = {'op': 'replace_range'}
-  endif
-
-  if s:apply_issue_snippet(l:issue, v:false)
-    echo '[Pingu] Prompt aplicado'
-  else
-    echomsg '[Pingu] Prompt nao alterou o buffer'
-  endif
+  let l:output = s:run_systemlist(l:argv, l:root, l:stdin_payload)
+  call s:pingu_prompt_apply_response(l:context, l:output, [], v:shell_error)
 endfunction
 
 function! s:pingu_hints_enabled() abort
@@ -6356,13 +6466,14 @@ endfunction
 
 function! s:pingu_issue_hint_text(issue) abort
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
-  let l:severity = empty(l:parts[0]) ? 'info' : l:parts[0]
+  let l:severity = empty(l:parts[0]) ? 'error' : l:parts[0]
   let l:message = empty(l:parts[1]) ? get(a:issue, 'kind', 'issue') : l:parts[1]
   let l:suggestion = l:parts[2]
+  let l:prefix = trim('' . get(g:, 'pingu_issue_hints_prefix', ''))
   let l:action = s:issue_effective_action(a:issue)
   let l:fixable = !empty(get(a:issue, 'snippet', ''))
         \ || index(['run_command', 'lsp_code_action', 'lsp_ai_fix'], get(l:action, 'op', '')) != -1
-  let l:text = printf('Pingu %s: %s', l:severity, l:message)
+  let l:text = printf('%s Pingu %s: %s', empty(l:prefix) ? '' : l:prefix, l:severity, l:message)
   if !empty(l:suggestion)
     let l:text .= ' -> ' . l:suggestion
   endif
@@ -6405,7 +6516,9 @@ function! s:update_pingu_issue_hints_for_buffer(bufnr, qf) abort
       continue
     endif
     let l:seen[l:key] = 1
-    let l:hint = s:pingu_issue_hint_text(l:item)
+    let l:hint_item = deepcopy(l:item)
+    let l:hint_item.bufnr = a:bufnr
+    let l:hint = s:pingu_issue_hint_text(l:hint_item)
     try
       call nvim_buf_set_extmark(a:bufnr, l:ns, l:lnum - 1, 0, {
             \ 'virt_text': [[printf('  %s', l:hint[0]), l:hint[1]]],
@@ -6487,6 +6600,18 @@ function! s:pingu_fix_current_issue() abort
   endif
 endfunction
 
+function! s:pingu_stop() abort
+  call s:stop_async_analysis_job()
+  call s:stop_pingu_prompt_job()
+  call s:stop_analysis_daemon()
+  call s:stop_auto_fix_timer()
+  let s:realtime_dev_agent_pending_auto_fixes = []
+  let s:realtime_dev_agent_auto_fix_busy = v:false
+  let s:realtime_dev_agent_suppress_auto_fix_once = v:false
+  call s:status_set_idle(0, '')
+  echomsg '[Pingu] Processamento interrompido'
+endfunction
+
 function! s:set_global_normal_map(lhs, rhs, desc) abort
   if empty(a:lhs) || empty(a:rhs)
     return
@@ -6537,6 +6662,7 @@ command! -range -nargs=* PinguPrompt call s:pingu_prompt(<line1>, <line2>, <q-ar
 command! PinguHintsRefresh call s:update_pingu_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()
+command! PinguStop call s:pingu_stop()
 command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
 command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
@@ -6569,6 +6695,15 @@ if !empty(g:pingu_fix_current_key)
         \ g:pingu_fix_current_key,
         \ ':PinguFixCurrent<CR>',
         \ 'Pingu: corrigir sugestao da linha atual',
+        \ )
+endif
+
+if !empty(g:pingu_stop_key)
+  " Atalho para interromper jobs e timers ativos do Pingu.
+  call s:set_global_normal_map(
+        \ g:pingu_stop_key,
+        \ ':PinguStop<CR>',
+        \ 'Pingu: interromper processamento ativo',
         \ )
 endif
 

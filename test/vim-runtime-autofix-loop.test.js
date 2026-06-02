@@ -101,18 +101,45 @@ test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /command! PinguHintsRefresh call s:update_pingu_hints_current_buffer\(\)/);
   assert.match(internalRuntime, /command! PinguAutoFixNow call s:pingu_auto_fix_now\(\)/);
   assert.match(internalRuntime, /command! PinguFixCurrent call s:pingu_fix_current_issue\(\)/);
+  assert.match(internalRuntime, /command! PinguStop call s:pingu_stop\(\)/);
   assert.match(internalRuntime, /command! -bang PinguUndoFix call s:undo_last_pingu_fix\(<bang>0\)/);
   assert.doesNotMatch(internalRuntime, /command! RealtimeDevAgent/);
   assert.match(internalRuntime, /':PinguCheck<CR>'/);
   assert.match(internalRuntime, /':PinguWindowCheck<CR>'/);
 });
 
+test('runtime usa namespace semantico de atalhos pingu', () => {
+  assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
+  assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
+  assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
+  assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
+  assert.match(pluginRuntime, /let g:pingu_stop_key = '<leader>pis'/);
+});
+
 test('runtime permite corrigir somente a issue da linha atual', () => {
-  assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>if'/);
+  assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue\(\) abort/);
   assert.match(internalRuntime, /s:get_buffer_issue_at_cursor\(\)/);
   assert.match(internalRuntime, /s:issue_has_applicable_fix\(l:issue\)/);
   assert.match(internalRuntime, /':PinguFixCurrent<CR>'/);
+});
+
+test('runtime permite interromper processamento ativo do Pingu', () => {
+  assert.match(internalRuntime, /function! s:pingu_stop\(\) abort/);
+  assert.match(internalRuntime, /s:stop_async_analysis_job\(\)/);
+  assert.match(internalRuntime, /s:stop_pingu_prompt_job\(\)/);
+  assert.match(internalRuntime, /s:stop_analysis_daemon\(\)/);
+  assert.match(internalRuntime, /s:stop_auto_fix_timer\(\)/);
+  assert.match(internalRuntime, /':PinguStop<CR>'/);
+});
+
+test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
+  assert.match(internalRuntime, /let s:pingu_prompt_job = -1/);
+  assert.match(internalRuntime, /function! s:start_async_pingu_prompt\(argv, root, payload, context\) abort/);
+  assert.match(internalRuntime, /jobstart\(l:command, \{/);
+  assert.match(internalRuntime, /'on_stdout': function\('s:pingu_prompt_on_stdout'\)/);
+  assert.match(internalRuntime, /'on_exit': function\('s:pingu_prompt_on_exit'\)/);
+  assert.match(internalRuntime, /if s:start_async_pingu_prompt\(l:argv, l:root, l:stdin_payload, l:context\)/);
 });
 
 test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
@@ -128,11 +155,14 @@ test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
 
 test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_issue_hints_enabled = has\('nvim'\) \? 1 : 0/);
+  assert.match(pluginRuntime, /let g:pingu_issue_hints_prefix = ''/);
   assert.match(internalRuntime, /function! s:update_pingu_issue_hints_for_buffer\(bufnr, qf\) abort/);
   assert.match(internalRuntime, /pingu_issue_hints/);
   assert.match(internalRuntime, /PinguIssueHintError/);
   assert.match(internalRuntime, /PinguIssueHintWarn/);
   assert.match(internalRuntime, /PinguIssueHintInfo/);
+  assert.match(internalRuntime, /let l:severity = empty\(l:parts\[0\]\) \? 'error' : l:parts\[0\]/);
+  assert.match(internalRuntime, /printf\('%s Pingu %s: %s'/);
   assert.match(internalRuntime, /call s:update_pingu_issue_hints_for_buffer\(a:bufnr, l:qf\)/);
 });
 

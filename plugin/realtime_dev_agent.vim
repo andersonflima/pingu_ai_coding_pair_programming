@@ -335,13 +335,48 @@ if !exists('g:pingu_open_qf')
 endif
 
 if !exists('g:pingu_map_key')
-  " Atalho de analise rapida do arquivo atual: <leader>i.
-  let g:pingu_map_key = '<leader>i'
+  " Atalho de analise rapida do arquivo atual no namespace <leader>pi.
+  let g:pingu_map_key = '<leader>pic'
 endif
 
 if !exists('g:pingu_window_key')
   " Mapeamento para abrir e fechar a janela de interacao em tempo real.
-  let g:pingu_window_key = '<leader>ia'
+  let g:pingu_window_key = '<leader>pia'
+endif
+
+if !exists('g:pingu_prompt_key')
+  " Atalho para prompt manual assistido no cursor ou selecao visual.
+  let g:pingu_prompt_key = '<leader>pip'
+endif
+
+if !exists('g:pingu_fix_current_key')
+  " Atalho para aplicar a correcao disponivel na linha atual.
+  let g:pingu_fix_current_key = '<leader>pif'
+endif
+
+if !exists('g:pingu_stop_key')
+  " Atalho para interromper jobs e timers ativos do Pingu.
+  let g:pingu_stop_key = '<leader>pis'
+endif
+
+if !exists('g:pingu_hints_enabled')
+  " 1 mostra hints inline para comentarios acionaveis do Pingu no Neovim.
+  let g:pingu_hints_enabled = has('nvim') ? 1 : 0
+endif
+
+if !exists('g:pingu_hints_max_lines')
+  " Limite de linhas para procurar hints sem impactar buffers grandes.
+  let g:pingu_hints_max_lines = 1200
+endif
+
+if !exists('g:pingu_issue_hints_enabled')
+  " 1 mostra virtual text para diagnosticos encontrados pelo Pingu no Neovim.
+  let g:pingu_issue_hints_enabled = has('nvim') ? 1 : 0
+endif
+
+if !exists('g:pingu_issue_hints_prefix')
+  " Prefixo curto no shadow text de diagnosticos do Pingu.
+  let g:pingu_issue_hints_prefix = ''
 endif
 
 if !exists('g:pingu_prompt_key')

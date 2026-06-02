@@ -582,8 +582,11 @@ O Pingu tenta escolher o comando mais natural para o projeto e para a linguagem:
 
 Atalhos principais:
 
-- `<leader>i`: analisa o arquivo atual
-- `<leader>ia`: abre ou fecha o painel
+- `<leader>pic`: analisa o arquivo atual
+- `<leader>pia`: abre ou fecha o painel
+- `<leader>pip`: abre prompt manual no cursor ou selecao visual
+- `<leader>pif`: aplica a correcao disponivel na linha atual
+- `<leader>pis`: interrompe jobs/timers ativos do Pingu
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
@@ -862,15 +865,21 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_statusline_icon = ''` define o icone exibido na status bar
 - `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; por padrao fica desligado para evitar duplicidade em setups com `lualine`
 - `let g:pingu_undo_fix_history_max = 30` limita quantos snapshots de correcoes do Pingu ficam disponiveis por arquivo para rollback manual
-- `let g:pingu_prompt_key = '<leader>ip'` aciona prompt manual assistido no cursor ou na selecao visual
-- `let g:pingu_fix_current_key = '<leader>if'` aplica a correcao disponivel na linha atual
+- `let g:pingu_map_key = '<leader>pic'` analisa o arquivo atual
+- `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
+- `let g:pingu_prompt_key = '<leader>pip'` aciona prompt manual assistido no cursor ou na selecao visual
+- `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
+- `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguPrompt` abre um prompt manual para o contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para substituir precisamente o range selecionado
+- no Neovim, `:PinguPrompt` executa o provider em background para nao bloquear o editor depois do Enter
 - `let g:pingu_hints_enabled = 1` habilita virtual text no Neovim para destacar comentarios acionaveis do Pingu
 - `let g:pingu_hints_max_lines = 1200` limita quantas linhas sao escaneadas para hints inline
 - `let g:pingu_issue_hints_enabled = 1` habilita virtual text para erros/sugestoes encontrados pelo Pingu
+- `let g:pingu_issue_hints_prefix = ''` controla o marcador do shadow text de diagnostico, por exemplo ` Pingu error: Logger.dub/1 is undefined or private`
 - `:PinguHintsRefresh` recalcula manualmente os hints inline do buffer atual
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
+- `:PinguStop` interrompe processamento ativo quando o runtime parecer preso ou estiver demorando demais
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `:PinguUndoFix` reverte a ultima correcao aplicada pelo Pingu no arquivo atual
 - `:PinguUndoFix!` força a reversao mesmo se o buffer tiver mudado depois da correcao
