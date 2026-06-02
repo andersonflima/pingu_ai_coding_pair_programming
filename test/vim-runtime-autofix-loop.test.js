@@ -158,13 +158,23 @@ test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
 test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_issue_hints_enabled = has\('nvim'\) \? 1 : 0/);
   assert.match(pluginRuntime, /let g:pingu_issue_hints_prefix = ''/);
+  assert.match(pluginRuntime, /let g:pingu_issue_hints_priority = 10000/);
+  assert.match(pluginRuntime, /let g:pingu_issue_hints_position = 'eol'/);
+  assert.match(pluginRuntime, /let g:pingu_diagnostic_takeover = has\('nvim'\) \? 1 : 0/);
+  assert.match(pluginRuntime, /let g:pingu_diagnostic_takeover_max_items = 80/);
   assert.match(internalRuntime, /function! s:update_pingu_issue_hints_for_buffer\(bufnr, qf\) abort/);
+  assert.match(internalRuntime, /function! s:apply_pingu_diagnostic_takeover\(\) abort/);
+  assert.match(internalRuntime, /function! s:merge_lsp_diagnostic_hint_items\(bufnr, file, qf\) abort/);
   assert.match(internalRuntime, /pingu_issue_hints/);
   assert.match(internalRuntime, /PinguIssueHintError/);
   assert.match(internalRuntime, /PinguIssueHintWarn/);
   assert.match(internalRuntime, /PinguIssueHintInfo/);
+  assert.match(internalRuntime, /vim\.diagnostic\.config\(\{ virtual_text = false \}\)/);
+  assert.match(internalRuntime, /augroup pingu_diagnostic_takeover/);
+  assert.match(internalRuntime, /'priority': l:priority/);
   assert.match(internalRuntime, /let l:severity = empty\(l:parts\[0\]\) \? 'error' : l:parts\[0\]/);
   assert.match(internalRuntime, /printf\('%s Pingu %s: %s'/);
+  assert.match(internalRuntime, /printf\(' \+%d', l:extra_count\)/);
   assert.match(internalRuntime, /call s:update_pingu_issue_hints_for_buffer\(a:bufnr, l:qf\)/);
 });
 

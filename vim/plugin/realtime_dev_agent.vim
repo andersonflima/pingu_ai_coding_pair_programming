@@ -384,6 +384,26 @@ if !exists('g:pingu_issue_hints_prefix')
   let g:pingu_issue_hints_prefix = ''
 endif
 
+if !exists('g:pingu_issue_hints_priority')
+  " Prioridade alta para o shadow text do Pingu aparecer acima de outros virtual texts.
+  let g:pingu_issue_hints_priority = 10000
+endif
+
+if !exists('g:pingu_issue_hints_position')
+  " Posicao do shadow text: eol, right_align, overlay ou inline conforme suporte do Neovim.
+  let g:pingu_issue_hints_position = 'eol'
+endif
+
+if !exists('g:pingu_diagnostic_takeover')
+  " 1 centraliza virtual text de LSP/linters no Pingu e desliga virtual_text nativo do vim.diagnostic.
+  let g:pingu_diagnostic_takeover = has('nvim') ? 1 : 0
+endif
+
+if !exists('g:pingu_diagnostic_takeover_max_items')
+  " Limite de diagnosticos externos agregados por buffer para evitar ruido em arquivos muito quebrados.
+  let g:pingu_diagnostic_takeover_max_items = 80
+endif
+
 if !exists('g:pingu_show_window')
   " Mantem a janela visivel apenas quando o usuario pede modo painel.
   let g:pingu_show_window = 0
