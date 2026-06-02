@@ -2034,6 +2034,7 @@ function! s:pingu_apply_issue_with_ai(issue) abort
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
     return v:true
   endif
+  call s:restore_issue_cursor_and_hints(a:issue)
   echomsg '[Pingu] Correcao com IA nao alterou o buffer'
   return v:false
 endfunction
@@ -3270,6 +3271,146 @@ function! s:apply_issue_lsp_ai_fix_explicit(issue) abort
   finally
     let g:pingu_lsp_ai_fix_enabled = l:previous
   endtry
+endfunction
+
+function! s:string_edit_distance(left, right) abort
+  let l:left = '' . a:left
+  let l:right = '' . a:right
+  let l:left_len = strlen(l:left)
+  let l:right_len = strlen(l:right)
+  let l:previous = range(0, l:right_len)
+  for l:i in range(1, l:left_len)
+    let l:current = [l:i]
+    let l:left_char = strpart(l:left, l:i - 1, 1)
+    for l:j in range(1, l:right_len)
+      let l:right_char = strpart(l:right, l:j - 1, 1)
+      let l:cost = l:left_char ==# l:right_char ? 0 : 1
+      call add(l:current, min([
+            \ l:current[l:j - 1] + 1,
+            \ l:previous[l:j] + 1,
+            \ l:previous[l:j - 1] + l:cost,
+            \ ]))
+    endfor
+    let l:previous = l:current
+  endfor
+  return l:previous[l:right_len]
+endfunction
+
+function! s:known_lsp_function_names(module, filetype) abort
+  let l:module = trim('' . a:module)
+  let l:filetype = tolower(trim('' . a:filetype))
+  if l:filetype ==# 'elixir' && l:module ==# 'Logger'
+    return ['debug', 'info', 'warning', 'warn', 'error', 'notice', 'critical', 'alert', 'emergency', 'metadata', 'configure', 'flush']
+  endif
+  return []
+endfunction
+
+function! s:closest_lsp_function_name(name, candidates) abort
+  let l:name = trim('' . a:name)
+  if empty(l:name) || type(a:candidates) != v:t_list || empty(a:candidates)
+    return ''
+  endif
+  let l:best = ''
+  let l:best_distance = 999
+  for l:candidate in a:candidates
+    let l:candidate = trim('' . l:candidate)
+    if empty(l:candidate) || strpart(l:candidate, 0, 1) !=# strpart(l:name, 0, 1)
+      continue
+    endif
+    let l:distance = s:string_edit_distance(l:name, l:candidate)
+    if l:distance < l:best_distance
+      let l:best = l:candidate
+      let l:best_distance = l:distance
+    endif
+  endfor
+  let l:threshold = strlen(l:name) <= 4 ? 3 : 2
+  return l:best_distance <= l:threshold ? l:best : ''
+endfunction
+
+function! s:undefined_lsp_call_from_issue(issue) abort
+  let l:message = trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', '')))
+  let l:patterns = [
+        \ '\([A-Z][A-Za-z0-9_.]*\.\)\?\([A-Za-z_][A-Za-z0-9_!?]*\)/\d\+ is undefined or private',
+        \ 'missing or private function \([A-Z][A-Za-z0-9_.]*\.\)\?\([A-Za-z_][A-Za-z0-9_!?]*\)/\d\+',
+        \ ]
+  for l:pattern in l:patterns
+    let l:match = matchlist(l:message, l:pattern)
+    if !empty(l:match)
+      return {
+            \ 'module': substitute(get(l:match, 1, ''), '\.$', '', ''),
+            \ 'function': get(l:match, 2, ''),
+            \ }
+    endif
+  endfor
+  return {}
+endfunction
+
+function! s:pingu_lsp_local_fix_candidate(issue) abort
+  let l:filename = fnamemodify(get(a:issue, 'filename', ''), ':p')
+  let l:target_buf = s:issue_target_buffer(l:filename)
+  if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    return {}
+  endif
+  let l:call = s:undefined_lsp_call_from_issue(a:issue)
+  if empty(l:call)
+    return {}
+  endif
+  let l:module = get(l:call, 'module', '')
+  let l:name = get(l:call, 'function', '')
+  let l:candidates = s:known_lsp_function_names(l:module, getbufvar(l:target_buf, '&filetype', ''))
+  let l:replacement = s:closest_lsp_function_name(l:name, l:candidates)
+  if empty(l:replacement)
+    return {}
+  endif
+  let l:lnum = max([1, str2nr(string(get(a:issue, 'lnum', 1)))])
+  let l:line = get(getbufline(l:target_buf, l:lnum, l:lnum), 0, '')
+  let l:target = empty(l:module) ? l:name : l:module . '.' . l:name
+  let l:replace_with = empty(l:module) ? l:replacement : l:module . '.' . l:replacement
+  if stridx(l:line, l:target) == -1
+    return {}
+  endif
+  let l:next_line = substitute(l:line, '\V' . escape(l:target, '\'), l:replace_with, '')
+  if l:next_line ==# l:line
+    return {}
+  endif
+  let l:resolved = deepcopy(a:issue)
+  let l:resolved.kind = 'lsp_local_fix'
+  let l:resolved.snippet = l:next_line
+  let l:resolved.action = {'op': 'replace_line'}
+  return l:resolved
+endfunction
+
+function! s:pingu_lsp_local_fix_candidate_for_line(bufnr, lnum) abort
+  if a:bufnr <= 0 || !bufloaded(a:bufnr)
+    return {}
+  endif
+  let l:filetype = getbufvar(a:bufnr, '&filetype', '')
+  let l:line = get(getbufline(a:bufnr, a:lnum, a:lnum), 0, '')
+  let l:match = matchlist(l:line, '\(Logger\)\.\([A-Za-z_][A-Za-z0-9_!?]*\)\s*(')
+  if empty(l:match)
+    return {}
+  endif
+  let l:module = get(l:match, 1, '')
+  let l:name = get(l:match, 2, '')
+  let l:replacement = s:closest_lsp_function_name(l:name, s:known_lsp_function_names(l:module, l:filetype))
+  if empty(l:replacement)
+    return {}
+  endif
+  let l:target = l:module . '.' . l:name
+  let l:replace_with = l:module . '.' . l:replacement
+  let l:next_line = substitute(l:line, '\V' . escape(l:target, '\'), l:replace_with, '')
+  if l:next_line ==# l:line
+    return {}
+  endif
+  return {
+        \ 'filename': fnamemodify(bufname(a:bufnr), ':p'),
+        \ 'lnum': max([1, str2nr(string(a:lnum))]),
+        \ 'col': max([1, stridx(l:line, l:target) + 1]),
+        \ 'text': printf('[Warning] %s/%d parece uma chamada invalida local | Corrige para %s', l:target, 1, l:replace_with),
+        \ 'kind': 'lsp_local_fix',
+        \ 'snippet': l:next_line,
+        \ 'action': {'op': 'replace_line'},
+        \ }
 endfunction
 
 function! s:apply_issue_lsp_ai_fix(issue) abort
@@ -4638,6 +4779,10 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   endif
   if l:op ==# 'lsp_code_action'
     if s:apply_issue_lsp_code_action(l:issue)
+      return v:true
+    endif
+    let l:local_fix = s:pingu_lsp_local_fix_candidate(l:issue)
+    if !empty(l:local_fix) && s:apply_issue_snippet(l:local_fix, v:false)
       return v:true
     endif
     return s:apply_issue_lsp_ai_fix_explicit(l:issue)
@@ -7766,8 +7911,24 @@ function! s:issue_has_applicable_fix(issue) abort
         \ || index(['run_command', 'lsp_code_action', 'lsp_ai_fix'], get(l:action, 'op', '')) != -1
 endfunction
 
+function! s:restore_issue_cursor_and_hints(issue) abort
+  if type(a:issue) == v:t_dict && !empty(a:issue)
+    call cursor(
+          \ max([1, str2nr(string(get(a:issue, 'lnum', line('.'))))]),
+          \ max([1, str2nr(string(get(a:issue, 'col', col('.'))))])
+          \ )
+  endif
+  silent! call s:update_pingu_all_hints_current_buffer()
+endfunction
+
 function! s:pingu_fix_current_issue() abort
-  let l:issue = s:get_buffer_issue_at_cursor()
+  let l:issue = s:get_buffer_issue_at_cursor_exact()
+  if empty(l:issue)
+    let l:issue = s:pingu_lsp_local_fix_candidate_for_line(bufnr('%'), line('.'))
+  endif
+  if empty(l:issue)
+    let l:issue = s:get_buffer_issue_at_cursor()
+  endif
   if empty(l:issue)
     echomsg '[Pingu] Nenhuma sugestao na linha atual'
     return
@@ -7786,6 +7947,7 @@ function! s:pingu_fix_current_issue() abort
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
   else
+    call s:restore_issue_cursor_and_hints(l:issue)
     echomsg '[Pingu] Correcao nao alterou o buffer'
   endif
 endfunction
