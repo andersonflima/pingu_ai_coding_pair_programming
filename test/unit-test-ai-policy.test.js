@@ -58,6 +58,40 @@ function createJavaScriptUnitTestChecker(projectRoot, resolveAiGeneratedUnitTest
   });
 }
 
+function createGenericUnitTestChecker(projectRoot) {
+  return createUnitTestCoverageChecker({
+    hasOpenAiConfiguration: () => true,
+    loadActiveBlueprintContext: () => null,
+    resolveAiGeneratedUnitTests: () => {
+      throw new Error('unit_test nao deve ser acionado para formato estruturado');
+    },
+    sanitizeIdentifier,
+    sanitizeNaturalIdentifier,
+    escapeRegExp,
+    isJavaScriptLikeExtension: () => false,
+    isPythonLikeExtension: () => false,
+    isGoExtension: () => false,
+    isRustExtension: () => false,
+    isRubyExtension: () => false,
+    resolveProjectRoot: () => projectRoot,
+    findUpwards: () => '',
+    pathExists: fs.existsSync,
+    requiresAiForFeature: () => false,
+    resolveAiFeaturePolicy: () => ({
+      feature: 'unit_test',
+      mode: 'prefer',
+      hasOpenAiConfiguration: true,
+      mustUseAi: false,
+      shouldUseAi: true,
+      canFallBack: true,
+    }),
+    toPosixPath: (value) => String(value || '').split(path.sep).join('/'),
+    toImportPath: (value) => value,
+    upwardDepth: () => 0,
+    upperFirst: (value) => String(value || '').charAt(0).toUpperCase() + String(value || '').slice(1),
+  });
+}
+
 test('unit test coverage resolves offline baseline when policy is disabled', () => {
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-unit-test-policy-'));
   const sourceFile = path.join(projectRoot, 'src', 'sum.js');
@@ -140,6 +174,26 @@ test('unit test coverage does not emit ai_required when offline fallback covers 
   assert.equal(issues[0].action.op, 'write_file');
   assert.equal(issues[0].action.target_file, path.join(projectRoot, 'test', 'src', 'sum.test.js'));
   assert.notEqual(issues[0].kind, 'ai_required');
+});
+
+test('unit test coverage ignora formatos estruturados sem semantica de programacao', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-unit-test-structured-'));
+  const checkUnitTestCoverage = createGenericUnitTestChecker(projectRoot);
+  const cases = [
+    ['README.md', ['# Projeto', '', '## Uso']],
+    ['flow.mmd', ['flowchart LR', '  A --> B']],
+    ['Dockerfile', ['FROM node:22-alpine', 'WORKDIR /app']],
+    ['docker-compose.yaml', ['services:', '  app:', '    image: node:22-alpine']],
+    ['config.toml', ['[tool]', 'name = "pingu"']],
+  ];
+
+  cases.forEach(([relativeFile, lines]) => {
+    const sourceFile = path.join(projectRoot, relativeFile);
+    fs.mkdirSync(path.dirname(sourceFile), { recursive: true });
+    fs.writeFileSync(sourceFile, `${lines.join('\n')}\n`);
+
+    assert.deepEqual(checkUnitTestCoverage(lines, sourceFile), [], relativeFile);
+  });
 });
 
 test('unit test coverage updates stale calls when function signature changes', () => {

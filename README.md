@@ -502,23 +502,23 @@ Resumo pratico:
   `comment_task`, `context_file`, `unit_test`, `terminal_task`
   funcoes, scripts, colecoes simples e enums equivalentes
 - Terraform:
-  `comment_task`, `context_file`, `unit_test`, `terminal_task`
-  snippets estruturados, `required_version`, blueprint de contexto e testes de contrato
+  `comment_task`, `context_file`, `terminal_task`
+  snippets estruturados, `required_version` e blueprint de contexto; nao gera `unit_test`
 - YAML:
-  `comment_task`, `context_file`, `unit_test`, `terminal_task`
-  configuracao estruturada e testes de contrato
+  `comment_task`, `context_file`, `terminal_task`
+  configuracao estruturada; nao gera `unit_test`
 - Markdown:
-  `comment_task`, `context_file`, `unit_test`, `terminal_task`
-  documentos, terminal acionavel por comentario e testes de contrato
+  `comment_task`, `context_file`, `terminal_task`
+  documentos e terminal acionavel por comentario; nao gera `unit_test`
 - Mermaid:
-  `comment_task`, `context_file`, `unit_test`, `terminal_task`
-  diagramas, terminal acionavel por comentario e testes de contrato
+  `comment_task`, `context_file`, `terminal_task`
+  diagramas e terminal acionavel por comentario; nao gera `unit_test`
 - Dockerfile:
-  `comment_task`, `context_file`, `unit_test`, `terminal_task`
-  contrato de `WORKDIR`, contexto persistente, snippets operacionais e testes
+  `comment_task`, `context_file`, `terminal_task`
+  contrato de `WORKDIR`, contexto persistente e snippets operacionais; nao gera `unit_test`
 - TOML:
-  `comment_task`, `context_file`, `unit_test`, `terminal_task`
-  configuracao, secoes estruturadas, testes de contrato e terminal por comentario
+  `comment_task`, `context_file`, `terminal_task`
+  configuracao, secoes estruturadas e terminal por comentario; nao gera `unit_test`
 
 Maturidade automatica atual do core:
 
