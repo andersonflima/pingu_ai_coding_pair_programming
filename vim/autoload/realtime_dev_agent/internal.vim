@@ -126,7 +126,38 @@ function! s:shell_escape_list(argv) abort
   return join(map(copy(a:argv), {_, val -> shellescape('' . val)}), ' ')
 endfunction
 
+function! s:pingu_normalize_ai_provider(value) abort
+  let l:value = tolower(trim('' . a:value))
+  if index(['codex', 'openai', 'copilot', 'auto'], l:value) != -1
+    return l:value
+  endif
+  return 'copilot'
+endfunction
+
+function! s:pingu_ai_provider_env_value() abort
+  let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'copilot' : $PINGU_AI_PROVIDER))
+  return l:provider ==# 'codex' ? 'openai' : l:provider
+endfunction
+
+function! s:pingu_ai_provider_label(value) abort
+  let l:provider = s:pingu_normalize_ai_provider(a:value)
+  if l:provider ==# 'codex' || l:provider ==# 'openai'
+    return 'OpenAI Codex'
+  endif
+  if l:provider ==# 'auto'
+    return 'Auto'
+  endif
+  return 'Copilot'
+endfunction
+
+function! s:pingu_apply_ai_provider_env() abort
+  let l:provider = s:pingu_ai_provider_env_value()
+  let $PINGU_AI_PROVIDER = l:provider
+  return l:provider
+endfunction
+
 function! s:project_command_argv(argv, cwd) abort
+  call s:pingu_apply_ai_provider_env()
   let l:inner = s:shell_escape_list(a:argv)
   if !empty(a:cwd)
     let l:inner = 'cd ' . shellescape(a:cwd) . ' && ' . l:inner
@@ -6762,6 +6793,37 @@ function! s:pingu_auto_fix_now() abort
   endif
 endfunction
 
+function! s:pingu_select_ai_provider(...) abort
+  let l:raw = a:0 > 0 ? a:1 : ''
+  if empty(trim('' . l:raw))
+    let l:current = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'copilot' : $PINGU_AI_PROVIDER))
+    let l:choice = inputlist([
+          \ 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current),
+          \ '1. Copilot',
+          \ '2. OpenAI Codex',
+          \ '3. Auto',
+          \ ])
+    if l:choice == 1
+      let l:raw = 'copilot'
+    elseif l:choice == 2
+      let l:raw = 'codex'
+    elseif l:choice == 3
+      let l:raw = 'auto'
+    else
+      echomsg '[Pingu] Selecao de provider cancelada'
+      return
+    endif
+  endif
+
+  let l:provider = s:pingu_normalize_ai_provider(l:raw)
+  let g:pingu_ai_provider = l:provider
+  let l:env_provider = s:pingu_apply_ai_provider_env()
+  call s:stop_analysis_daemon()
+  call s:stop_pingu_prompt_job()
+  call s:status_set_idle(0, '')
+  echomsg '[Pingu] Provider assistido: ' . s:pingu_ai_provider_label(l:provider) . ' (' . l:env_provider . ')'
+endfunction
+
 function! s:issue_has_applicable_fix(issue) abort
   if empty(a:issue) || type(a:issue) != v:t_dict
     return v:false
@@ -6862,6 +6924,7 @@ command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
 command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
 command! PinguAutoFixDisable let g:pingu_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'
+command! -nargs=? PinguModel call s:pingu_select_ai_provider(<q-args>)
 
 call s:install_neovim_lualine_global()
 call s:install_statusline_component()
@@ -6913,6 +6976,15 @@ if !empty(g:pingu_prompt_key)
         \ g:pingu_prompt_key,
         \ ':<C-U>''<,''>PinguPrompt<CR>',
         \ 'Pingu: prompt manual na selecao',
+        \ )
+endif
+
+if !empty(g:pingu_model_key)
+  " Atalho para escolher o provider assistido da sessao.
+  call s:set_global_normal_map(
+        \ g:pingu_model_key,
+        \ ':PinguModel<CR>',
+        \ 'Pingu: escolher provider assistido',
         \ )
 endif
 
