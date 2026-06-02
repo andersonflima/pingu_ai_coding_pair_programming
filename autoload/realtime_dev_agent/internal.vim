@@ -3073,6 +3073,7 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ 'preferGlobal': get(l:action, 'prefer_global', s:lsp_auto_fix_prefer_global()) ? v:true : v:false,
         \ 'scope': trim('' . get(l:action, 'scope', 'line')),
         \ }
+  let l:previous_changedtick = getbufvar(l:target_buf, 'changedtick')
   let l:script = join([
         \ '(function(input)',
         \ 'input = input or {}',
@@ -3241,9 +3242,34 @@ function! s:apply_issue_lsp_code_action(issue) abort
   endtry
 
   if l:applied
-    call s:auto_save_buffer_if_modified(l:target_buf, l:filename)
+    let l:changed = getbufvar(l:target_buf, 'changedtick') != l:previous_changedtick
+    if !l:changed
+      try
+        let l:changed = luaeval('(function(input) vim.wait(input.timeoutMs, function() return vim.api.nvim_buf_get_changedtick(input.bufnr) ~= input.changedtick end, 10, false); return vim.api.nvim_buf_get_changedtick(input.bufnr) ~= input.changedtick end)(_A)', {
+              \ 'bufnr': l:target_buf,
+              \ 'changedtick': l:previous_changedtick,
+              \ 'timeoutMs': max([100, str2nr(string(get(l:action, 'settle_timeout_ms', 250)))]),
+              \ }) ? v:true : v:false
+      catch
+        let l:changed = getbufvar(l:target_buf, 'changedtick') != l:previous_changedtick
+      endtry
+    endif
+    if l:changed
+      call s:auto_save_buffer_if_modified(l:target_buf, l:filename)
+      return v:true
+    endif
   endif
-  return l:applied
+  return v:false
+endfunction
+
+function! s:apply_issue_lsp_ai_fix_explicit(issue) abort
+  let l:previous = get(g:, 'pingu_lsp_ai_fix_enabled', 0)
+  let g:pingu_lsp_ai_fix_enabled = 1
+  try
+    return s:apply_issue_lsp_ai_fix(s:pingu_issue_ai_fix_candidate(a:issue))
+  finally
+    let g:pingu_lsp_ai_fix_enabled = l:previous
+  endtry
 endfunction
 
 function! s:apply_issue_lsp_ai_fix(issue) abort
@@ -4611,7 +4637,10 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
     return s:apply_issue_run_command(l:issue, a:keep_focus_code)
   endif
   if l:op ==# 'lsp_code_action'
-    return s:apply_issue_lsp_code_action(l:issue)
+    if s:apply_issue_lsp_code_action(l:issue)
+      return v:true
+    endif
+    return s:apply_issue_lsp_ai_fix_explicit(l:issue)
   endif
   if l:op ==# 'lsp_ai_fix'
     return s:apply_issue_lsp_ai_fix(l:issue)
