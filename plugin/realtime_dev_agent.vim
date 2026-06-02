@@ -410,8 +410,8 @@ if !exists('g:pingu_diagnostic_takeover')
 endif
 
 if !exists('g:pingu_diagnostic_takeover_max_items')
-  " Limite de diagnosticos externos agregados por buffer para evitar ruido em arquivos muito quebrados.
-  let g:pingu_diagnostic_takeover_max_items = 80
+  " Limite de diagnosticos externos agregados por buffer; -1 mostra o arquivo inteiro.
+  let g:pingu_diagnostic_takeover_max_items = -1
 endif
 
 if !exists('g:pingu_show_window')
