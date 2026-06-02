@@ -75,3 +75,13 @@ test('requiresAiForFeature retorna false quando PINGU_OFFLINE_MODE for true', ()
     assert.equal(requiresAiForFeature('.py', 'unit_test'), false);
   });
 });
+
+test('formatos estruturados nao anunciam unit_test', () => {
+  withPatchedNodeEnv({}, ({ supportsEditorFeature, declaredOfflineCapabilitiesFor }) => {
+    ['.md', '.mmd', '.mermaid', '.dockerfile', '.yaml', '.yml', '.toml', '.tf'].forEach((extension) => {
+      assert.equal(supportsEditorFeature(extension, 'unit_test'), false, extension);
+      assert.equal(declaredOfflineCapabilitiesFor(extension).includes('contract_test_generation'), false, extension);
+      assert.equal(declaredOfflineCapabilitiesFor(extension).includes('unit_test_generation'), false, extension);
+    });
+  });
+});
