@@ -5,6 +5,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const RUNTIME_FILES = Object.freeze([
+  ['vim/plugin/00_pingu_diagnostic_manager.lua', 'plugin/00_pingu_diagnostic_manager.lua'],
   ['vim/plugin/realtime_dev_agent.vim', 'plugin/realtime_dev_agent.vim'],
   ['vim/autoload/realtime_dev_agent/internal.vim', 'autoload/realtime_dev_agent/internal.vim'],
   ['vim/autoload/realtime_dev_agent/guard_runtime.js', 'autoload/realtime_dev_agent/guard_runtime.js'],
