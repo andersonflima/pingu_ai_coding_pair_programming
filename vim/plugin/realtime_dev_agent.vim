@@ -426,7 +426,7 @@ endif
 
 if !exists('g:pingu_issue_hover_delay_ms')
   " Tempo para abrir o menu de acoes apos o cursor parar sobre uma linha com hint.
-  let g:pingu_issue_hover_delay_ms = 80
+  let g:pingu_issue_hover_delay_ms = 30
 endif
 
 if !exists('g:pingu_diagnostic_takeover')

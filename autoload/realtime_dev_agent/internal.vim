@@ -2054,12 +2054,22 @@ function! s:pingu_show_issue_hover_action_hint() abort
   call s:pingu_open_issue_hover_menu(l:issue)
 endfunction
 
+function! s:pingu_show_issue_hover_action_hint_if_current(bufnr) abort
+  if a:bufnr !=# bufnr('%') || mode() !=# 'n'
+    return
+  endif
+  if str2nr(string(get(g:, 'pingu_issue_hover_hint', 1))) <= 0
+    return
+  endif
+  call s:pingu_show_issue_hover_action_hint()
+endfunction
+
 function! s:pingu_issue_hover_delay_ms() abort
-  let l:delay = get(g:, 'pingu_issue_hover_delay_ms', 80)
+  let l:delay = get(g:, 'pingu_issue_hover_delay_ms', 30)
   if type(l:delay) != v:t_number
     let l:delay = str2nr(string(l:delay))
   endif
-  return max([30, l:delay])
+  return max([10, l:delay])
 endfunction
 
 function! s:schedule_pingu_issue_hover_menu() abort
@@ -2668,6 +2678,7 @@ function! s:refresh_pingu_diagnostic_hints_for_buffer(bufnr) abort
   let l:qf = s:merge_lsp_diagnostic_hint_items(a:bufnr, l:file, l:qf)
   let s:realtime_dev_agent_last_qf = l:qf
   call s:update_pingu_issue_hints_for_buffer(a:bufnr, l:qf)
+  call s:pingu_show_issue_hover_action_hint_if_current(a:bufnr)
 endfunction
 
 function! s:fire_scheduled_pingu_diagnostic_hints_refresh(bufnr, timer) abort
