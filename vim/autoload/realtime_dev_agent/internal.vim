@@ -1861,6 +1861,20 @@ function! s:close_pingu_issue_hover_menu() abort
     catch
     endtry
   endif
+  if has('nvim') && exists('*nvim_list_wins') && exists('*nvim_win_get_buf')
+    for l:hover_winid in nvim_list_wins()
+      try
+        let l:hover_bufnr = nvim_win_get_buf(l:hover_winid)
+        let l:config = exists('*nvim_win_get_config') ? nvim_win_get_config(l:hover_winid) : {}
+        let l:first_line = get(nvim_buf_get_lines(l:hover_bufnr, 0, 1, v:false), 0, '')
+        if getbufvar(l:hover_bufnr, 'pingu_issue_hover_menu', 0)
+              \ || (get(l:config, 'relative', '') !=# '' && l:first_line =~# '^Pingu:')
+          call nvim_win_close(l:hover_winid, v:true)
+        endif
+      catch
+      endtry
+    endfor
+  endif
   let s:pingu_issue_hover_menu_winid = -1
   let s:pingu_issue_hover_menu_bufnr = -1
 endfunction
@@ -2011,7 +2025,8 @@ function! s:pingu_open_issue_hover_menu(issue) abort
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
   call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
-  let l:winid = nvim_open_win(l:bufnr, v:true, {
+  call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
+  let l:winid = nvim_open_win(l:bufnr, v:false, {
         \ 'relative': 'cursor',
         \ 'row': 1,
         \ 'col': 0,
@@ -2343,7 +2358,7 @@ function! s:pingu_diagnostic_source_label(bufnr, source) abort
     endif
   endfor
 
-  return !empty(l:source) ? 'Pingu' : l:default
+  return !empty(l:source) ? l:source : l:default
 endfunction
 
 function! s:lsp_only_kinds_for_diagnostic(source) abort
@@ -2421,13 +2436,14 @@ function! s:lsp_diagnostics_for_buffer(bufnr, ...) abort
         \ 'maxSeverity': l:max_severity,
         \ }
   let l:script = join([
-        \ 'local input = _A or {}',
+        \ '(function(input)',
+        \ 'input = input or {}',
         \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
         \ 'local maxSeverity = tonumber(input.maxSeverity or 2) or 2',
         \ 'if type(vim) ~= "table" or type(vim.diagnostic) ~= "table" or type(vim.diagnostic.get) ~= "function" then',
         \ '  return {}',
         \ 'end',
-                \ 'local ok, diagnostics = pcall(vim.diagnostic.get, bufnr)',
+        \ 'local ok, diagnostics = pcall(vim.diagnostic.get, bufnr)',
         \ 'if not ok or type(diagnostics) ~= "table" then',
         \ '  return {}',
         \ 'end',
@@ -2471,6 +2487,7 @@ function! s:lsp_diagnostics_for_buffer(bufnr, ...) abort
         \ '  return (a.lnum or 1) < (b.lnum or 1)',
         \ 'end)',
         \ 'return items',
+        \ 'end)(_A)',
         \ ], "\n")
 
   try
@@ -2505,7 +2522,8 @@ function! s:apply_pingu_diagnostic_takeover() abort
 
   let l:payload = {'enabled': s:pingu_diagnostic_takeover_enabled() ? 1 : 0}
   let l:script = join([
-        \ 'local input = _A or {}',
+        \ '(function(input)',
+        \ 'input = input or {}',
         \ 'if type(vim) ~= "table" or type(vim.diagnostic) ~= "table" or type(vim.diagnostic.config) ~= "function" then',
         \ '  return false',
         \ 'end',
@@ -2516,6 +2534,17 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ 'end',
         \ 'if type(vim.diagnostic.show) == "function" and not state.original_show then',
         \ '  state.original_show = vim.diagnostic.show',
+        \ 'end',
+        \ 'if type(vim.diagnostic.set) == "function" and not state.original_set then',
+        \ '  state.original_set = vim.diagnostic.set',
+        \ 'end',
+        \ 'local function pingu_mask_diagnostic_opts(opts)',
+        \ '  local next_opts = type(opts) == "table" and vim.tbl_extend("force", {}, opts) or {}',
+        \ '  next_opts.virtual_text = false',
+        \ '  next_opts.virtual_lines = false',
+        \ '  next_opts.signs = false',
+        \ '  next_opts.underline = false',
+        \ '  return next_opts',
         \ 'end',
         \ 'if not state.config_wrapped then',
         \ '  vim.diagnostic.config = function(opts, namespace)',
@@ -2528,15 +2557,14 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '          local next_cfg = vim.tbl_extend("force", {}, cfg)',
         \ '          next_cfg.virtual_text = false',
         \ '          next_cfg.virtual_lines = false',
+        \ '          next_cfg.signs = false',
+        \ '          next_cfg.underline = false',
         \ '          return next_cfg',
         \ '        end',
         \ '        return cfg',
         \ '      end',
         \ '      if type(opts) == "table" then',
-        \ '        local next_opts = vim.tbl_extend("force", {}, opts)',
-        \ '        next_opts.virtual_text = false',
-        \ '        next_opts.virtual_lines = false',
-        \ '        return original(next_opts, namespace)',
+        \ '        return original(pingu_mask_diagnostic_opts(opts), namespace)',
         \ '      end',
         \ '    end',
         \ '    return original(opts, namespace)',
@@ -2551,14 +2579,25 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '      return nil',
         \ '    end',
         \ '    if type(current) == "table" and current.enabled and not current.restoring then',
-        \ '      local next_opts = type(opts) == "table" and vim.tbl_extend("force", {}, opts) or {}',
-        \ '      next_opts.virtual_text = false',
-        \ '      next_opts.virtual_lines = false',
-        \ '      return original(namespace, bufnr, diagnostics, next_opts)',
+        \ '      return original(namespace, bufnr, diagnostics, pingu_mask_diagnostic_opts(opts))',
         \ '    end',
         \ '    return original(namespace, bufnr, diagnostics, opts)',
         \ '  end',
         \ '  state.show_wrapped = true',
+        \ 'end',
+        \ 'if type(vim.diagnostic.set) == "function" and not state.set_wrapped then',
+        \ '  vim.diagnostic.set = function(namespace, bufnr, diagnostics, opts)',
+        \ '    local current = _G.__pingu_diagnostic_takeover',
+        \ '    local original = type(current) == "table" and current.original_set or state.original_set',
+        \ '    if type(original) ~= "function" then',
+        \ '      return nil',
+        \ '    end',
+        \ '    if type(current) == "table" and current.enabled and not current.restoring then',
+        \ '      return original(namespace, bufnr, diagnostics, pingu_mask_diagnostic_opts(opts))',
+        \ '    end',
+        \ '    return original(namespace, bufnr, diagnostics, opts)',
+        \ '  end',
+        \ '  state.set_wrapped = true',
         \ 'end',
         \ 'state.enabled = tonumber(input.enabled or 0) == 1',
         \ 'state.namespaces = state.namespaces or {}',
@@ -2571,6 +2610,8 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '  state.captured = true',
         \ '  state.virtual_text = ok and type(cfg) == "table" and cfg.virtual_text or nil',
         \ '  state.virtual_lines = ok and type(cfg) == "table" and cfg.virtual_lines or nil',
+        \ '  state.signs = ok and type(cfg) == "table" and cfg.signs or nil',
+        \ '  state.underline = ok and type(cfg) == "table" and cfg.underline or nil',
         \ 'end',
         \ 'local function each_namespace(callback)',
         \ '  if type(vim.diagnostic.get_namespaces) ~= "function" then',
@@ -2595,6 +2636,8 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ '  state.namespaces[key] = {',
         \ '    virtual_text = ok and type(cfg) == "table" and cfg.virtual_text or nil,',
         \ '    virtual_lines = ok and type(cfg) == "table" and cfg.virtual_lines or nil,',
+        \ '    signs = ok and type(cfg) == "table" and cfg.signs or nil,',
+        \ '    underline = ok and type(cfg) == "table" and cfg.underline or nil,',
         \ '  }',
         \ 'end',
         \ 'local function capture_handler(name)',
@@ -2624,31 +2667,40 @@ function! s:apply_pingu_diagnostic_takeover() abort
         \ 'end',
         \ 'capture_global()',
         \ 'if tonumber(input.enabled or 0) == 1 then',
-        \ '  vim.diagnostic.config({ virtual_text = false, virtual_lines = false })',
+        \ '  vim.diagnostic.config(pingu_mask_diagnostic_opts({}))',
         \ '  suppress_handler("virtual_text")',
         \ '  suppress_handler("virtual_lines")',
+        \ '  suppress_handler("signs")',
+        \ '  suppress_handler("underline")',
         \ '  each_namespace(function(ns_id)',
         \ '    capture_namespace(ns_id)',
-        \ '    vim.diagnostic.config({ virtual_text = false, virtual_lines = false }, ns_id)',
+        \ '    vim.diagnostic.config(pingu_mask_diagnostic_opts({}), ns_id)',
         \ '  end)',
         \ 'elseif state.captured then',
         \ '  state.restoring = true',
-        \ '  vim.diagnostic.config({ virtual_text = state.virtual_text, virtual_lines = state.virtual_lines })',
+        \ '  vim.diagnostic.config({ virtual_text = state.virtual_text, virtual_lines = state.virtual_lines, signs = state.signs, underline = state.underline })',
         \ '  each_namespace(function(ns_id)',
         \ '    local cfg = state.namespaces[tostring(ns_id)]',
         \ '    if type(cfg) == "table" then',
-        \ '      vim.diagnostic.config({ virtual_text = cfg.virtual_text, virtual_lines = cfg.virtual_lines }, ns_id)',
+        \ '      vim.diagnostic.config({ virtual_text = cfg.virtual_text, virtual_lines = cfg.virtual_lines, signs = cfg.signs, underline = cfg.underline }, ns_id)',
         \ '    end',
         \ '  end)',
         \ '  restore_handler("virtual_text")',
         \ '  restore_handler("virtual_lines")',
+        \ '  restore_handler("signs")',
+        \ '  restore_handler("underline")',
         \ '  if type(state.original_show) == "function" then',
         \ '    vim.diagnostic.show = state.original_show',
         \ '    state.show_wrapped = false',
         \ '  end',
+        \ '  if type(state.original_set) == "function" then',
+        \ '    vim.diagnostic.set = state.original_set',
+        \ '    state.set_wrapped = false',
+        \ '  end',
         \ '  state.restoring = false',
         \ 'end',
         \ 'return true',
+        \ 'end)(_A)',
         \ ], "\n")
   try
     call luaeval(l:script, l:payload)
@@ -2919,7 +2971,8 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ 'scope': trim('' . get(l:action, 'scope', 'line')),
         \ }
   let l:script = join([
-        \ 'local input = _A or {}',
+        \ '(function(input)',
+        \ 'input = input or {}',
         \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
         \ 'local lnum = math.max(1, tonumber(input.lnum or 1) or 1)',
         \ 'local timeoutMs = math.max(100, tonumber(input.timeoutMs or 400) or 400)',
@@ -3075,6 +3128,7 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ '  return false',
         \ 'end',
         \ 'return execute_action(best.clientId, best.action)',
+        \ 'end)(_A)',
         \ ], "\n")
 
   try
@@ -7400,7 +7454,11 @@ function! s:pingu_issue_hint_text(issue, ...) abort
   let l:action = s:issue_effective_action(a:issue)
   let l:fixable = !empty(get(a:issue, 'snippet', ''))
         \ || index(['run_command', 'lsp_code_action', 'lsp_ai_fix'], get(l:action, 'op', '')) != -1
-  let l:text = printf('%s Pingu %s: %s', empty(l:prefix) ? '' : l:prefix, l:severity, l:message)
+  if get(a:issue, 'kind', '') ==# 'lsp_diagnostic'
+    let l:text = printf('%s %s', empty(l:prefix) ? '' : l:prefix, l:message)
+  else
+    let l:text = printf('%s Pingu %s: %s', empty(l:prefix) ? '' : l:prefix, l:severity, l:message)
+  endif
   if l:extra_count > 0
     let l:text .= printf(' +%d', l:extra_count)
   endif

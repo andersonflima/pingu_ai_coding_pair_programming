@@ -440,13 +440,9 @@ if !exists('g:pingu_diagnostic_takeover_max_items')
 endif
 
 if !exists('g:pingu_diagnostic_source_labels')
-  " Rótulos exibidos para diagnósticos LSP em takeover (chave 'default' é fallback).
+  " Rótulos opcionais para diagnósticos LSP em takeover; a origem real é preservada quando não houver mapeamento.
   let g:pingu_diagnostic_source_labels = {
         \ 'default': 'Pingu',
-        \ 'elixirls': 'Pingu',
-        \ 'elixirlsp': 'Pingu',
-        \ 'dialyzer': 'Pingu',
-        \ 'filetype:elixir': 'Pingu',
         \ }
 endif
 

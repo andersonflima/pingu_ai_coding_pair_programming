@@ -892,13 +892,13 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_hints_enabled = 1` habilita virtual text no Neovim para destacar comentarios acionaveis do Pingu
 - `let g:pingu_hints_max_lines = 1200` limita quantas linhas sao escaneadas para hints inline
 - `let g:pingu_issue_hints_enabled = 1` habilita virtual text para erros/sugestoes encontrados pelo Pingu
-- `let g:pingu_issue_hints_prefix = ''` controla o marcador do shadow text de diagnostico, por exemplo ` Pingu error: Logger.dub/1 is undefined or private`
+- `let g:pingu_issue_hints_prefix = ''` controla o marcador do shadow text de diagnostico, por exemplo ` Elixir: Logger.dub/1 is undefined or private`
 - `let g:pingu_issue_hints_priority = 10000` define prioridade alta para o shadow text do Pingu sobre outros virtual texts
 - `let g:pingu_issue_hints_position = 'eol'` controla a posicao do shadow text (`eol`, `right_align`, `overlay` ou `inline`)
-- `let g:pingu_diagnostic_takeover = 1` faz o Pingu assumir o virtual text de todos os LSPs/linters publicados via `vim.diagnostic`, incluindo erros de import/modulo, desligando `virtual_text`/`virtual_lines` nativos globais, por namespace e em chamadas diretas de publicacao, mantendo signs/underline
+- `let g:pingu_diagnostic_takeover = 1` faz o Pingu assumir a exibicao visual de todos os LSPs/linters publicados via `vim.diagnostic`, incluindo erros de import/modulo, desligando `virtual_text`, `virtual_lines`, `signs` e `underline` nativos globais, por namespace e em chamadas diretas de publicacao
 - `let g:pingu_diagnostic_takeover_max_items = -1` mostra diagnosticos externos do arquivo inteiro; use um numero positivo para limitar ou `0` para nao agregar diagnosticos LSP/linter no shadow text do Pingu
-- `g:pingu_diagnostic_source_labels` permite sobrescrever o rótulo exibido para os diagnostics de LSP agregados no takeover; por padrão usa `Pingu` (incluindo Elixir/ElixirLS e Dialyzer). Exemplo:
-  - `{'default': 'Pingu', 'elixirls': 'Pingu', 'filetype:elixir': 'Pingu'}`
+- `g:pingu_diagnostic_source_labels` permite sobrescrever o rotulo exibido para os diagnostics de LSP agregados no takeover; por padrao preserva a origem real do diagnostico e usa `Pingu` apenas como fallback. Exemplo:
+  - `{'default': 'Pingu', 'elixirls': 'Elixir', 'dialyzer': 'Dialyzer'}`
 - `:PinguHintsRefresh` recalcula manualmente todos os hints inline do buffer atual, incluindo diagnosticos LSP/linter assumidos pelo Pingu
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
