@@ -308,6 +308,11 @@ if !exists('g:pingu_latency_metrics_max_entries')
   let g:pingu_latency_metrics_max_entries = 50
 endif
 
+if !exists('g:pingu_logs_max_entries')
+  " Quantidade maxima de eventos operacionais mantidos para :PinguLogs.
+  let g:pingu_logs_max_entries = 200
+endif
+
 if !exists('g:pingu_statusline_enabled')
   let g:pingu_statusline_enabled = 1
 endif

@@ -874,6 +874,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_analysis_cache_max_entries = 24` reaproveita a ultima analise do mesmo texto e reduz relancamento do agente
 - `let g:pingu_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
 - `let g:pingu_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
+- `let g:pingu_logs_max_entries = 200` limita quantos eventos operacionais recentes ficam disponiveis em `:PinguLogs`
 - `let g:pingu_statusline_enabled = 1` habilita o indicador de status `PinguStatusline()`
 - `let g:pingu_statusline_icon = ''` define o icone exibido na status bar
 - `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; por padrao fica desligado para evitar duplicidade em setups com `lualine`
@@ -922,6 +923,8 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
   - `:PinguOutline` lista simbolos do documento no picker flutuante do Pingu, com destaque para tipo e nome
   - `:PinguRename [novo_nome]` executa rename LSP; sem argumento, pergunta o novo nome usando a palavra sob o cursor
 - `:PinguStop` interrompe processamento ativo quando o runtime parecer preso ou estiver demorando demais
+- `:PinguLogs` abre um buffer `pingu://logs` com erros/eventos operacionais recentes do Pingu, semelhante ao uso de `:LspLog`; no buffer, use `r` para atualizar e `q` para fechar
+- `:PinguLogsClear` limpa o historico de logs da sessao atual
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `:PinguUndoFix` reverte a ultima correcao aplicada pelo Pingu no arquivo atual
 - `:PinguUndoFix!` força a reversao mesmo se o buffer tiver mudado depois da correcao

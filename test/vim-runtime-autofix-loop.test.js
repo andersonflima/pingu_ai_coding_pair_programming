@@ -127,9 +127,24 @@ test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /win_gotoid\(l:source_winid\)/);
   assert.match(internalRuntime, /command! PinguStop call s:pingu_stop\(\)/);
   assert.match(internalRuntime, /command! -bang PinguUndoFix call s:undo_last_pingu_fix\(<bang>0\)/);
+  assert.match(internalRuntime, /command! PinguLogs call s:pingu_logs_open\(\)/);
+  assert.match(internalRuntime, /command! PinguLogsClear call s:pingu_logs_clear\(\)/);
   assert.doesNotMatch(internalRuntime, /command! RealtimeDevAgent/);
   assert.match(internalRuntime, /':PinguCheck<CR>'/);
   assert.match(internalRuntime, /':PinguWindowCheck<CR>'/);
+});
+
+test('runtime mantém histórico de logs operacionais do Pingu', () => {
+  assert.match(pluginRuntime, /let g:pingu_logs_max_entries = 200/);
+  assert.match(internalRuntime, /let s:pingu_logs = \[\]/);
+  assert.match(internalRuntime, /function! s:pingu_log_event\(level, source, message, \.\.\.\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_log_lines\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_logs_open\(\) abort/);
+  assert.match(internalRuntime, /file pingu:\/\/logs/);
+  assert.match(internalRuntime, /nnoremap <silent> <buffer> r :call <SID>pingu_logs_refresh\(\)<CR>/);
+  assert.match(internalRuntime, /function! s:pingu_logs_clear\(\) abort/);
+  assert.match(internalRuntime, /call s:pingu_log_event\('error', 'status', a:error/);
+  assert.match(internalRuntime, /call s:pingu_log_event\('error', 'lsp-hover', v:exception/);
 });
 
 test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
