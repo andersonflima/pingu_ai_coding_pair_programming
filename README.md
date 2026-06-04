@@ -912,6 +912,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
+- quando `:PinguFixCurrentAI` nao altera o buffer, o Pingu repinta os hints imediatamente, registra o motivo em `:PinguLogs` e tenta fallback local seguro para diagnostics conhecidos antes de desistir
 - apos `:PinguFixCurrent` ou `:PinguFixCurrentAI`, os hints sao repintados imediatamente e novamente apos os diagnostics do LSP atualizarem, evitando que outros erros desaparecam da tela
 - o Pingu tambem substitui a camada operacional usada normalmente pelo lspsaga:
   - `:PinguHover` abre documentacao LSP em janela flutuante do Pingu
