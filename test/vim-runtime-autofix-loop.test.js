@@ -134,6 +134,11 @@ test('runtime expõe comandos Pingu sem aliases legados', () => {
 
 test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
   assert.match(internalRuntime, /function! s:pingu_lsp_hover\(\) abort/);
+  assert.match(pluginRuntime, /let g:pingu_lsp_ui = 'float'/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_ui_mode\(\) abort/);
+  assert.match(internalRuntime, /function! s:define_pingu_lsp_ui_highlights\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_open_picker\(title, items\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_picker_apply\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_request_locations\(mode\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_set_qf\(title, items, jump_first\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_finder\(\) abort/);
@@ -148,6 +153,9 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
   assert.match(internalRuntime, /textDocument\/documentSymbol/);
   assert.match(internalRuntime, /vim\.lsp\.buf\.rename\(input\.name\)/);
   assert.match(internalRuntime, /call s:pingu_lsp_open_float\('Pingu Hover'/);
+  assert.match(internalRuntime, /elseif s:pingu_lsp_open_picker\(a:title, a:items\)/);
+  assert.match(internalRuntime, /Enter\/o abrir   q\/Esc fechar   quickfix sincronizado/);
+  assert.match(internalRuntime, /PinguLspFloatTitle/);
   assert.match(internalRuntime, /call setqflist\(\[\], 'r', \{'title': a:title\}\)/);
 });
 

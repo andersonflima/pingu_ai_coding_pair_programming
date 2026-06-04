@@ -7346,21 +7346,41 @@ function! s:pingu_lsp_warn_unavailable() abort
   echohl None
 endfunction
 
+let s:pingu_lsp_picker_state = {}
+
+function! s:pingu_lsp_ui_mode() abort
+  let l:mode = tolower(trim('' . get(g:, 'pingu_lsp_ui', 'float')))
+  return index(['float', 'quickfix'], l:mode) == -1 ? 'float' : l:mode
+endfunction
+
+function! s:define_pingu_lsp_ui_highlights() abort
+  silent! highlight default link PinguLspFloatTitle Title
+  silent! highlight default link PinguLspFloatFooter Comment
+  silent! highlight default link PinguLspFloatIndex Number
+  silent! highlight default link PinguLspFloatKind Type
+  silent! highlight default link PinguLspFloatLocation Directory
+endfunction
+
 function! s:pingu_lsp_open_float(title, lines) abort
   if !has('nvim') || !exists('*nvim_create_buf') || empty(a:lines)
     echo join(a:lines, "\n")
     return
   endif
 
-  let l:lines = [a:title, ''] + copy(a:lines)
-  let l:width = min([90, max([24] + map(copy(l:lines), {_, line -> strdisplaywidth(line)}))])
-  let l:height = min([18, max([1, len(l:lines)])])
+  call s:define_pingu_lsp_ui_highlights()
+  let l:title = ' ' . a:title
+  let l:footer = ' q/Esc fechar '
+  let l:lines = [l:title, repeat('─', max([12, strdisplaywidth(l:title)])), ''] + copy(a:lines) + ['', l:footer]
+  let l:width = min([90, max([34] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([20, max([1, len(l:lines)])])
   let l:bufnr = nvim_create_buf(v:false, v:true)
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call setbufvar(l:bufnr, '&buftype', 'nofile')
   call setbufvar(l:bufnr, '&bufhidden', 'wipe')
   call setbufvar(l:bufnr, '&swapfile', 0)
   call setbufvar(l:bufnr, 'pingu_lsp_float', 1)
+  call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatTitle', 0, 0, -1)
+  call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatFooter', len(l:lines) - 1, 0, -1)
   let l:winid = nvim_open_win(l:bufnr, v:false, {
         \ 'relative': 'cursor',
         \ 'row': 1,
@@ -7373,6 +7393,117 @@ function! s:pingu_lsp_open_float(title, lines) abort
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   silent! call nvim_win_set_option(l:winid, 'wrap', v:true)
+endfunction
+
+function! s:pingu_lsp_item_label(item, index) abort
+  let l:kind = trim('' . get(a:item, 'pingu_kind', get(a:item, 'text', 'item')))
+  let l:filename = fnamemodify(get(a:item, 'filename', ''), ':~:.')
+  let l:lnum = max([1, str2nr(string(get(a:item, 'lnum', 1)))])
+  let l:col = max([1, str2nr(string(get(a:item, 'col', 1)))])
+  let l:detail = trim('' . get(a:item, 'pingu_detail', ''))
+  if empty(l:detail)
+    let l:detail = printf('%s:%d:%d', l:filename, l:lnum, l:col)
+  endif
+  return printf('%2d  %-14s %s', a:index, l:kind, l:detail)
+endfunction
+
+function! s:pingu_lsp_picker_close() abort
+  let l:winid = str2nr(string(get(s:pingu_lsp_picker_state, 'winid', -1)))
+  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
+    silent! call nvim_win_close(l:winid, v:true)
+  endif
+  let s:pingu_lsp_picker_state = {}
+endfunction
+
+function! s:pingu_lsp_picker_selected_index() abort
+  let l:first_item_line = 4
+  let l:current = line('.')
+  let l:index = l:current - l:first_item_line + 1
+  let l:items = get(s:pingu_lsp_picker_state, 'items', [])
+  if l:index < 1
+    return 1
+  endif
+  if l:index > len(l:items)
+    return len(l:items)
+  endif
+  return l:index
+endfunction
+
+function! s:pingu_lsp_picker_apply() abort
+  let l:items = get(s:pingu_lsp_picker_state, 'items', [])
+  if empty(l:items)
+    call s:pingu_lsp_picker_close()
+    return
+  endif
+  let l:index = s:pingu_lsp_picker_selected_index()
+  let l:item = deepcopy(l:items[l:index - 1])
+  let l:source_winid = str2nr(string(get(s:pingu_lsp_picker_state, 'source_winid', -1)))
+  call s:pingu_lsp_picker_close()
+  if l:source_winid > 0 && exists('*win_gotoid')
+    silent! call win_gotoid(l:source_winid)
+  endif
+  execute 'edit ' . fnameescape(get(l:item, 'filename', ''))
+  call cursor(max([1, str2nr(string(get(l:item, 'lnum', 1)))]), max([1, str2nr(string(get(l:item, 'col', 1)))]))
+  normal! zv
+endfunction
+
+function! s:pingu_lsp_open_picker(title, items) abort
+  if !has('nvim') || !exists('*nvim_open_win') || s:pingu_lsp_ui_mode() !=# 'float'
+    return v:false
+  endif
+
+  call s:define_pingu_lsp_ui_highlights()
+  call s:pingu_lsp_picker_close()
+  let l:items = type(a:items) == v:t_list ? deepcopy(a:items) : []
+  let l:title = printf(' %s  %d resultado%s', a:title, len(l:items), len(l:items) == 1 ? '' : 's')
+  let l:footer = ' Enter/o abrir   q/Esc fechar   quickfix sincronizado '
+  let l:lines = [l:title, repeat('─', max([12, strdisplaywidth(l:title)])), '']
+  let l:index = 1
+  for l:item in l:items
+    call add(l:lines, s:pingu_lsp_item_label(l:item, l:index))
+    let l:index += 1
+  endfor
+  call add(l:lines, '')
+  call add(l:lines, l:footer)
+
+  let l:columns = exists('&columns') ? &columns : 100
+  let l:screen_lines = exists('&lines') ? &lines : 40
+  let l:width = min([max([54, float2nr(l:columns * 0.72)]), max([54] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([max([8, float2nr(l:screen_lines * 0.55)]), len(l:lines)])
+  let l:row = max([1, float2nr((l:screen_lines - l:height) / 2) - 1])
+  let l:col = max([0, float2nr((l:columns - l:width) / 2)])
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
+  call setbufvar(l:bufnr, '&buftype', 'nofile')
+  call setbufvar(l:bufnr, '&bufhidden', 'wipe')
+  call setbufvar(l:bufnr, '&swapfile', 0)
+  call setbufvar(l:bufnr, 'pingu_lsp_picker', 1)
+  call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatTitle', 0, 0, -1)
+  call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatFooter', len(l:lines) - 1, 0, -1)
+  for l:line_index in range(3, len(l:items) + 2)
+    call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatIndex', l:line_index, 0, 4)
+    call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatKind', l:line_index, 4, 20)
+    call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatLocation', l:line_index, 20, -1)
+  endfor
+  let l:source_winid = win_getid()
+  let l:winid = nvim_open_win(l:bufnr, v:true, {
+        \ 'relative': 'editor',
+        \ 'row': l:row,
+        \ 'col': l:col,
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ })
+  let s:pingu_lsp_picker_state = {'bufnr': l:bufnr, 'winid': l:winid, 'items': l:items, 'source_winid': l:source_winid}
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':call <SID>pingu_lsp_picker_apply()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'o', ':call <SID>pingu_lsp_picker_apply()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':call <SID>pingu_lsp_picker_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':call <SID>pingu_lsp_picker_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call cursor(4, 1)
+  silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
+  silent! call nvim_win_set_option(l:winid, 'wrap', v:false)
+  return v:true
 endfunction
 
 function! s:pingu_lsp_hover() abort
@@ -7448,6 +7579,8 @@ function! s:pingu_lsp_request_locations(mode) abort
         \ '        lnum = (tonumber(range.start.line or 0) or 0) + 1,',
         \ '        col = (tonumber(range.start.character or 0) or 0) + 1,',
         \ '        text = label .. ": " .. filename,',
+        \ '        pingu_kind = label,',
+        \ '        pingu_detail = vim.fn.fnamemodify(filename, ":~:.") .. ":" .. tostring((tonumber(range.start.line or 0) or 0) + 1) .. ":" .. tostring((tonumber(range.start.character or 0) or 0) + 1),',
         \ '      })',
         \ '    end',
         \ '  end',
@@ -7498,6 +7631,8 @@ function! s:pingu_lsp_set_qf(title, items, jump_first) abort
   call setqflist(a:items, 'a')
   if a:jump_first
     cfirst
+  elseif s:pingu_lsp_open_picker(a:title, a:items)
+    return v:true
   else
     let l:source_winid = win_getid()
     copen
@@ -7552,6 +7687,8 @@ function! s:pingu_lsp_outline() abort
         \ '      lnum = (tonumber(range.start.line or 0) or 0) + 1,',
         \ '      col = (tonumber(range.start.character or 0) or 0) + 1,',
         \ '      text = string.rep("  ", depth) .. kind .. ": " .. name,',
+        \ '      pingu_kind = kind,',
+        \ '      pingu_detail = string.rep("  ", depth) .. name,',
         \ '    })',
         \ '  end',
         \ '  for _, child in ipairs(symbol.children or {}) do add_symbol(child, depth + 1) end',

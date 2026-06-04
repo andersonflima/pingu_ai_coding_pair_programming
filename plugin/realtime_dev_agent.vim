@@ -379,6 +379,11 @@ if !exists('g:pingu_issue_qf_open')
   let g:pingu_issue_qf_open = 1
 endif
 
+if !exists('g:pingu_lsp_ui')
+  " UI padrao para finder/references/outline: float ou quickfix.
+  let g:pingu_lsp_ui = 'float'
+endif
+
 if !exists('g:pingu_fix_current_key')
   " Atalho para aplicar a correcao disponivel na linha atual.
   let g:pingu_fix_current_key = '<leader>pif'
