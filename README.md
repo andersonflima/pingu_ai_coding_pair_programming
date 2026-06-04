@@ -885,6 +885,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
 - `let g:pingu_prev_issue_key = '<C-k>'` ativa o atalho para o diagnostico/aviso anterior do Pingu no buffer atual
 - `let g:pingu_issue_qf_open = 1` abre quickfix ao navegar pelos diagnosticos do Pingu com `:PinguQfNext`/`:PinguQfPrev`
+- `let g:pingu_lsp_ui = 'float'` usa a UI flutuante do Pingu para finder/references/outline; use `'quickfix'` quando quiser abrir somente a quickfix nativa
 - `let g:pingu_ai_provider = 'copilot'` define o provider inicial; use `codex`/`openai` para OpenAI Codex ou `auto` para fallback automatico
 - `let g:pingu_prompt_context_radius = 80` limita quantas linhas em volta do cursor/selecao sao enviadas no prompt manual
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
@@ -915,10 +916,10 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
   - `:PinguHover` abre documentacao LSP em janela flutuante do Pingu
   - `:PinguCodeAction` tenta a correcao do Pingu na linha atual e usa `vim.lsp.buf.code_action()` apenas como fallback quando nao houver issue aplicavel do Pingu
   - `:PinguDiagnosticNext` e `:PinguDiagnosticPrev` navegam pelos diagnostics gerenciados pelo Pingu, equivalentes a `:PinguQfNext` e `:PinguQfPrev`
-  - `:PinguFinder` agrega definicao, tipo, implementacao e referencias em quickfix controlado pelo Pingu
+  - `:PinguFinder` agrega definicao, tipo, implementacao e referencias em um picker flutuante do Pingu, mantendo a quickfix sincronizada
   - `:PinguDefinition` navega para a primeira definicao retornada pelo LSP
-  - `:PinguReferences` lista referencias em quickfix controlado pelo Pingu
-  - `:PinguOutline` lista simbolos do documento em quickfix controlado pelo Pingu
+  - `:PinguReferences` lista referencias no picker flutuante do Pingu, com `Enter`/`o` para abrir e `q`/`Esc` para fechar
+  - `:PinguOutline` lista simbolos do documento no picker flutuante do Pingu, com destaque para tipo e nome
   - `:PinguRename [novo_nome]` executa rename LSP; sem argumento, pergunta o novo nome usando a palavra sob o cursor
 - `:PinguStop` interrompe processamento ativo quando o runtime parecer preso ou estiver demorando demais
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
