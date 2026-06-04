@@ -174,6 +174,20 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
   assert.match(internalRuntime, /call setqflist\(\[\], 'r', \{'title': a:title\}\)/);
 });
 
+test('runtime mostra hover de issue com layout limpo', () => {
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue\) abort/);
+  assert.match(internalRuntime, /' Pingu'/);
+  assert.match(internalRuntime, /Code action/);
+  assert.match(internalRuntime, /Correcao com IA/);
+  assert.match(internalRuntime, /Aplicar correcao sugerida/);
+  assert.match(internalRuntime, /Corrigir com IA/);
+  assert.match(internalRuntime, /Abrir painel/);
+  assert.doesNotMatch(internalRuntime, /Pingu: ' \. l:message/);
+  assert.doesNotMatch(internalRuntime, /lsp_code_action: %s/);
+  assert.match(internalRuntime, /if l:line == 5\n    call s:pingu_issue_hover_action\('apply'\)/);
+  assert.match(internalRuntime, /if empty\(l:issue\)\n    let l:issue = s:pingu_issue_at_cursor_for_action\(\)\n  endif/);
+});
+
 test('runtime mantem painel Pingu fechado apos fechamento manual', () => {
   assert.match(internalRuntime, /function! s:window_close\(\) abort\n  let g:pingu_show_window = 0/);
   assert.match(internalRuntime, /augroup pingu_window_state/);
@@ -575,11 +589,15 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /function! s:pingu_lsp_local_fix_candidate\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_local_fix_candidate_for_line\(bufnr, lnum\) abort/);
   assert.match(internalRuntime, /function! s:restore_issue_cursor_and_hints\(issue\) abort/);
+  assert.match(internalRuntime, /let s:pingu_lsp_ai_fix_last_error = ''/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_ai_fix_fail\(reason, issue\) abort/);
   assert.match(internalRuntime, /'Logger'/);
   assert.match(internalRuntime, /'debug'/);
   assert.match(internalRuntime, /let l:threshold = strlen\(l:name\) <= 4 \? 3 : 2/);
   assert.match(internalRuntime, /let l:issue = s:pingu_lsp_local_fix_candidate_for_line\(bufnr\('%'\), line\('\.'\)\)/);
   assert.match(internalRuntime, /let l:local_fix = s:pingu_lsp_local_fix_candidate\(l:issue\)/);
+  assert.match(internalRuntime, /Correcao com IA nao alterou o buffer: /);
+  assert.match(internalRuntime, /call s:pingu_log_event\('error', 'fix-current-ai'/);
   assert.match(internalRuntime, /call s:restore_issue_cursor_and_hints\(l:issue\)/);
   assert.match(internalRuntime, /silent! call s:update_pingu_all_hints_current_buffer\(\)/);
   assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix\(s:pingu_issue_ai_fix_candidate\(a:issue\)\)/);
@@ -589,6 +607,8 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /'kind': 'lsp_ai_fix'/);
   assert.match(internalRuntime, /'op': 'lsp_ai_fix'/);
   assert.match(internalRuntime, /'--lsp-ai-fix'/);
+  assert.match(internalRuntime, /provider assistido nao aplicou: /);
+  assert.match(internalRuntime, /snippet assistido nao alterou o buffer/);
   assert.match(internalRuntime, /index\(\['lsp_code_action', 'lsp_ai_fix'\], l:item_kind\)/);
 });
 
