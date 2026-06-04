@@ -161,8 +161,13 @@ test('runtime permite escolher provider assistido do Pingu', () => {
 test('runtime permite corrigir somente a issue da linha atual', () => {
   assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_at_cursor_for_action\(\) abort/);
+  assert.match(internalRuntime, /function! s:refresh_pingu_hints_after_issue_apply\(bufnr\) abort/);
+  assert.match(internalRuntime, /let l:issue = s:pingu_issue_at_cursor_for_action\(\)/);
   assert.match(internalRuntime, /s:get_buffer_issue_at_cursor\(\)/);
   assert.match(internalRuntime, /s:issue_has_applicable_fix\(l:issue\)/);
+  assert.match(internalRuntime, /call s:refresh_pingu_hints_after_issue_apply\(bufnr\('%'\)\)/);
+  assert.doesNotMatch(internalRuntime, /Correcao aplicada na linha atual'\\n\s*call s:clear_pingu_issue_hints_for_buffer/);
   assert.match(internalRuntime, /':PinguFixCurrent<CR>'/);
 });
 
@@ -512,6 +517,10 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /function! s:lsp_ai_fix_enabled\(\) abort/);
   assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix\(issue\) abort/);
   assert.match(internalRuntime, /function! s:apply_issue_lsp_ai_fix_explicit\(issue\) abort/);
+  assert.match(internalRuntime, /let l:issue\.filename = fnamemodify\(get\(l:issue, 'filename', empty\(bufname\('%'\)\) \? '' : bufname\('%'\)\), ':p'\)/);
+  assert.match(internalRuntime, /function! s:pingu_fix_current_issue_with_ai\(\) abort\n  let l:issue = s:pingu_issue_at_cursor_for_action\(\)/);
+  assert.match(internalRuntime, /call s:refresh_pingu_hints_after_issue_apply\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /for l:delay in \[80, 250, 750, 1500\]/);
   assert.match(internalRuntime, /function! s:pingu_lsp_local_fix_candidate\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_local_fix_candidate_for_line\(bufnr, lnum\) abort/);
   assert.match(internalRuntime, /function! s:restore_issue_cursor_and_hints\(issue\) abort/);
