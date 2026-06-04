@@ -911,6 +911,15 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
 - apos `:PinguFixCurrent` ou `:PinguFixCurrentAI`, os hints sao repintados imediatamente e novamente apos os diagnostics do LSP atualizarem, evitando que outros erros desaparecam da tela
+- o Pingu tambem substitui a camada operacional usada normalmente pelo lspsaga:
+  - `:PinguHover` abre documentacao LSP em janela flutuante do Pingu
+  - `:PinguCodeAction` tenta a correcao do Pingu na linha atual e usa `vim.lsp.buf.code_action()` apenas como fallback quando nao houver issue aplicavel do Pingu
+  - `:PinguDiagnosticNext` e `:PinguDiagnosticPrev` navegam pelos diagnostics gerenciados pelo Pingu, equivalentes a `:PinguQfNext` e `:PinguQfPrev`
+  - `:PinguFinder` agrega definicao, tipo, implementacao e referencias em quickfix controlado pelo Pingu
+  - `:PinguDefinition` navega para a primeira definicao retornada pelo LSP
+  - `:PinguReferences` lista referencias em quickfix controlado pelo Pingu
+  - `:PinguOutline` lista simbolos do documento em quickfix controlado pelo Pingu
+  - `:PinguRename [novo_nome]` executa rename LSP; sem argumento, pergunta o novo nome usando a palavra sob o cursor
 - `:PinguStop` interrompe processamento ativo quando o runtime parecer preso ou estiver demorando demais
 - `:PinguLatencyMetrics` imprime as amostras recentes de latencia sem gravar arquivos
 - `:PinguUndoFix` reverte a ultima correcao aplicada pelo Pingu no arquivo atual

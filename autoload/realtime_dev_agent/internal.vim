@@ -7336,6 +7336,276 @@ function! s:pingu_qf_prev() abort
   endif
 endfunction
 
+function! s:pingu_lsp_ready() abort
+  return has('nvim') && exists('*luaeval')
+endfunction
+
+function! s:pingu_lsp_warn_unavailable() abort
+  echohl WarningMsg
+  echomsg '[Pingu] LSP do Neovim indisponivel neste buffer'
+  echohl None
+endfunction
+
+function! s:pingu_lsp_open_float(title, lines) abort
+  if !has('nvim') || !exists('*nvim_create_buf') || empty(a:lines)
+    echo join(a:lines, "\n")
+    return
+  endif
+
+  let l:lines = [a:title, ''] + copy(a:lines)
+  let l:width = min([90, max([24] + map(copy(l:lines), {_, line -> strdisplaywidth(line)}))])
+  let l:height = min([18, max([1, len(l:lines)])])
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
+  call setbufvar(l:bufnr, '&buftype', 'nofile')
+  call setbufvar(l:bufnr, '&bufhidden', 'wipe')
+  call setbufvar(l:bufnr, '&swapfile', 0)
+  call setbufvar(l:bufnr, 'pingu_lsp_float', 1)
+  let l:winid = nvim_open_win(l:bufnr, v:false, {
+        \ 'relative': 'cursor',
+        \ 'row': 1,
+        \ 'col': 0,
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ })
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  silent! call nvim_win_set_option(l:winid, 'wrap', v:true)
+endfunction
+
+function! s:pingu_lsp_hover() abort
+  if !s:pingu_lsp_ready()
+    call s:pingu_lsp_warn_unavailable()
+    return
+  endif
+
+  let l:script = join([
+        \ '(function(input)',
+        \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
+        \ 'if bufnr <= 0 or type(vim.lsp) ~= "table" or type(vim.lsp.buf_request_sync) ~= "function" then return { ok = false, lines = {} } end',
+        \ 'local clients = {}',
+        \ 'if type(vim.lsp.get_clients) == "function" then clients = vim.lsp.get_clients({ bufnr = bufnr }) else clients = vim.lsp.get_active_clients({ bufnr = bufnr }) end',
+        \ 'if type(clients) ~= "table" or vim.tbl_isempty(clients) then return { ok = false, lines = {} } end',
+        \ 'local ok_params, params = pcall(vim.lsp.util.make_position_params, 0, "utf-16")',
+        \ 'if not ok_params then params = vim.lsp.util.make_position_params() end',
+        \ 'local responses = vim.lsp.buf_request_sync(bufnr, "textDocument/hover", params, tonumber(input.timeoutMs or 400) or 400)',
+        \ 'local lines = {}',
+        \ 'for _, response in pairs(responses or {}) do',
+        \ '  local result = response.result',
+        \ '  if result and result.contents then',
+        \ '    local converted = vim.lsp.util.convert_input_to_markdown_lines(result.contents)',
+        \ '    converted = vim.lsp.util.trim_empty_lines(converted)',
+        \ '    for _, line in ipairs(converted or {}) do',
+        \ '      if tostring(line) ~= "" then table.insert(lines, tostring(line)) end',
+        \ '    end',
+        \ '  end',
+        \ 'end',
+        \ 'return { ok = #lines > 0, lines = lines }',
+        \ 'end)(_A)',
+        \ ], "\n")
+
+  try
+    let l:result = luaeval(l:script, {'bufnr': bufnr('%'), 'timeoutMs': 500})
+  catch
+    let l:result = {'ok': v:false, 'lines': []}
+  endtry
+
+  if type(l:result) != v:t_dict || !get(l:result, 'ok', v:false)
+    call s:pingu_lsp_warn_unavailable()
+    return
+  endif
+  call s:pingu_lsp_open_float('Pingu Hover', get(l:result, 'lines', []))
+endfunction
+
+function! s:pingu_lsp_request_locations(mode) abort
+  if !s:pingu_lsp_ready()
+    return []
+  endif
+
+  let l:script = join([
+        \ '(function(input)',
+        \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
+        \ 'if bufnr <= 0 or type(vim.lsp) ~= "table" or type(vim.lsp.buf_request_sync) ~= "function" then return {} end',
+        \ 'local clients = {}',
+        \ 'if type(vim.lsp.get_clients) == "function" then clients = vim.lsp.get_clients({ bufnr = bufnr }) else clients = vim.lsp.get_active_clients({ bufnr = bufnr }) end',
+        \ 'if type(clients) ~= "table" or vim.tbl_isempty(clients) then return {} end',
+        \ 'local ok_params, params = pcall(vim.lsp.util.make_position_params, 0, "utf-16")',
+        \ 'if not ok_params then params = vim.lsp.util.make_position_params() end',
+        \ 'local function normalize_result(result, label, items)',
+        \ '  if result == nil then return end',
+        \ '  local list = result',
+        \ '  if result.uri ~= nil or result.targetUri ~= nil then list = { result } end',
+        \ '  if type(list) ~= "table" then return end',
+        \ '  for _, location in ipairs(list) do',
+        \ '    local uri = location.uri or location.targetUri',
+        \ '    local range = location.range or location.targetSelectionRange or location.targetRange',
+        \ '    if uri and range and range.start then',
+        \ '      local filename = vim.uri_to_fname(uri)',
+        \ '      table.insert(items, {',
+        \ '        filename = filename,',
+        \ '        lnum = (tonumber(range.start.line or 0) or 0) + 1,',
+        \ '        col = (tonumber(range.start.character or 0) or 0) + 1,',
+        \ '        text = label .. ": " .. filename,',
+        \ '      })',
+        \ '    end',
+        \ '  end',
+        \ 'end',
+        \ 'local method_sets = {',
+        \ '  definition = { { "textDocument/definition", params, "definition" } },',
+        \ '  references = { { "textDocument/references", vim.tbl_extend("force", vim.deepcopy(params), { context = { includeDeclaration = true } }), "reference" } },',
+        \ '  finder = {',
+        \ '    { "textDocument/definition", params, "definition" },',
+        \ '    { "textDocument/typeDefinition", params, "type" },',
+        \ '    { "textDocument/implementation", params, "implementation" },',
+        \ '    { "textDocument/references", vim.tbl_extend("force", vim.deepcopy(params), { context = { includeDeclaration = true } }), "reference" },',
+        \ '  },',
+        \ '}',
+        \ 'local items = {}',
+        \ 'for _, spec in ipairs(method_sets[tostring(input.mode or "finder")] or method_sets.finder) do',
+        \ '  local responses = vim.lsp.buf_request_sync(bufnr, spec[1], spec[2], tonumber(input.timeoutMs or 600) or 600)',
+        \ '  for _, response in pairs(responses or {}) do normalize_result(response.result, spec[3], items) end',
+        \ 'end',
+        \ 'table.sort(items, function(a, b)',
+        \ '  if a.filename == b.filename then',
+        \ '    if a.lnum == b.lnum then return (a.col or 1) < (b.col or 1) end',
+        \ '    return (a.lnum or 1) < (b.lnum or 1)',
+        \ '  end',
+        \ '  return tostring(a.filename or "") < tostring(b.filename or "")',
+        \ 'end)',
+        \ 'return items',
+        \ 'end)(_A)',
+        \ ], "\n")
+
+  try
+    let l:items = luaeval(l:script, {'bufnr': bufnr('%'), 'mode': a:mode, 'timeoutMs': 700})
+  catch
+    return []
+  endtry
+  return type(l:items) == v:t_list ? l:items : []
+endfunction
+
+function! s:pingu_lsp_set_qf(title, items, jump_first) abort
+  if empty(a:items)
+    echohl WarningMsg
+    echomsg '[Pingu] Nenhum resultado LSP encontrado'
+    echohl None
+    return v:false
+  endif
+
+  call setqflist([], 'r', {'title': a:title})
+  call setqflist(a:items, 'a')
+  if a:jump_first
+    cfirst
+  else
+    let l:source_winid = win_getid()
+    copen
+    if exists('*win_gotoid')
+      silent! call win_gotoid(l:source_winid)
+    endif
+  endif
+  return v:true
+endfunction
+
+function! s:pingu_lsp_finder() abort
+  let l:items = s:pingu_lsp_request_locations('finder')
+  call s:pingu_lsp_set_qf('Pingu Finder', l:items, v:false)
+endfunction
+
+function! s:pingu_lsp_definition() abort
+  let l:items = s:pingu_lsp_request_locations('definition')
+  call s:pingu_lsp_set_qf('Pingu Definition', l:items, v:true)
+endfunction
+
+function! s:pingu_lsp_references() abort
+  let l:items = s:pingu_lsp_request_locations('references')
+  call s:pingu_lsp_set_qf('Pingu References', l:items, v:false)
+endfunction
+
+function! s:pingu_lsp_outline() abort
+  if !s:pingu_lsp_ready()
+    call s:pingu_lsp_warn_unavailable()
+    return
+  endif
+
+  let l:script = join([
+        \ '(function(input)',
+        \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
+        \ 'if bufnr <= 0 or type(vim.lsp) ~= "table" or type(vim.lsp.buf_request_sync) ~= "function" then return {} end',
+        \ 'local clients = {}',
+        \ 'if type(vim.lsp.get_clients) == "function" then clients = vim.lsp.get_clients({ bufnr = bufnr }) else clients = vim.lsp.get_active_clients({ bufnr = bufnr }) end',
+        \ 'if type(clients) ~= "table" or vim.tbl_isempty(clients) then return {} end',
+        \ 'local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }',
+        \ 'local responses = vim.lsp.buf_request_sync(bufnr, "textDocument/documentSymbol", params, tonumber(input.timeoutMs or 700) or 700)',
+        \ 'local items = {}',
+        \ 'local kinds = vim.lsp.protocol.SymbolKind or {}',
+        \ 'local function add_symbol(symbol, depth)',
+        \ '  if type(symbol) ~= "table" then return end',
+        \ '  local range = symbol.selectionRange or symbol.range or symbol.location and symbol.location.range',
+        \ '  local uri = symbol.location and symbol.location.uri or vim.uri_from_bufnr(bufnr)',
+        \ '  if range and range.start then',
+        \ '    local kind = kinds[symbol.kind] or tostring(symbol.kind or "symbol")',
+        \ '    local name = tostring(symbol.name or "")',
+        \ '    table.insert(items, {',
+        \ '      filename = vim.uri_to_fname(uri),',
+        \ '      lnum = (tonumber(range.start.line or 0) or 0) + 1,',
+        \ '      col = (tonumber(range.start.character or 0) or 0) + 1,',
+        \ '      text = string.rep("  ", depth) .. kind .. ": " .. name,',
+        \ '    })',
+        \ '  end',
+        \ '  for _, child in ipairs(symbol.children or {}) do add_symbol(child, depth + 1) end',
+        \ 'end',
+        \ 'for _, response in pairs(responses or {}) do',
+        \ '  for _, symbol in ipairs(response.result or {}) do add_symbol(symbol, 0) end',
+        \ 'end',
+        \ 'return items',
+        \ 'end)(_A)',
+        \ ], "\n")
+
+  try
+    let l:items = luaeval(l:script, {'bufnr': bufnr('%'), 'timeoutMs': 700})
+  catch
+    let l:items = []
+  endtry
+  call s:pingu_lsp_set_qf('Pingu Outline', l:items, v:false)
+endfunction
+
+function! s:pingu_lsp_rename(name) abort
+  if !s:pingu_lsp_ready()
+    call s:pingu_lsp_warn_unavailable()
+    return
+  endif
+
+  let l:name = trim(a:name)
+  if empty(l:name)
+    let l:name = input('Novo nome: ', expand('<cword>'))
+  endif
+  if empty(trim(l:name))
+    return
+  endif
+
+  try
+    let l:ok = luaeval('(function(input) if type(vim.lsp) ~= "table" or type(vim.lsp.buf) ~= "table" or type(vim.lsp.buf.rename) ~= "function" then return false end vim.lsp.buf.rename(input.name); return true end)(_A)', {'name': l:name})
+  catch
+    let l:ok = v:false
+  endtry
+  if !l:ok
+    call s:pingu_lsp_warn_unavailable()
+  endif
+endfunction
+
+function! s:pingu_lsp_code_action() abort
+  if s:pingu_fix_current_issue()
+    return
+  endif
+  if !s:pingu_lsp_ready()
+    call s:pingu_lsp_warn_unavailable()
+    return
+  endif
+  silent! call luaeval('(function() if vim.lsp and vim.lsp.buf and vim.lsp.buf.code_action then vim.lsp.buf.code_action(); return true end return false end)()')
+endfunction
+
 function! s:stop_pingu_prompt_job() abort
   let l:job = get(s:, 'pingu_prompt_job', -1)
   let s:pingu_prompt_job = -1
@@ -7951,25 +8221,27 @@ function! s:pingu_fix_current_issue() abort
   let l:issue = s:pingu_issue_at_cursor_for_action()
   if empty(l:issue)
     echomsg '[Pingu] Nenhuma sugestao na linha atual'
-    return
+    return v:false
   endif
   if !s:issue_has_applicable_fix(l:issue)
     echomsg '[Pingu] Sugestao sem correcao automatica aplicavel'
-    return
+    return v:false
   endif
   if s:realtime_dev_agent_auto_fix_busy
     echomsg '[Pingu] Aguarde o fim do auto-fix atual'
-    return
+    return v:false
   endif
   if s:apply_issue_snippet(l:issue, v:false)
     echo '[Pingu] Correcao aplicada na linha atual'
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
+    return v:true
   else
     call s:restore_issue_cursor_and_hints(l:issue)
     echomsg '[Pingu] Correcao nao alterou o buffer'
   endif
+  return v:false
 endfunction
 
 function! s:pingu_stop() abort
@@ -8038,6 +8310,15 @@ command! PinguFixCurrentAI call s:pingu_fix_current_issue_with_ai()
 command! PinguIssueHoverClose call s:close_pingu_issue_hover_menu()
 command! PinguQfNext call s:pingu_qf_next()
 command! PinguQfPrev call s:pingu_qf_prev()
+command! PinguDiagnosticNext call s:pingu_qf_next()
+command! PinguDiagnosticPrev call s:pingu_qf_prev()
+command! PinguHover call s:pingu_lsp_hover()
+command! PinguFinder call s:pingu_lsp_finder()
+command! PinguDefinition call s:pingu_lsp_definition()
+command! PinguReferences call s:pingu_lsp_references()
+command! PinguOutline call s:pingu_lsp_outline()
+command! -nargs=? PinguRename call s:pingu_lsp_rename(<q-args>)
+command! PinguCodeAction call s:pingu_lsp_code_action()
 command! PinguStop call s:pingu_stop()
 command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
