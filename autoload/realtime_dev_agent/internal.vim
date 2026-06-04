@@ -40,6 +40,7 @@ let s:realtime_dev_agent_auto_fix_timer = -1
 let s:realtime_dev_agent_auto_fix_state = {}
 let s:realtime_dev_agent_latency_metrics = []
 let s:realtime_dev_agent_fix_history = {}
+let s:pingu_logs = []
 let s:pingu_status = {
       \ 'running': v:false,
       \ 'phase': 'idle',
@@ -512,6 +513,84 @@ function! s:now_ms() abort
   return localtime() * 1000
 endfunction
 
+function! s:pingu_logs_max_entries() abort
+  let l:max_entries = get(g:, 'pingu_logs_max_entries', 200)
+  if type(l:max_entries) != v:t_number
+    let l:max_entries = str2nr(string(l:max_entries))
+  endif
+  return l:max_entries > 0 ? l:max_entries : 200
+endfunction
+
+function! s:pingu_log_event(level, source, message, ...) abort
+  let l:message = trim('' . a:message)
+  if empty(l:message)
+    return
+  endif
+
+  let l:context = a:0 > 0 && type(a:1) == v:t_dict ? deepcopy(a:1) : {}
+  let l:item = {
+        \ 'timestamp': strftime('%Y-%m-%d %H:%M:%S'),
+        \ 'level': toupper(trim('' . a:level)),
+        \ 'source': trim('' . a:source),
+        \ 'message': l:message,
+        \ 'context': l:context,
+        \ }
+  call add(s:pingu_logs, l:item)
+  let l:max_entries = s:pingu_logs_max_entries()
+  while len(s:pingu_logs) > l:max_entries
+    call remove(s:pingu_logs, 0)
+  endwhile
+endfunction
+
+function! s:pingu_log_lines() abort
+  let l:lines = ['Pingu Logs', '==========', '']
+  if empty(s:pingu_logs)
+    call add(l:lines, 'Nenhum erro/evento operacional registrado nesta sessao.')
+    return l:lines
+  endif
+
+  for l:item in reverse(copy(s:pingu_logs))
+    let l:source = empty(get(l:item, 'source', '')) ? 'runtime' : get(l:item, 'source', '')
+    call add(l:lines, printf('[%s] %-5s %s', get(l:item, 'timestamp', ''), get(l:item, 'level', 'INFO'), l:source))
+    call add(l:lines, '  ' . substitute(get(l:item, 'message', ''), "\n", "\n  ", 'g'))
+    let l:context = get(l:item, 'context', {})
+    if type(l:context) == v:t_dict && !empty(l:context)
+      for l:key in sort(keys(l:context))
+        call add(l:lines, printf('  %s: %s', l:key, string(get(l:context, l:key))))
+      endfor
+    endif
+    call add(l:lines, '')
+  endfor
+  return l:lines
+endfunction
+
+function! s:pingu_logs_open() abort
+  botright split
+  enew
+  file pingu://logs
+  setlocal buftype=nofile bufhidden=wipe noswapfile nobuflisted
+  setlocal filetype=pingu_logs
+  silent! %delete _
+  call setline(1, s:pingu_log_lines())
+  normal! gg
+  nnoremap <silent> <buffer> q :bd!<CR>
+  nnoremap <silent> <buffer> r :call <SID>pingu_logs_refresh()<CR>
+endfunction
+
+function! s:pingu_logs_refresh() abort
+  if &l:buftype !=# 'nofile' || expand('%') !=# 'pingu://logs'
+    return
+  endif
+  silent! %delete _
+  call setline(1, s:pingu_log_lines())
+  normal! gg
+endfunction
+
+function! s:pingu_logs_clear() abort
+  let s:pingu_logs = []
+  echomsg '[Pingu] Logs limpos'
+endfunction
+
 function! s:latency_metrics_enabled() abort
   return str2nr(string(get(g:, 'pingu_latency_metrics_enabled', 0))) > 0
 endfunction
@@ -588,6 +667,9 @@ function! s:status_set_idle(issue_count, error) abort
   let s:pingu_status.issue_count = max([0, str2nr(string(a:issue_count))])
   let s:pingu_status.last_error = a:error
   let s:pingu_status.updated_at_ms = s:now_ms()
+  if !empty(trim('' . a:error))
+    call s:pingu_log_event('error', 'status', a:error, {'phase': s:pingu_status.phase, 'issue_count': s:pingu_status.issue_count})
+  endif
   redrawstatus
 endfunction
 
@@ -7341,6 +7423,7 @@ function! s:pingu_lsp_ready() abort
 endfunction
 
 function! s:pingu_lsp_warn_unavailable() abort
+  call s:pingu_log_event('warn', 'lsp-ui', 'LSP do Neovim indisponivel neste buffer', {'bufnr': bufnr('%'), 'filetype': &filetype})
   echohl WarningMsg
   echomsg '[Pingu] LSP do Neovim indisponivel neste buffer'
   echohl None
@@ -7540,6 +7623,7 @@ function! s:pingu_lsp_hover() abort
   try
     let l:result = luaeval(l:script, {'bufnr': bufnr('%'), 'timeoutMs': 500})
   catch
+    call s:pingu_log_event('error', 'lsp-hover', v:exception, {'bufnr': bufnr('%')})
     let l:result = {'ok': v:false, 'lines': []}
   endtry
 
@@ -7614,6 +7698,7 @@ function! s:pingu_lsp_request_locations(mode) abort
   try
     let l:items = luaeval(l:script, {'bufnr': bufnr('%'), 'mode': a:mode, 'timeoutMs': 700})
   catch
+    call s:pingu_log_event('error', 'lsp-' . a:mode, v:exception, {'bufnr': bufnr('%')})
     return []
   endtry
   return type(l:items) == v:t_list ? l:items : []
@@ -7621,6 +7706,7 @@ endfunction
 
 function! s:pingu_lsp_set_qf(title, items, jump_first) abort
   if empty(a:items)
+    call s:pingu_log_event('warn', 'lsp-ui', 'Nenhum resultado LSP encontrado', {'title': a:title, 'bufnr': bufnr('%')})
     echohl WarningMsg
     echomsg '[Pingu] Nenhum resultado LSP encontrado'
     echohl None
@@ -7703,6 +7789,7 @@ function! s:pingu_lsp_outline() abort
   try
     let l:items = luaeval(l:script, {'bufnr': bufnr('%'), 'timeoutMs': 700})
   catch
+    call s:pingu_log_event('error', 'lsp-outline', v:exception, {'bufnr': bufnr('%')})
     let l:items = []
   endtry
   call s:pingu_lsp_set_qf('Pingu Outline', l:items, v:false)
@@ -7725,6 +7812,7 @@ function! s:pingu_lsp_rename(name) abort
   try
     let l:ok = luaeval('(function(input) if type(vim.lsp) ~= "table" or type(vim.lsp.buf) ~= "table" or type(vim.lsp.buf.rename) ~= "function" then return false end vim.lsp.buf.rename(input.name); return true end)(_A)', {'name': l:name})
   catch
+    call s:pingu_log_event('error', 'lsp-rename', v:exception, {'bufnr': bufnr('%'), 'name': l:name})
     let l:ok = v:false
   endtry
   if !l:ok
@@ -8459,6 +8547,8 @@ command! PinguCodeAction call s:pingu_lsp_code_action()
 command! PinguStop call s:pingu_stop()
 command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
+command! PinguLogs call s:pingu_logs_open()
+command! PinguLogsClear call s:pingu_logs_clear()
 command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
 command! PinguAutoFixDisable let g:pingu_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'
 command! -nargs=? PinguModel call s:pingu_select_ai_provider(<q-args>)
