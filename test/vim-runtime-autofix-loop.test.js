@@ -110,6 +110,15 @@ test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /command! PinguIssueHoverClose call s:close_pingu_issue_hover_menu\(\)/);
   assert.match(internalRuntime, /command! PinguQfNext call s:pingu_qf_next\(\)/);
   assert.match(internalRuntime, /command! PinguQfPrev call s:pingu_qf_prev\(\)/);
+  assert.match(internalRuntime, /command! PinguDiagnosticNext call s:pingu_qf_next\(\)/);
+  assert.match(internalRuntime, /command! PinguDiagnosticPrev call s:pingu_qf_prev\(\)/);
+  assert.match(internalRuntime, /command! PinguHover call s:pingu_lsp_hover\(\)/);
+  assert.match(internalRuntime, /command! PinguFinder call s:pingu_lsp_finder\(\)/);
+  assert.match(internalRuntime, /command! PinguDefinition call s:pingu_lsp_definition\(\)/);
+  assert.match(internalRuntime, /command! PinguReferences call s:pingu_lsp_references\(\)/);
+  assert.match(internalRuntime, /command! PinguOutline call s:pingu_lsp_outline\(\)/);
+  assert.match(internalRuntime, /command! -nargs=\? PinguRename call s:pingu_lsp_rename\(<q-args>\)/);
+  assert.match(internalRuntime, /command! PinguCodeAction call s:pingu_lsp_code_action\(\)/);
   assert.match(internalRuntime, /function! s:pingu_issue_lines_for_current_buffer\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_jump_to_issue\(direction\) abort/);
   assert.match(internalRuntime, /call cursor\(l:lnum, l:col\)/);
@@ -121,6 +130,25 @@ test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.doesNotMatch(internalRuntime, /command! RealtimeDevAgent/);
   assert.match(internalRuntime, /':PinguCheck<CR>'/);
   assert.match(internalRuntime, /':PinguWindowCheck<CR>'/);
+});
+
+test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
+  assert.match(internalRuntime, /function! s:pingu_lsp_hover\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_request_locations\(mode\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_set_qf\(title, items, jump_first\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_finder\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_definition\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_references\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_outline\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_rename\(name\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_code_action\(\) abort/);
+  assert.match(internalRuntime, /vim\.lsp\.buf_request_sync\(bufnr, "textDocument\/hover"/);
+  assert.match(internalRuntime, /textDocument\/definition/);
+  assert.match(internalRuntime, /textDocument\/references/);
+  assert.match(internalRuntime, /textDocument\/documentSymbol/);
+  assert.match(internalRuntime, /vim\.lsp\.buf\.rename\(input\.name\)/);
+  assert.match(internalRuntime, /call s:pingu_lsp_open_float\('Pingu Hover'/);
+  assert.match(internalRuntime, /call setqflist\(\[\], 'r', \{'title': a:title\}\)/);
 });
 
 test('runtime mantem painel Pingu fechado apos fechamento manual', () => {
