@@ -2002,12 +2002,38 @@ function! s:pingu_issue_ai_fix_candidate(issue) abort
   endif
   let l:issue.kind = 'lsp_ai_fix'
   let l:issue.snippet = ''
+  let l:issue.filename = fnamemodify(get(l:issue, 'filename', empty(bufname('%')) ? '' : bufname('%')), ':p')
   let l:issue.lsp_message = l:message
   let l:issue.lsp_source = trim('' . get(l:issue, 'lsp_source', 'Pingu'))
   let l:issue.lsp_code = trim('' . get(l:issue, 'lsp_code', ''))
   let l:issue.lsp_severity = str2nr(string(get(l:issue, 'lsp_severity', s:pingu_issue_severity_rank(l:issue))))
   let l:issue.action = {'op': 'lsp_ai_fix', 'line': get(l:issue, 'lnum', line('.'))}
   return l:issue
+endfunction
+
+function! s:pingu_issue_at_cursor_for_action() abort
+  let l:issue = s:get_buffer_issue_at_cursor_exact()
+  if empty(l:issue)
+    let l:issue = s:pingu_lsp_local_fix_candidate_for_line(bufnr('%'), line('.'))
+  endif
+  if empty(l:issue)
+    let l:issue = s:get_buffer_issue_at_cursor()
+  endif
+  return l:issue
+endfunction
+
+function! s:refresh_pingu_hints_after_issue_apply(bufnr) abort
+  let l:bufnr = a:bufnr > 0 ? a:bufnr : bufnr('%')
+  if l:bufnr <= 0 || !bufloaded(l:bufnr)
+    return
+  endif
+  silent! call s:update_pingu_all_hints_current_buffer()
+  silent! call s:refresh_pingu_diagnostic_hints_for_buffer(l:bufnr)
+  if exists('*timer_start')
+    for l:delay in [80, 250, 750, 1500]
+      call timer_start(l:delay, {timer -> s:refresh_pingu_diagnostic_hints_for_buffer(l:bufnr)})
+    endfor
+  endif
 endfunction
 
 function! s:pingu_apply_issue_with_ai(issue) abort
@@ -2029,7 +2055,7 @@ function! s:pingu_apply_issue_with_ai(issue) abort
   endtry
   if l:applied
     echo '[Pingu] Correcao com IA aplicada na linha atual'
-    call s:clear_pingu_issue_hints_for_buffer(bufnr('%'))
+    call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
     return v:true
@@ -2040,7 +2066,7 @@ function! s:pingu_apply_issue_with_ai(issue) abort
 endfunction
 
 function! s:pingu_fix_current_issue_with_ai() abort
-  let l:issue = s:get_buffer_issue_at_cursor()
+  let l:issue = s:pingu_issue_at_cursor_for_action()
   call s:pingu_apply_issue_with_ai(l:issue)
 endfunction
 
@@ -7922,13 +7948,7 @@ function! s:restore_issue_cursor_and_hints(issue) abort
 endfunction
 
 function! s:pingu_fix_current_issue() abort
-  let l:issue = s:get_buffer_issue_at_cursor_exact()
-  if empty(l:issue)
-    let l:issue = s:pingu_lsp_local_fix_candidate_for_line(bufnr('%'), line('.'))
-  endif
-  if empty(l:issue)
-    let l:issue = s:get_buffer_issue_at_cursor()
-  endif
+  let l:issue = s:pingu_issue_at_cursor_for_action()
   if empty(l:issue)
     echomsg '[Pingu] Nenhuma sugestao na linha atual'
     return
@@ -7943,7 +7963,7 @@ function! s:pingu_fix_current_issue() abort
   endif
   if s:apply_issue_snippet(l:issue, v:false)
     echo '[Pingu] Correcao aplicada na linha atual'
-    call s:clear_pingu_issue_hints_for_buffer(bufnr('%'))
+    call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
   else
