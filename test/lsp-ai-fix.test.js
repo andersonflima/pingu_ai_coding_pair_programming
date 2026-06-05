@@ -8,6 +8,7 @@ const test = require('node:test');
 
 const {
   buildLspDiagnosticFixRequest,
+  extractUndefinedSymbol,
   resolveLspDiagnosticFix,
 } = require('../lib/lsp-ai-fix');
 
@@ -128,6 +129,74 @@ test('resolveLspDiagnosticFix preserva linha escolhida pela IA para inserir impo
   assert.equal(result.issue.line, 1);
   assert.deepEqual(result.issue.action, { op: 'insert_before', line: 1 });
   assert.equal(result.issue.snippet, 'from inventory import use_item');
+});
+
+test('extractUndefinedSymbol entende Ruff F821 com crases', () => {
+  const symbol = extractUndefinedSymbol({
+    message: 'Undefined name `use_item`',
+    source: 'Ruff',
+    code: 'F821',
+  });
+
+  assert.equal(symbol, 'use_item');
+});
+
+test('resolveLspDiagnosticFix usa fallback de import quando provider retorna vazio para Ruff F821', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-ruff-import-'));
+  const helpersFile = path.join(root, 'inventory.py');
+  const farmFile = path.join(root, 'farm.py');
+  fs.writeFileSync(path.join(root, 'pyproject.toml'), '[project]\nname = "sample"\n');
+  fs.writeFileSync(helpersFile, 'def use_item(item):\n    return item\n');
+  fs.writeFileSync(farmFile, 'def run(item):\n    return use_item(item)\n');
+
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiIssueFix: () => null,
+  };
+
+  const result = resolveLspDiagnosticFix({
+    file: farmFile,
+    lines: ['def run(item):', '    return use_item(item)'],
+    diagnostic: {
+      line: 2,
+      severity: 'error',
+      message: 'Undefined name `use_item`',
+      source: 'Ruff',
+      code: 'F821',
+    },
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.issue.snippet, 'from inventory import use_item');
+  assert.deepEqual(result.issue.action, { op: 'insert_before', line: 1 });
+  assert.equal(result.issue.metadata.fallbackReason, 'empty_resolution');
+});
+
+test('resolveLspDiagnosticFix cria stub minimo quando Ruff F821 nao tem candidato de import', () => {
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiIssueFix: () => ({ snippet: '' }),
+  };
+
+  const result = resolveLspDiagnosticFix({
+    file: '/tmp/farm.py',
+    lines: [
+      'def run(seed):',
+      '    return plant(seed)',
+    ],
+    diagnostic: {
+      line: 2,
+      severity: 'error',
+      message: 'Undefined name `plant`',
+      source: 'Ruff',
+      code: 'F821',
+    },
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.issue.line, 1);
+  assert.equal(result.issue.snippet, 'def plant(seed):\n    pass\n');
+  assert.deepEqual(result.issue.action, { op: 'insert_before', line: 1 });
 });
 
 test('resolveLspDiagnosticFix rejeita action ampla do provider', () => {
