@@ -8100,6 +8100,7 @@ function! s:pingu_prompt(line1, line2, args, range_count) abort
         \ 'selectedText': join(getbufline(l:bufnr, l:start_line, l:end_line), "\n"),
         \ 'startLine': l:start_line,
         \ 'endLine': l:end_line,
+        \ 'hasExplicitRange': a:range_count > 0 ? v:true : v:false,
         \ 'cursorLine': line('.'),
         \ 'cursorColumn': col('.'),
         \ 'contextRadius': str2nr(string(get(g:, 'pingu_prompt_context_radius', 80))),
