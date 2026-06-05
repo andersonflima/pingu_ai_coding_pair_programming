@@ -5167,7 +5167,7 @@ endfunction
 
 function! s:split_snippet_lines(snippet) abort
   if type(a:snippet) == v:t_list
-    return copy(a:snippet)
+    return s:sanitize_snippet_lines(copy(a:snippet))
   endif
 
   let l:snippet = '' . a:snippet
@@ -5175,7 +5175,14 @@ function! s:split_snippet_lines(snippet) abort
     return []
   endif
 
-  return split(l:snippet, "\%x00\\|\n", 1)
+  return s:sanitize_snippet_lines(split(l:snippet, "\%x00\\|\n", 1))
+endfunction
+
+function! s:sanitize_snippet_lines(snippet_lines) abort
+  if type(a:snippet_lines) != v:t_list
+    return []
+  endif
+  return map(copy(a:snippet_lines), {_, val -> substitute('' . val, '\s\+$', '', '')})
 endfunction
 
 function! s:is_declaration_authority_issue(kind) abort
