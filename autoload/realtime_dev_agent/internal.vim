@@ -2221,6 +2221,63 @@ function! s:pingu_issue_hover_action_for_cursor() abort
   endif
 endfunction
 
+function! s:pingu_truncate_hover_text(text, limit) abort
+  let l:text = substitute(trim('' . a:text), '\s\+', ' ', 'g')
+  let l:limit = max([10, str2nr(string(a:limit))])
+  if strlen(l:text) > l:limit
+    return strpart(l:text, 0, l:limit - 3) . '...'
+  endif
+  return l:text
+endfunction
+
+function! s:pingu_issue_hover_action_summary(issue) abort
+  let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:suggestion = trim('' . get(a:issue, 'suggestion', ''))
+  if empty(l:suggestion)
+    let l:suggestion = trim('' . get(l:parts, 2, ''))
+  endif
+  if !empty(l:suggestion)
+    return s:pingu_truncate_hover_text(l:suggestion, 78)
+  endif
+
+  let l:action = s:issue_effective_action(a:issue)
+  let l:op = trim('' . get(l:action, 'op', ''))
+  if l:op ==# 'lsp_code_action'
+    let l:only = get(l:action, 'only', [])
+    if type(l:only) == v:t_list && !empty(l:only)
+      return 'Aplicar code action LSP: ' . s:pingu_truncate_hover_text(join(l:only, ', '), 52)
+    endif
+    return 'Aplicar melhor code action LSP disponivel'
+  endif
+  if l:op ==# 'lsp_ai_fix'
+    return 'Gerar edicao local com IA para este diagnostico'
+  endif
+  if l:op ==# 'replace_range'
+    return 'Substituir o range indicado pelo snippet sugerido'
+  endif
+  if l:op ==# 'replace_line'
+    return 'Substituir a linha atual pelo snippet sugerido'
+  endif
+  if l:op ==# 'insert_before'
+    return 'Inserir snippet antes da linha atual'
+  endif
+  if l:op ==# 'insert_after'
+    return 'Inserir snippet depois da linha atual'
+  endif
+  if l:op ==# 'delete_line'
+    return 'Remover a linha indicada'
+  endif
+  if l:op ==# 'write_file'
+    let l:target = fnamemodify(trim('' . get(l:action, 'target_file', '')), ':t')
+    return empty(l:target) ? 'Criar ou atualizar arquivo pelo snippet sugerido' : 'Criar ou atualizar ' . l:target
+  endif
+  if l:op ==# 'run_command'
+    let l:command = trim('' . get(l:action, 'command', ''))
+    return empty(l:command) ? 'Executar comando sugerido' : 'Executar: ' . s:pingu_truncate_hover_text(l:command, 60)
+  endif
+  return 'Aplicar snippet sugerido para este problema'
+endfunction
+
 function! s:pingu_issue_hover_menu_lines(issue) abort
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:message = trim('' . get(a:issue, 'lsp_message', ''))
@@ -2245,11 +2302,12 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
     let l:message = strpart(l:message, 0, 75) . '...'
   endif
   let l:meta = empty(l:source) ? l:severity_label : l:severity_label . ' · ' . l:source
+  let l:action_summary = s:pingu_issue_hover_action_summary(a:issue)
   return [
         \ ' Pingu',
         \ l:kind_label . ' · ' . l:meta,
         \ l:message,
-        \ '',
+        \ 'Acao sugerida: ' . l:action_summary,
         \ 'a  Aplicar correcao sugerida',
         \ 'i  Corrigir com IA',
         \ 'p  Abrir painel',
