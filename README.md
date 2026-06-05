@@ -109,15 +109,15 @@ pingu doctor
 Enquanto o primeiro publish no npm nao estiver concluido, instale direto do GitHub:
 
 ```bash
-npm install -g github:andersonflima/pingu_ai_codding_pair_programming
+npm install -g github:andersonflima/pingu_ai_coding_pair_programming
 pingu doctor
 ```
 
 Para desenvolvimento local:
 
 ```bash
-git clone git@github.com:andersonflima/pingu_ai_codding_pair_programming.git
-cd pingu_ai_codding_pair_programming
+git clone git@github.com:andersonflima/pingu_ai_coding_pair_programming.git
+cd pingu_ai_coding_pair_programming
 npm ci --ignore-scripts
 npm link
 pingu doctor
@@ -793,7 +793,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
 
 ```lua
 {
-  "andersonflima/pingu_ai_codding_pair_programming",
+  "andersonflima/pingu_ai_coding_pair_programming",
   lazy = false,
   priority = 10000,
   init = function()
@@ -838,7 +838,7 @@ As variaveis `g:pingu_*` sao a configuracao principal do plugin. As variaveis an
 ### `vim-plug`
 
 ```vim
-Plug 'andersonflima/pingu_ai_codding_pair_programming'
+Plug 'andersonflima/pingu_ai_coding_pair_programming'
 ```
 
 ### Startup automatico no Vim
