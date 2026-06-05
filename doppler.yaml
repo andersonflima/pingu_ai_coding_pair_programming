@@ -1,3 +1,3 @@
 setup:
-  - project: pingu_ai_codding_pair_programming
+  - project: pingu_ai_coding_pair_programming
     config: dev_personal
