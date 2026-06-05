@@ -897,6 +897,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `:PinguModel` permite alternar entre Copilot, OpenAI Codex e Auto sem reiniciar o editor; o daemon do Pingu e reiniciado para herdar o provider escolhido
 - no Neovim, `:PinguPrompt` executa o provider em background para nao bloquear o editor depois do Enter
 - `:PinguPrompt` preserva a indentacao relativa do bloco selecionado e remove apenas quebras de linha externas do snippet retornado
+- quando `:PinguPrompt` recebe um pedido claro para remover comentarios, o Pingu aplica fallback local seguro se o provider retornar vazio ou estiver indisponivel
 - `let g:pingu_hints_enabled = 1` habilita virtual text no Neovim para destacar comentarios acionaveis do Pingu
 - hints inline usam apenas o icone `` como marcador visual; o texto `Pingu` nao aparece no shadow text
 - `let g:pingu_hints_max_lines = 1200` limita quantas linhas sao escaneadas para hints inline
@@ -1024,6 +1025,7 @@ Importante:
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - `prompt_task` usa o provider ativo para aplicar um patch local no range selecionado por `:PinguPrompt`; comandos de terminal sugeridos pelo provider nao sao executados por esse hotkey
 - `prompt_task` envia somente uma janela de contexto em volta do range (`g:pingu_prompt_context_radius`, padrao `80`) e preserva os espacos iniciais do snippet para nao quebrar indentacao
+- `prompt_task` possui fallback deterministico para remover comentarios de codigo quando o provider retorna vazio, preservando strings e linhas em branco existentes
 - se o provider externo não estiver disponível ou falhar, o fluxo segue com fallback local sem interrupção
 - quando o provider falha em runtime (ex.: CLI sem autenticacao), o agente entra em cooldown automatico curto e evita novas tentativas ate expirar, reduzindo impacto de latencia no loop automatico
 - no Neovim, diagnosticos ativos do LSP agora entram no lote automatico como `lsp_code_action` e tentam aplicar `source.fixAll`, `source.organizeImports` e `quickfix` sem abrir prompt
