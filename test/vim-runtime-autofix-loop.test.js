@@ -180,15 +180,16 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /' Pingu'/);
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
-  assert.match(internalRuntime, /Acao sugerida: /);
-  assert.match(internalRuntime, /Aplicar melhor code action LSP disponivel/);
+  assert.match(internalRuntime, /Acao sugerida/);
+  assert.match(internalRuntime, /IA avalia import existente; se nao houver, cria a menor definicao local/);
+  assert.match(internalRuntime, /IA revisa o diagnostico e aplica a menor correcao segura/);
   assert.match(internalRuntime, /Substituir a linha atual pelo snippet sugerido/);
-  assert.match(internalRuntime, /Aplicar correcao sugerida/);
-  assert.match(internalRuntime, /Corrigir com IA/);
+  assert.match(internalRuntime, /Aplicar resolucao assistida/);
+  assert.match(internalRuntime, /Forcar correcao com IA/);
   assert.match(internalRuntime, /Abrir painel/);
   assert.doesNotMatch(internalRuntime, /Pingu: ' \. l:message/);
   assert.doesNotMatch(internalRuntime, /lsp_code_action: %s/);
-  assert.match(internalRuntime, /if l:line == 5\n    call s:pingu_issue_hover_action\('apply'\)/);
+  assert.match(internalRuntime, /if l:line == 7\n    call s:pingu_issue_hover_action\('apply'\)/);
   assert.match(internalRuntime, /if empty\(l:issue\)\n    let l:issue = s:pingu_issue_at_cursor_for_action\(\)\n  endif/);
 });
 
@@ -609,10 +610,15 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /call s:restore_issue_cursor_and_hints\(l:issue\)/);
   assert.match(internalRuntime, /silent! call s:update_pingu_all_hints_current_buffer\(\)/);
   assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix\(s:pingu_issue_ai_fix_candidate\(a:issue\)\)/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_issue_requires_ai_decision\(issue\) abort/);
+  assert.match(internalRuntime, /reportundefined/);
   assert.match(internalRuntime, /let l:previous_changedticks = \{\}/);
   assert.match(internalRuntime, /for l:buf in getbufinfo\(\{'bufloaded': 1\}\)/);
   assert.match(internalRuntime, /code action nao alterou nenhum buffer carregado/);
-  assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix_explicit\(l:issue\)/);
+  assert.match(
+    internalRuntime,
+    /if l:op ==# 'lsp_code_action'\n    if s:apply_issue_lsp_ai_fix_explicit\(l:issue\)\n      return v:true\n    endif\n    if s:apply_issue_lsp_code_action\(l:issue\)/,
+  );
   assert.match(internalRuntime, /'kind': 'lsp_ai_fix'/);
   assert.match(internalRuntime, /'op': 'lsp_ai_fix'/);
   assert.match(internalRuntime, /'--lsp-ai-fix'/);
