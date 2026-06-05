@@ -220,6 +220,9 @@ test('runtime permite escolher provider assistido do Pingu', () => {
   assert.match(internalRuntime, /return l:provider ==# 'codex' \? 'openai' : l:provider/);
   assert.match(internalRuntime, /command! -nargs=\? PinguModel call s:pingu_select_ai_provider\(<q-args>\)/);
   assert.match(internalRuntime, /call s:stop_analysis_daemon\(\)/);
+  assert.match(internalRuntime, /echo '1\. Copilot'/);
+  assert.match(internalRuntime, /input\('Escolha provider \[1-3\]: '\)/);
+  assert.match(internalRuntime, /Opcao ' \. l:choice \. ' selecionada/);
   assert.match(internalRuntime, /':PinguModel<CR>'/);
 });
 
