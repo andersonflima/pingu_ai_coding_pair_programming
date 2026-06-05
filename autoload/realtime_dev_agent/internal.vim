@@ -2230,11 +2230,68 @@ function! s:pingu_truncate_hover_text(text, limit) abort
   return l:text
 endfunction
 
+function! s:pingu_lsp_hover_symbol(issue) abort
+  let l:call = s:undefined_lsp_call_from_issue(a:issue)
+  if !empty(l:call)
+    let l:module = trim('' . get(l:call, 'module', ''))
+    let l:name = trim('' . get(l:call, 'function', ''))
+    return empty(l:module) ? l:name : l:module . '.' . l:name
+  endif
+  let l:message = trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', '')))
+  let l:patterns = [
+        \ 'Undefined name [`''"]\([A-Za-z_][A-Za-z0-9_]*\)[`''"]',
+        \ '[`''"]\([A-Za-z_][A-Za-z0-9_]*\)[`''"] is not defined',
+        \ 'Cannot find name [`''"]\([A-Za-z_][A-Za-z0-9_]*\)[`''"]',
+        \ 'unresolved reference [`''"]\?\([A-Za-z_][A-Za-z0-9_]*\)[`''"]\?',
+        \ ]
+  for l:pattern in l:patterns
+    let l:match = matchlist(l:message, l:pattern)
+    if !empty(l:match) && !empty(get(l:match, 1, ''))
+      return l:match[1]
+    endif
+  endfor
+  return ''
+endfunction
+
+function! s:pingu_lsp_hover_assisted_suggestion(issue) abort
+  let l:message = tolower(trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', ''))))
+  let l:source = trim('' . get(a:issue, 'lsp_source', 'LSP'))
+  let l:symbol = s:pingu_lsp_hover_symbol(a:issue)
+  if !empty(l:symbol)
+    return 'IA procura ' . l:symbol . ' no projeto para importar; se nao achar, cria a menor definicao local'
+  endif
+  if l:message =~# '\v(import|module|package|dependency)'
+    return 'IA verifica import, modulo ou dependencia faltante e ajusta a menor declaracao segura'
+  endif
+  if s:pingu_lsp_issue_requires_ai_decision(a:issue)
+    return 'IA analisa o diagnostico e escolhe entre importar, criar definicao ou editar o uso atual'
+  endif
+  return 'IA analisa ' . l:source . ' e aplica a menor edicao local; LSP fica como fallback'
+endfunction
+
+function! s:pingu_generic_lsp_suggestion(text) abort
+  let l:text = tolower(trim('' . a:text))
+  return l:text =~# 'fixall/organizeimports/quickfix'
+        \ || l:text =~# 'code action lsp'
+        \ || l:text =~# 'quando disponivel'
+endfunction
+
 function! s:pingu_issue_hover_action_summary(issue) abort
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:action = s:issue_effective_action(a:issue)
+  let l:op = trim('' . get(l:action, 'op', ''))
+  if index(['lsp_code_action', 'lsp_ai_fix', 'lsp_diagnostic'], get(a:issue, 'kind', '')) != -1
+        \ || l:op ==# 'lsp_code_action'
+        \ || l:op ==# 'lsp_ai_fix'
+    return s:pingu_truncate_hover_text(s:pingu_lsp_hover_assisted_suggestion(a:issue), 78)
+  endif
+
   let l:suggestion = trim('' . get(a:issue, 'suggestion', ''))
   if empty(l:suggestion)
     let l:suggestion = trim('' . get(l:parts, 2, ''))
+  endif
+  if s:pingu_generic_lsp_suggestion(l:suggestion)
+    let l:suggestion = ''
   endif
   if !empty(l:suggestion)
     return s:pingu_truncate_hover_text(l:suggestion, 78)
@@ -2244,8 +2301,6 @@ function! s:pingu_issue_hover_action_summary(issue) abort
     return 'IA avalia import existente; se nao houver, cria a menor definicao local'
   endif
 
-  let l:action = s:issue_effective_action(a:issue)
-  let l:op = trim('' . get(l:action, 'op', ''))
   if l:op ==# 'lsp_code_action'
     let l:only = get(l:action, 'only', [])
     if type(l:only) == v:t_list && !empty(l:only)
