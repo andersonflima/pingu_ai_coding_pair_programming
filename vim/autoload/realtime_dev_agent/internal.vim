@@ -2258,15 +2258,15 @@ function! s:pingu_lsp_hover_assisted_suggestion(issue) abort
   let l:source = trim('' . get(a:issue, 'lsp_source', 'LSP'))
   let l:symbol = s:pingu_lsp_hover_symbol(a:issue)
   if !empty(l:symbol)
-    return 'IA procura ' . l:symbol . ' no projeto para importar; se nao achar, cria a menor definicao local'
+    return 'Importar ' . l:symbol . ' de outro arquivo ou implementar ' . l:symbol . ' localmente'
   endif
   if l:message =~# '\v(import|module|package|dependency)'
-    return 'IA verifica import, modulo ou dependencia faltante e ajusta a menor declaracao segura'
+    return 'Corrigir import, modulo ou dependencia faltante com a menor declaracao segura'
   endif
   if s:pingu_lsp_issue_requires_ai_decision(a:issue)
-    return 'IA analisa o diagnostico e escolhe entre importar, criar definicao ou editar o uso atual'
+    return 'Resolver simbolo ausente: importar, criar definicao ou ajustar o uso atual'
   endif
-  return 'IA analisa ' . l:source . ' e aplica a menor edicao local; LSP fica como fallback'
+  return 'Aplicar a menor edicao local para o diagnostico de ' . l:source
 endfunction
 
 function! s:pingu_generic_lsp_suggestion(text) abort

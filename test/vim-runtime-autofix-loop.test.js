@@ -183,10 +183,10 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
   assert.match(internalRuntime, /Acao sugerida/);
-  assert.match(internalRuntime, /IA procura /);
-  assert.match(internalRuntime, /no projeto para importar; se nao achar, cria a menor definicao local/);
-  assert.match(internalRuntime, /IA verifica import, modulo ou dependencia faltante e ajusta a menor declaracao segura/);
-  assert.match(internalRuntime, /e aplica a menor edicao local; LSP fica como fallback/);
+  assert.match(internalRuntime, /Importar .* de outro arquivo ou implementar .* localmente/);
+  assert.match(internalRuntime, /Corrigir import, modulo ou dependencia faltante com a menor declaracao segura/);
+  assert.match(internalRuntime, /Resolver simbolo ausente: importar, criar definicao ou ajustar o uso atual/);
+  assert.match(internalRuntime, /Aplicar a menor edicao local para o diagnostico de /);
   assert.match(internalRuntime, /fixall\/organizeimports\/quickfix/);
   assert.match(internalRuntime, /Substituir a linha atual pelo snippet sugerido/);
   assert.match(internalRuntime, /Aplicar resolucao assistida/);
