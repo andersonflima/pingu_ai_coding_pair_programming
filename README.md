@@ -914,6 +914,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
 - quando `:PinguFixCurrentAI` nao altera o buffer, o Pingu repinta os hints imediatamente, registra o motivo em `:PinguLogs` e tenta fallback local seguro para diagnostics conhecidos antes de desistir
 - apos `:PinguFixCurrent` ou `:PinguFixCurrentAI`, os hints sao repintados imediatamente e novamente apos os diagnostics do LSP atualizarem, evitando que outros erros desaparecam da tela
+- snippets aplicados por correcoes do Pingu removem espacos/tabs no fim das linhas antes de alterar o buffer, evitando que uma correcao gere um novo hint `trailing_whitespace`
 - o Pingu tambem substitui a camada operacional usada normalmente pelo lspsaga:
   - `:PinguHover` abre documentacao LSP em janela flutuante do Pingu
   - `:PinguCodeAction` tenta a correcao do Pingu na linha atual sem depender de `g:pingu_lsp_auto_fix_enabled` e usa `vim.lsp.buf.code_action()` apenas como fallback quando nao houver issue aplicavel do Pingu

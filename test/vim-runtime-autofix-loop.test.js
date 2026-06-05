@@ -628,6 +628,13 @@ test('runtime aplica code action manual mesmo sem auto-fix LSP ligado', () => {
   assert.match(internalRuntime, /call s:pingu_log_event\('warn', 'lsp-code-action', 'code action nao alterou nenhum buffer carregado'/);
 });
 
+test('runtime remove trailing whitespace de snippets antes de aplicar correcoes', () => {
+  assert.match(internalRuntime, /function! s:sanitize_snippet_lines\(snippet_lines\) abort/);
+  assert.match(internalRuntime, /return s:sanitize_snippet_lines\(copy\(a:snippet\)\)/);
+  assert.match(internalRuntime, /return s:sanitize_snippet_lines\(split\(l:snippet, "\\%x00\\\\\|\\n", 1\)\)/);
+  assert.match(internalRuntime, /substitute\('' \. val, '\\s\\\+\$', '', ''\)/);
+});
+
 test('runtime descarta auto-fix pendente quando insert mode altera o buffer', () => {
   assert.match(internalRuntime, /'changedtick': getbufvar\(l:target_buf, 'changedtick', -1\)/);
   assert.match(internalRuntime, /let l:pending_tick = get\(l:pending, 'changedtick', -1\)/);
