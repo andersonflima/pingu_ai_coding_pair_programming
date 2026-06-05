@@ -137,6 +137,60 @@ test('resolvePromptTask preserves provider snippet indentation and exposes base 
   assert.equal(result.issue.action.indent, '      ');
 });
 
+test('resolvePromptTask remove comentarios localmente quando provider retorna vazio', () => {
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiPromptTask: () => null,
+  };
+
+  const result = resolvePromptTask({
+    file: '/tmp/sample.py',
+    prompt: 'remova os comentarios do codigo',
+    lines: [
+      '# comentario inicial',
+      'def run(value):  # comentario inline',
+      '    text = "# nao e comentario"',
+      '',
+      '    return value',
+    ],
+    startLine: 1,
+    endLine: 5,
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.issue.providerFallbackReason, 'empty_provider_response');
+  assert.equal(
+    result.issue.snippet,
+    'def run(value):\n    text = "# nao e comentario"\n\n    return value',
+  );
+  assert.deepEqual(result.issue.action.range, {
+    start: { line: 0, character: 0 },
+    end: { line: 5, character: 0 },
+  });
+});
+
+test('resolvePromptTask remove comentarios localmente quando provider esta indisponivel', () => {
+  const provider = {
+    hasOpenAiConfiguration: () => false,
+  };
+
+  const result = resolvePromptTask({
+    file: '/tmp/sample.js',
+    prompt: 'remove comments',
+    lines: [
+      'const value = 1; // inline',
+      '// remove esta linha',
+      'const label = "http://example.test";',
+    ],
+    startLine: 1,
+    endLine: 3,
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.issue.providerFallbackReason, 'provider_unavailable');
+  assert.equal(result.issue.snippet, 'const value = 1;\nconst label = "http://example.test";');
+});
+
 test('resolvePromptTask refuses direct terminal action from provider', () => {
   const provider = {
     hasOpenAiConfiguration: () => true,
