@@ -916,7 +916,7 @@ Plug 'andersonflima/pingu_ai_codding_pair_programming'
 - apos `:PinguFixCurrent` ou `:PinguFixCurrentAI`, os hints sao repintados imediatamente e novamente apos os diagnostics do LSP atualizarem, evitando que outros erros desaparecam da tela
 - o Pingu tambem substitui a camada operacional usada normalmente pelo lspsaga:
   - `:PinguHover` abre documentacao LSP em janela flutuante do Pingu
-  - `:PinguCodeAction` tenta a correcao do Pingu na linha atual e usa `vim.lsp.buf.code_action()` apenas como fallback quando nao houver issue aplicavel do Pingu
+  - `:PinguCodeAction` tenta a correcao do Pingu na linha atual sem depender de `g:pingu_lsp_auto_fix_enabled` e usa `vim.lsp.buf.code_action()` apenas como fallback quando nao houver issue aplicavel do Pingu
   - `:PinguDiagnosticNext` e `:PinguDiagnosticPrev` navegam pelos diagnostics gerenciados pelo Pingu, equivalentes a `:PinguQfNext` e `:PinguQfPrev`
   - `:PinguFinder` agrega definicao, tipo, implementacao e referencias em um picker flutuante do Pingu, mantendo a quickfix sincronizada
   - `:PinguDefinition` navega para a primeira definicao retornada pelo LSP
@@ -1033,7 +1033,8 @@ Importante:
 - quando o servidor exigir `codeAction/resolve`, o runtime resolve e executa a acao automaticamente antes de aplicar edits/comandos
 - se a busca com `context.only` vier vazia, o runtime faz fallback automatico para nova tentativa sem `only`
 - quando o `kind` do code action vier fora dos padroes esperados, o runtime ainda pode aplicar a melhor acao habilitada (priorizando `isPreferred`)
-- quando o `apply` explicito de um diagnostico LSP executa uma code action que nao altera o buffer, o Pingu tenta o fallback assistido da mesma linha antes de reportar falha
+- quando o `apply` explicito de um diagnostico LSP executa uma code action que nao altera nenhum buffer carregado, o Pingu registra o no-op em `:PinguLogs` e tenta o fallback assistido da mesma linha antes de reportar falha
+- code actions manuais do Pingu detectam alteracoes em qualquer buffer carregado afetado pelo LSP, salvando os buffers modificados em vez de validar somente o arquivo onde a action foi disparada
 - para diagnostics LSP com chamada local obviamente incorreta, o Pingu tenta um fallback deterministico antes do provider assistido, por exemplo `Logger.dub(...)` para `Logger.debug(...)` em Elixir
 - quando uma correcao automatica (snippet local ou `lsp_code_action`) eh aplicada com sucesso, o buffer alvo eh salvo automaticamente no disco
 - `:PinguWindowCheck` (e o atalho `g:pingu_window_key`) abre o painel e o mantem aberto durante e apos a analise assincrona ate ele ser fechado explicitamente

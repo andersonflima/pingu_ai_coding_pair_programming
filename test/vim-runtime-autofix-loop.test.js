@@ -601,8 +601,9 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /call s:restore_issue_cursor_and_hints\(l:issue\)/);
   assert.match(internalRuntime, /silent! call s:update_pingu_all_hints_current_buffer\(\)/);
   assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix\(s:pingu_issue_ai_fix_candidate\(a:issue\)\)/);
-  assert.match(internalRuntime, /let l:previous_changedtick = getbufvar\(l:target_buf, 'changedtick'\)/);
-  assert.match(internalRuntime, /vim\.api\.nvim_buf_get_changedtick\(input\.bufnr\) ~= input\.changedtick/);
+  assert.match(internalRuntime, /let l:previous_changedticks = \{\}/);
+  assert.match(internalRuntime, /for l:buf in getbufinfo\(\{'bufloaded': 1\}\)/);
+  assert.match(internalRuntime, /code action nao alterou nenhum buffer carregado/);
   assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix_explicit\(l:issue\)/);
   assert.match(internalRuntime, /'kind': 'lsp_ai_fix'/);
   assert.match(internalRuntime, /'op': 'lsp_ai_fix'/);
@@ -610,6 +611,21 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /provider assistido nao aplicou: /);
   assert.match(internalRuntime, /snippet assistido nao alterou o buffer/);
   assert.match(internalRuntime, /index\(\['lsp_code_action', 'lsp_ai_fix'\], l:item_kind\)/);
+});
+
+test('runtime aplica code action manual mesmo sem auto-fix LSP ligado', () => {
+  assert.match(internalRuntime, /function! s:apply_issue_lsp_code_action\(issue\) abort/);
+  assert.doesNotMatch(
+    internalRuntime,
+    /function! s:apply_issue_lsp_code_action\(issue\) abort\n  if !s:lsp_auto_fix_enabled\(\)/,
+  );
+  assert.match(internalRuntime, /let l:previous_changedticks = \{\}/);
+  assert.match(internalRuntime, /for l:buf in getbufinfo\(\{'bufloaded': 1\}\)/);
+  assert.match(internalRuntime, /let l:settle_timeout_ms = max\(\[100, str2nr\(string\(get\(l:action, 'settle_timeout_ms', 500\)\)\)\]\)/);
+  assert.match(internalRuntime, /let l:start_wait_ms = s:now_ms\(\)/);
+  assert.match(internalRuntime, /while s:now_ms\(\) - l:start_wait_ms < l:settle_timeout_ms/);
+  assert.match(internalRuntime, /call s:auto_save_buffer_if_modified\(l:changed_buf, fnamemodify\(bufname\(l:changed_buf\), ':p'\)\)/);
+  assert.match(internalRuntime, /call s:pingu_log_event\('warn', 'lsp-code-action', 'code action nao alterou nenhum buffer carregado'/);
 });
 
 test('runtime descarta auto-fix pendente quando insert mode altera o buffer', () => {
