@@ -8486,12 +8486,13 @@ function! s:pingu_select_ai_provider(...) abort
   let l:raw = a:0 > 0 ? a:1 : ''
   if empty(trim('' . l:raw))
     let l:current = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'copilot' : $PINGU_AI_PROVIDER))
-    let l:choice = inputlist([
-          \ 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current),
-          \ '1. Copilot',
-          \ '2. OpenAI Codex',
-          \ '3. Auto',
-          \ ])
+    echo 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current)
+    echo '1. Copilot'
+    echo '2. OpenAI Codex'
+    echo '3. Auto'
+    call inputsave()
+    let l:choice = str2nr(input('Escolha provider [1-3]: '))
+    call inputrestore()
     if l:choice == 1
       let l:raw = 'copilot'
     elseif l:choice == 2
@@ -8502,6 +8503,7 @@ function! s:pingu_select_ai_provider(...) abort
       echomsg '[Pingu] Selecao de provider cancelada'
       return
     endif
+    echomsg '[Pingu] Opcao ' . l:choice . ' selecionada: ' . s:pingu_ai_provider_label(l:raw)
   endif
 
   let l:provider = s:pingu_normalize_ai_provider(l:raw)
