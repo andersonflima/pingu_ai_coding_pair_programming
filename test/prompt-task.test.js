@@ -24,7 +24,7 @@ test('buildPromptTaskRequest captures selected range and constraints', () => {
   assert.equal(request.mode, 'prompt_task');
   assert.equal(request.prompt, 'corrige esse bloco');
   assert.equal(request.selectedText, 'const b = 2\nconsole.log(a + b)');
-  assert.deepEqual(request.selection, { startLine: 2, endLine: 3 });
+  assert.deepEqual(request.selection, { startLine: 2, endLine: 3, hasExplicitRange: false });
   assert.deepEqual(request.context, { startLine: 1, endLine: 3, radius: 80 });
   assert.equal(request.constraints.some((item) => item.includes('range selecionado')), true);
   assert.equal(request.constraints.some((item) => item.includes('indentacao relativa')), true);
@@ -166,6 +166,45 @@ test('resolvePromptTask remove comentarios localmente quando provider retorna va
   assert.deepEqual(result.issue.action.range, {
     start: { line: 0, character: 0 },
     end: { line: 5, character: 0 },
+  });
+});
+
+test('resolvePromptTask remove comentarios do arquivo aberto quando nao ha range explicito', () => {
+  let providerRequest;
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiPromptTask: (request) => {
+      providerRequest = request;
+      return null;
+    },
+  };
+
+  const result = resolvePromptTask({
+    file: '/tmp/sample.py',
+    prompt: 'remova os comentarios do codigo aberto',
+    lines: [
+      '# comentario inicial',
+      'def run(value):',
+      '    text = "# nao e comentario"',
+      '    return value  # comentario inline',
+    ],
+    selectedText: 'def run(value):',
+    startLine: 2,
+    endLine: 2,
+    hasExplicitRange: false,
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(providerRequest.allLines, undefined);
+  assert.equal(result.issue.providerFallbackReason, 'empty_provider_response');
+  assert.equal(result.issue.line, 1);
+  assert.equal(
+    result.issue.snippet,
+    'def run(value):\n    text = "# nao e comentario"\n    return value',
+  );
+  assert.deepEqual(result.issue.action.range, {
+    start: { line: 0, character: 0 },
+    end: { line: 4, character: 0 },
   });
 });
 
