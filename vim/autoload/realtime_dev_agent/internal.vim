@@ -3212,33 +3212,36 @@ function! s:merge_lsp_diagnostic_auto_fix_candidates(bufnr, file, qf) abort
 endfunction
 
 function! s:apply_issue_lsp_code_action(issue) abort
-  if !s:lsp_auto_fix_enabled()
-    return v:false
-  endif
-
   let l:filename = fnamemodify(get(a:issue, 'filename', ''), ':p')
   let l:target_buf = s:issue_target_buffer(l:filename)
   if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    call s:pingu_log_event('error', 'lsp-code-action', 'buffer alvo indisponivel', {'filename': l:filename})
     return v:false
   endif
 
   let l:action = s:issue_effective_action(a:issue)
+  let l:settle_timeout_ms = max([100, str2nr(string(get(l:action, 'settle_timeout_ms', 500)))])
   let l:payload = {
         \ 'bufnr': l:target_buf,
         \ 'lnum': max([1, str2nr(string(get(a:issue, 'lnum', get(l:action, 'line', 1))))]),
         \ 'timeoutMs': max([100, str2nr(string(get(l:action, 'timeout_ms', s:lsp_auto_fix_timeout_ms())))]),
+        \ 'settleTimeoutMs': l:settle_timeout_ms,
         \ 'only': type(get(l:action, 'only', [])) == v:t_list ? copy(get(l:action, 'only', [])) : s:lsp_auto_fix_only_kinds(),
         \ 'preferPreferred': get(l:action, 'prefer_preferred', v:true) ? v:true : v:false,
         \ 'preferGlobal': get(l:action, 'prefer_global', s:lsp_auto_fix_prefer_global()) ? v:true : v:false,
         \ 'scope': trim('' . get(l:action, 'scope', 'line')),
         \ }
-  let l:previous_changedtick = getbufvar(l:target_buf, 'changedtick')
+  let l:previous_changedticks = {}
+  for l:buf in getbufinfo({'bufloaded': 1})
+    let l:previous_changedticks[string(get(l:buf, 'bufnr', 0))] = getbufvar(get(l:buf, 'bufnr', 0), 'changedtick', -1)
+  endfor
   let l:script = join([
         \ '(function(input)',
         \ 'input = input or {}',
         \ 'local bufnr = tonumber(input.bufnr or 0) or 0',
         \ 'local lnum = math.max(1, tonumber(input.lnum or 1) or 1)',
         \ 'local timeoutMs = math.max(100, tonumber(input.timeoutMs or 400) or 400)',
+        \ 'local settleTimeoutMs = math.max(100, tonumber(input.settleTimeoutMs or 500) or 500)',
         \ 'local only = type(input.only) == "table" and input.only or {"source.fixAll", "source.organizeImports", "quickfix"}',
         \ 'local preferPreferred = input.preferPreferred ~= false',
         \ 'local preferGlobal = input.preferGlobal ~= false',
@@ -3317,11 +3320,29 @@ function! s:apply_issue_lsp_code_action(issue) abort
         \ '  end',
         \ '  if command then',
         \ '    local okExec = pcall(vim.lsp.buf.execute_command, command)',
+        \ '    if okExec then',
+        \ '      vim.wait(settleTimeoutMs, function() return false end, 10, false)',
+        \ '    end',
         \ '    if not okExec and type(vim.lsp.commands) == "table" and type(vim.lsp.commands[command.command]) == "function" then',
         \ '      pcall(vim.lsp.commands[command.command], command, { client_id = clientId, bufnr = bufnr })',
         \ '    end',
         \ '  end',
-        \ '  return resolvedAction.edit ~= nil or command ~= nil',
+        \ '  if resolvedAction.edit ~= nil or command ~= nil then',
+        \ '    return true',
+        \ '  end',
+        \ '  local previousBuf = vim.api.nvim_get_current_buf()',
+        \ '  pcall(vim.api.nvim_set_current_buf, bufnr)',
+        \ '  local okNative = pcall(vim.lsp.buf.code_action, {',
+        \ '    context = { only = only },',
+        \ '    apply = true,',
+        \ '  })',
+        \ '  if previousBuf > 0 and vim.api.nvim_buf_is_valid(previousBuf) then',
+        \ '    pcall(vim.api.nvim_set_current_buf, previousBuf)',
+        \ '  end',
+        \ '  if okNative then',
+        \ '    vim.wait(settleTimeoutMs, function() return false end, 10, false)',
+        \ '  end',
+        \ '  return okNative',
         \ 'end',
         \ 'local function pick_action(results)',
         \ '  if type(results) ~= "table" or vim.tbl_isempty(results) then',
@@ -3397,27 +3418,35 @@ function! s:apply_issue_lsp_code_action(issue) abort
   try
     let l:applied = luaeval(l:script, l:payload) ? v:true : v:false
   catch
+    call s:pingu_log_event('error', 'lsp-code-action', v:exception, {'filename': l:filename, 'line': get(l:payload, 'lnum', 0)})
     return v:false
   endtry
 
   if l:applied
-    let l:changed = getbufvar(l:target_buf, 'changedtick') != l:previous_changedtick
-    if !l:changed
-      try
-        let l:changed = luaeval('(function(input) vim.wait(input.timeoutMs, function() return vim.api.nvim_buf_get_changedtick(input.bufnr) ~= input.changedtick end, 10, false); return vim.api.nvim_buf_get_changedtick(input.bufnr) ~= input.changedtick end)(_A)', {
-              \ 'bufnr': l:target_buf,
-              \ 'changedtick': l:previous_changedtick,
-              \ 'timeoutMs': max([100, str2nr(string(get(l:action, 'settle_timeout_ms', 250)))]),
-              \ }) ? v:true : v:false
-      catch
-        let l:changed = getbufvar(l:target_buf, 'changedtick') != l:previous_changedtick
-      endtry
-    endif
+    let l:changed_buffers = []
+    let l:start_wait_ms = s:now_ms()
+    while s:now_ms() - l:start_wait_ms < l:settle_timeout_ms
+      let l:changed_buffers = []
+      for l:buf in getbufinfo({'bufloaded': 1})
+        let l:bufnr = get(l:buf, 'bufnr', 0)
+        if getbufvar(l:bufnr, 'changedtick', -1) != get(l:previous_changedticks, string(l:bufnr), -1)
+          call add(l:changed_buffers, l:bufnr)
+        endif
+      endfor
+      if !empty(l:changed_buffers)
+        break
+      endif
+      sleep 20m
+    endwhile
+    let l:changed = !empty(l:changed_buffers)
     if l:changed
-      call s:auto_save_buffer_if_modified(l:target_buf, l:filename)
+      for l:changed_buf in l:changed_buffers
+        call s:auto_save_buffer_if_modified(l:changed_buf, fnamemodify(bufname(l:changed_buf), ':p'))
+      endfor
       return v:true
     endif
   endif
+  call s:pingu_log_event('warn', 'lsp-code-action', 'code action nao alterou nenhum buffer carregado', {'filename': l:filename, 'line': get(l:payload, 'lnum', 0)})
   return v:false
 endfunction
 
