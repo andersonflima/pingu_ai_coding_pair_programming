@@ -2202,19 +2202,19 @@ endfunction
 
 function! s:pingu_issue_hover_action_for_cursor() abort
   let l:line = line('.')
-  if l:line == 5
+  if l:line == 7
     call s:pingu_issue_hover_action('apply')
     return
   endif
-  if l:line == 6
+  if l:line == 8
     call s:pingu_issue_hover_action('ai')
     return
   endif
-  if l:line == 7
+  if l:line == 9
     call s:pingu_issue_hover_action('panel')
     return
   endif
-  if l:line == 8
+  if l:line == 10
     call s:close_pingu_issue_hover_menu()
     call s:restore_pingu_issue_hover_source()
     return
@@ -2240,17 +2240,21 @@ function! s:pingu_issue_hover_action_summary(issue) abort
     return s:pingu_truncate_hover_text(l:suggestion, 78)
   endif
 
+  if s:pingu_lsp_issue_requires_ai_decision(a:issue)
+    return 'IA avalia import existente; se nao houver, cria a menor definicao local'
+  endif
+
   let l:action = s:issue_effective_action(a:issue)
   let l:op = trim('' . get(l:action, 'op', ''))
   if l:op ==# 'lsp_code_action'
     let l:only = get(l:action, 'only', [])
     if type(l:only) == v:t_list && !empty(l:only)
-      return 'Aplicar code action LSP: ' . s:pingu_truncate_hover_text(join(l:only, ', '), 52)
+      return 'IA revisa o diagnostico e usa LSP se a correcao for segura: ' . s:pingu_truncate_hover_text(join(l:only, ', '), 34)
     endif
-    return 'Aplicar melhor code action LSP disponivel'
+    return 'IA revisa o diagnostico e aplica a menor correcao segura'
   endif
   if l:op ==# 'lsp_ai_fix'
-    return 'Gerar edicao local com IA para este diagnostico'
+    return 'IA gera uma edicao local minima para este diagnostico'
   endif
   if l:op ==# 'replace_range'
     return 'Substituir o range indicado pelo snippet sugerido'
@@ -2306,10 +2310,12 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
   return [
         \ ' Pingu',
         \ l:kind_label . ' · ' . l:meta,
-        \ l:message,
-        \ 'Acao sugerida: ' . l:action_summary,
-        \ 'a  Aplicar correcao sugerida',
-        \ 'i  Corrigir com IA',
+        \ 'Problema',
+        \ '  ' . l:message,
+        \ 'Acao sugerida',
+        \ '  ' . l:action_summary,
+        \ 'a  Aplicar resolucao assistida',
+        \ 'i  Forcar correcao com IA',
         \ 'p  Abrir painel',
         \ 'q  Fechar',
         \ ]
@@ -2739,6 +2745,33 @@ function! s:pingu_effective_language_diagnostic_severity(source, message, severi
     endif
   endfor
   return l:severity
+endfunction
+
+function! s:pingu_lsp_issue_requires_ai_decision(issue) abort
+  let l:message = tolower(trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', ''))))
+  let l:code = tolower(trim('' . get(a:issue, 'lsp_code', '')))
+  let l:kind = trim('' . get(a:issue, 'kind', ''))
+  if index(['lsp_code_action', 'lsp_ai_fix', 'lsp_diagnostic'], l:kind) == -1
+    return v:false
+  endif
+  let l:patterns = [
+        \ '\v(undefined or private|missing or private function)',
+        \ '\v(is undefined|undefined (function|method|variable|constant|type|class|module|property|name))',
+        \ '\v(not defined|is not defined|name ''.+'' is not defined)',
+        \ '\v(cannot find (name|module|symbol|package|type)|cannot resolve (symbol|module|import))',
+        \ '\v(import .+ could not be resolved|could not resolve (import|module|package|dependency))',
+        \ '\v(failed to resolve import|unable to resolve (path|module|import|dependency))',
+        \ '\v(unresolved (reference|import|module|name|symbol))',
+        \ '\v(use of undeclared identifier|undeclared (name|identifier)|unknown identifier)',
+        \ '\v(cannot find value|cannot find function|cannot find type)',
+        \ '\v(unresolved name|undefined local variable or method)',
+        \ ]
+  for l:pattern in l:patterns
+    if l:message =~# l:pattern
+      return v:true
+    endif
+  endfor
+  return l:code =~# '\v(undefined|unresolved|^f821$|reportundefined)'
 endfunction
 
 function! s:lsp_diagnostics_for_buffer(bufnr, ...) abort
@@ -5027,6 +5060,9 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
     return s:apply_issue_run_command(l:issue, a:keep_focus_code)
   endif
   if l:op ==# 'lsp_code_action'
+    if s:apply_issue_lsp_ai_fix_explicit(l:issue)
+      return v:true
+    endif
     if s:apply_issue_lsp_code_action(l:issue)
       return v:true
     endif
@@ -5034,7 +5070,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
     if !empty(l:local_fix) && s:apply_issue_snippet(l:local_fix, v:false)
       return v:true
     endif
-    return s:apply_issue_lsp_ai_fix_explicit(l:issue)
+    return v:false
   endif
   if l:op ==# 'lsp_ai_fix'
     return s:apply_issue_lsp_ai_fix(l:issue)
