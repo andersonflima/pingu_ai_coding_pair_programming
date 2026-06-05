@@ -177,12 +177,17 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
 test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_summary\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_lsp_hover_assisted_suggestion\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_generic_lsp_suggestion\(text\) abort/);
   assert.match(internalRuntime, /' Pingu'/);
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
   assert.match(internalRuntime, /Acao sugerida/);
-  assert.match(internalRuntime, /IA avalia import existente; se nao houver, cria a menor definicao local/);
-  assert.match(internalRuntime, /IA revisa o diagnostico e aplica a menor correcao segura/);
+  assert.match(internalRuntime, /IA procura /);
+  assert.match(internalRuntime, /no projeto para importar; se nao achar, cria a menor definicao local/);
+  assert.match(internalRuntime, /IA verifica import, modulo ou dependencia faltante e ajusta a menor declaracao segura/);
+  assert.match(internalRuntime, /e aplica a menor edicao local; LSP fica como fallback/);
+  assert.match(internalRuntime, /fixall\/organizeimports\/quickfix/);
   assert.match(internalRuntime, /Substituir a linha atual pelo snippet sugerido/);
   assert.match(internalRuntime, /Aplicar resolucao assistida/);
   assert.match(internalRuntime, /Forcar correcao com IA/);
