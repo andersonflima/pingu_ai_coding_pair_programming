@@ -26,6 +26,9 @@ let s:pingu_issue_hover_menu_timer = -1
 let s:pingu_issue_hover_source_context = {}
 let s:pingu_issue_hover_source_map_bufnr = -1
 let s:pingu_issue_hover_source_maps = []
+let s:pingu_issue_hover_ai_suggestion_cache = {}
+let s:pingu_issue_hover_ai_suggestion_job = -1
+let s:pingu_issue_hover_ai_suggestion_context = {}
 let s:realtime_dev_agent_async_analysis_job = -1
 let s:realtime_dev_agent_async_analysis_context = {}
 let s:pingu_prompt_job = -1
@@ -2280,6 +2283,11 @@ function! s:pingu_issue_hover_action_summary(issue) abort
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:action = s:issue_effective_action(a:issue)
   let l:op = trim('' . get(l:action, 'op', ''))
+  let l:signature = s:pingu_issue_hover_signature(a:issue)
+  let l:cached = get(s:pingu_issue_hover_ai_suggestion_cache, l:signature, '')
+  if !empty(l:cached)
+    return s:pingu_truncate_hover_text(l:cached, 78)
+  endif
   if index(['lsp_code_action', 'lsp_ai_fix', 'lsp_diagnostic'], get(a:issue, 'kind', '')) != -1
         \ || l:op ==# 'lsp_code_action'
         \ || l:op ==# 'lsp_ai_fix'
@@ -2335,6 +2343,155 @@ function! s:pingu_issue_hover_action_summary(issue) abort
     return empty(l:command) ? 'Executar comando sugerido' : 'Executar: ' . s:pingu_truncate_hover_text(l:command, 60)
   endif
   return 'Aplicar snippet sugerido para este problema'
+endfunction
+
+function! s:pingu_issue_hover_lsp_payload(issue) abort
+  if !has('nvim') || !exists('*jobstart') || !exists('*json_decode')
+    return {}
+  endif
+  let l:action = s:issue_effective_action(a:issue)
+  let l:op = trim('' . get(l:action, 'op', ''))
+  if index(['lsp_code_action', 'lsp_ai_fix', 'lsp_diagnostic'], get(a:issue, 'kind', '')) == -1
+        \ && l:op !=# 'lsp_code_action'
+        \ && l:op !=# 'lsp_ai_fix'
+    return {}
+  endif
+  let l:filename = fnamemodify(get(a:issue, 'filename', ''), ':p')
+  let l:target_buf = s:issue_target_buffer(l:filename)
+  if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    return {}
+  endif
+  let l:runner = s:realtime_dev_agent_script_runner()
+  let l:script = s:realtime_dev_agent_script_path()
+  if empty(l:runner) || empty(l:script)
+    return {}
+  endif
+  let l:diagnostic = {
+        \ 'line': max([1, str2nr(string(get(a:issue, 'lnum', 1)))]),
+        \ 'col': max([1, str2nr(string(get(a:issue, 'col', 1)))]),
+        \ 'severity': tolower(s:lsp_severity_label(str2nr(string(get(a:issue, 'lsp_severity', 2))))),
+        \ 'message': trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', ''))),
+        \ 'source': trim('' . get(a:issue, 'lsp_source', '')),
+        \ 'code': trim('' . get(a:issue, 'lsp_code', '')),
+        \ }
+  return {
+        \ 'argv': [l:runner, l:script, '--lsp-ai-fix'],
+        \ 'root': s:project_root(l:filename),
+        \ 'payload': json_encode({
+        \   'file': l:filename,
+        \   'lines': getbufline(l:target_buf, 1, '$'),
+        \   'diagnostic': l:diagnostic,
+        \ }),
+        \ }
+endfunction
+
+function! s:pingu_issue_hover_ai_suggestion_on_stdout(context, job_id, data, event) abort
+  if a:job_id !=# get(s:, 'pingu_issue_hover_ai_suggestion_job', -1) || type(a:data) != v:t_list
+    return
+  endif
+  let a:context.stdout += a:data
+endfunction
+
+function! s:pingu_issue_hover_ai_suggestion_on_stderr(context, job_id, data, event) abort
+  if a:job_id !=# get(s:, 'pingu_issue_hover_ai_suggestion_job', -1) || type(a:data) != v:t_list
+    return
+  endif
+  let a:context.stderr += a:data
+endfunction
+
+function! s:pingu_issue_hover_update_suggestion(signature, suggestion) abort
+  let l:suggestion = s:pingu_truncate_hover_text(a:suggestion, 78)
+  if empty(l:suggestion)
+    return
+  endif
+  let s:pingu_issue_hover_ai_suggestion_cache[a:signature] = l:suggestion
+  if get(s:, 'pingu_cursor_hover_issue_signature', '') !=# a:signature
+    return
+  endif
+  let l:bufnr = get(s:, 'pingu_issue_hover_menu_bufnr', -1)
+  if l:bufnr <= 0 || !bufloaded(l:bufnr) || !exists('*nvim_buf_set_lines')
+    return
+  endif
+  try
+    call nvim_buf_set_option(l:bufnr, 'modifiable', v:true)
+    call nvim_buf_set_lines(l:bufnr, 5, 6, v:false, ['  ' . l:suggestion])
+    call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
+  catch
+    silent! call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
+  endtry
+endfunction
+
+function! s:pingu_issue_hover_ai_suggestion_on_exit(context, job_id, code, event) abort
+  if a:job_id !=# get(s:, 'pingu_issue_hover_ai_suggestion_job', -1)
+    return
+  endif
+  let s:pingu_issue_hover_ai_suggestion_job = -1
+  let s:pingu_issue_hover_ai_suggestion_context = {}
+  if a:code != 0
+    return
+  endif
+  let l:raw = join(get(a:context, 'stdout', []), "\n")
+  if empty(trim(l:raw))
+    return
+  endif
+  try
+    let l:decoded = json_decode(l:raw)
+  catch
+    return
+  endtry
+  if type(l:decoded) != v:t_dict || !get(l:decoded, 'ok', v:false)
+    return
+  endif
+  let l:issue = get(l:decoded, 'issue', {})
+  if type(l:issue) != v:t_dict
+    return
+  endif
+  let l:suggestion = trim('' . get(l:issue, 'suggestion', ''))
+  if empty(l:suggestion)
+    let l:suggestion = trim('' . get(l:issue, 'message', ''))
+  endif
+  if !empty(l:suggestion) && !s:pingu_generic_lsp_suggestion(l:suggestion)
+    call s:pingu_issue_hover_update_suggestion(get(a:context, 'signature', ''), l:suggestion)
+  endif
+endfunction
+
+function! s:start_pingu_issue_hover_ai_suggestion(issue, signature) abort
+  if has_key(s:pingu_issue_hover_ai_suggestion_cache, a:signature)
+    return
+  endif
+  let l:request = s:pingu_issue_hover_lsp_payload(a:issue)
+  if empty(l:request)
+    return
+  endif
+  if get(s:, 'pingu_issue_hover_ai_suggestion_job', -1) > 0
+    silent! call jobstop(s:pingu_issue_hover_ai_suggestion_job)
+  endif
+  let l:context = {
+        \ 'signature': a:signature,
+        \ 'stdout': [],
+        \ 'stderr': [],
+        \ }
+  let l:command = s:project_command_argv(get(l:request, 'argv', []), get(l:request, 'root', ''))
+  let l:job = jobstart(l:command, {
+        \ 'stdout_buffered': v:true,
+        \ 'stderr_buffered': v:true,
+        \ 'on_stdout': function('s:pingu_issue_hover_ai_suggestion_on_stdout', [l:context]),
+        \ 'on_stderr': function('s:pingu_issue_hover_ai_suggestion_on_stderr', [l:context]),
+        \ 'on_exit': function('s:pingu_issue_hover_ai_suggestion_on_exit', [l:context]),
+        \ })
+  if l:job <= 0
+    return
+  endif
+  let s:pingu_issue_hover_ai_suggestion_job = l:job
+  let s:pingu_issue_hover_ai_suggestion_context = l:context
+  try
+    call chansend(l:job, get(l:request, 'payload', '{}'))
+    call chanclose(l:job, 'stdin')
+  catch
+    silent! call jobstop(l:job)
+    let s:pingu_issue_hover_ai_suggestion_job = -1
+    let s:pingu_issue_hover_ai_suggestion_context = {}
+  endtry
 endfunction
 
 function! s:pingu_issue_hover_menu_lines(issue) abort
@@ -2425,6 +2582,7 @@ function! s:pingu_open_issue_hover_menu(issue) abort
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = l:signature
+  call s:start_pingu_issue_hover_ai_suggestion(a:issue, l:signature)
 endfunction
 
 function! s:pingu_show_issue_hover_action_hint() abort
