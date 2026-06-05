@@ -1,6 +1,9 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 
 const {
@@ -65,6 +68,66 @@ test('resolveLspDiagnosticFix usa provider e limita action a edicao local', () =
   assert.deepEqual(result.issue.action, { op: 'replace_line' });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].lspDiagnostic.source, 'pyright');
+});
+
+test('buildLspDiagnosticFixRequest orienta Pyright undefined variable a importar simbolo existente', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-lsp-ai-'));
+  const helpersFile = path.join(root, 'inventory.py');
+  const farmFile = path.join(root, 'farm.py');
+  fs.writeFileSync(path.join(root, 'pyproject.toml'), '[project]\nname = "sample"\n');
+  fs.writeFileSync(helpersFile, 'def use_item(item):\n    return item\n');
+  fs.writeFileSync(farmFile, 'def run(item):\n    return use_item(item)\n');
+
+  const request = buildLspDiagnosticFixRequest({
+    file: farmFile,
+    lines: [
+      'def run(item):',
+      '    return use_item(item)',
+    ],
+    diagnostic: {
+      line: 2,
+      severity: 'error',
+      message: '"use_item" is not defined',
+      source: 'Pyright',
+      code: 'reportUndefinedVariable',
+    },
+  });
+
+  assert.equal(request.issue.metadata.undefinedSymbol, 'use_item');
+  assert.equal(request.issue.metadata.importCandidates.length, 1);
+  assert.equal(request.issue.metadata.importCandidates[0].importStatement, 'from inventory import use_item');
+  assert.match(request.instruction, /Antes de criar codigo novo, avalie importCandidates/);
+  assert.match(request.instruction, /prefira adicionar somente o import necessario/);
+  assert.equal(request.issueContext.importInsertionLine, 1);
+});
+
+test('resolveLspDiagnosticFix preserva linha escolhida pela IA para inserir import', () => {
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiIssueFix: () => ({
+      snippet: 'from inventory import use_item',
+      message: 'Importa simbolo existente',
+      suggestion: 'Adicionar import para use_item.',
+      action: { op: 'insert_before', line: 1 },
+    }),
+  };
+
+  const result = resolveLspDiagnosticFix({
+    file: '/tmp/farm.py',
+    lines: ['def run(item):', '    return use_item(item)'],
+    diagnostic: {
+      line: 2,
+      severity: 'error',
+      message: '"use_item" is not defined',
+      source: 'Pyright',
+      code: 'reportUndefinedVariable',
+    },
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.issue.line, 1);
+  assert.deepEqual(result.issue.action, { op: 'insert_before', line: 1 });
+  assert.equal(result.issue.snippet, 'from inventory import use_item');
 });
 
 test('resolveLspDiagnosticFix rejeita action ampla do provider', () => {
