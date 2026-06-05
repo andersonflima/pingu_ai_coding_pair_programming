@@ -299,6 +299,7 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
   assert.match(internalRuntime, /'on_stdout': function\('s:pingu_prompt_on_stdout'\)/);
   assert.match(internalRuntime, /'on_exit': function\('s:pingu_prompt_on_exit'\)/);
   assert.match(internalRuntime, /'contextRadius': str2nr\(string\(get\(g:, 'pingu_prompt_context_radius', 80\)\)\)/);
+  assert.match(internalRuntime, /'hasExplicitRange': a:range_count > 0 \? v:true : v:false/);
   assert.match(internalRuntime, /if s:start_async_pingu_prompt\(l:argv, l:root, l:stdin_payload, l:context\)/);
 });
 
