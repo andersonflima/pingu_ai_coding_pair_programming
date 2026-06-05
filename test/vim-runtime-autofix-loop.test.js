@@ -178,6 +178,9 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_summary\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_hover_assisted_suggestion\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:start_pingu_issue_hover_ai_suggestion\(issue, signature\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_ai_suggestion_on_exit\(context, job_id, code, event\) abort/);
+  assert.match(internalRuntime, /s:pingu_issue_hover_ai_suggestion_cache/);
   assert.match(internalRuntime, /function! s:pingu_generic_lsp_suggestion\(text\) abort/);
   assert.match(internalRuntime, /' Pingu'/);
   assert.match(internalRuntime, /Code action/);
@@ -194,6 +197,9 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Abrir painel/);
   assert.doesNotMatch(internalRuntime, /Pingu: ' \. l:message/);
   assert.doesNotMatch(internalRuntime, /lsp_code_action: %s/);
+  assert.match(internalRuntime, /call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
+  assert.match(internalRuntime, /'--lsp-ai-fix'/);
+  assert.match(internalRuntime, /nvim_buf_set_lines\(l:bufnr, 5, 6, v:false, \['  ' \. l:suggestion\]\)/);
   assert.match(internalRuntime, /if l:line == 7\n    call s:pingu_issue_hover_action\('apply'\)/);
   assert.match(internalRuntime, /if empty\(l:issue\)\n    let l:issue = s:pingu_issue_at_cursor_for_action\(\)\n  endif/);
 });
