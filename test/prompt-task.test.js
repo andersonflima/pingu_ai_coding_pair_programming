@@ -208,6 +208,55 @@ test('resolvePromptTask remove comentarios do arquivo aberto quando nao ha range
   });
 });
 
+test('resolvePromptTask remove docstring Python quando usuario pede remover comentarios', () => {
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiPromptTask: () => null,
+  };
+
+  const result = resolvePromptTask({
+    file: '/tmp/farm.py',
+    language: 'python',
+    prompt: 'remova os comentarios do codigo',
+    lines: [
+      'def helper(planta, fert):',
+      '    def interna():',
+      '        """',
+      '        Executa a etapa principal de interna preservando o contrato esperado',
+      '',
+      '        Args:',
+      '          Nenhum argumento recebido.',
+      '',
+      '        Returns:',
+      '          Any: Valor calculado conforme a regra principal da funcao.',
+      '        """',
+      '        use_item(fert)',
+      '        plant(planta)',
+      '',
+      '    return interna',
+    ],
+    selectedText: '        Executa a etapa principal de interna preservando o contrato esperado',
+    startLine: 4,
+    endLine: 4,
+    hasExplicitRange: false,
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(
+    result.issue.snippet,
+    'def helper(planta, fert):\n'
+      + '    def interna():\n'
+      + '        use_item(fert)\n'
+      + '        plant(planta)\n'
+      + '\n'
+      + '    return interna',
+  );
+  assert.deepEqual(result.issue.action.range, {
+    start: { line: 0, character: 0 },
+    end: { line: 15, character: 0 },
+  });
+});
+
 test('resolvePromptTask remove comentarios localmente quando provider esta indisponivel', () => {
   const provider = {
     hasOpenAiConfiguration: () => false,
