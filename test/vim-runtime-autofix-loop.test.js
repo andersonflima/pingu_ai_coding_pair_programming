@@ -176,9 +176,13 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
 
 test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_action_summary\(issue\) abort/);
   assert.match(internalRuntime, /' Pingu'/);
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
+  assert.match(internalRuntime, /Acao sugerida: /);
+  assert.match(internalRuntime, /Aplicar melhor code action LSP disponivel/);
+  assert.match(internalRuntime, /Substituir a linha atual pelo snippet sugerido/);
   assert.match(internalRuntime, /Aplicar correcao sugerida/);
   assert.match(internalRuntime, /Corrigir com IA/);
   assert.match(internalRuntime, /Abrir painel/);
