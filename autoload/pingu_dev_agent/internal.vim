@@ -8537,9 +8537,13 @@ function! s:pingu_prompt_terminal_command() abort
     return l:command
   endif
 
+  if !empty($PINGU_PROMPT_TERMINAL_COMMAND)
+    return $PINGU_PROMPT_TERMINAL_COMMAND
+  endif
+
   let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
-  if l:provider ==# 'copilot'
-    return empty($PINGU_COPILOT_COMMAND) ? 'copilot' : $PINGU_COPILOT_COMMAND
+  if l:provider !=# 'codex' && l:provider !=# 'auto'
+    return ''
   endif
 
   let l:codex_command = trim('' . get(g:, 'pingu_codex_command', ''))
@@ -8652,6 +8656,12 @@ function! s:pingu_prompt_terminal(line1, line2, range_count) abort
     return
   endif
   let l:command = s:pingu_prompt_terminal_command()
+  if empty(l:command)
+    echohl WarningMsg
+    echomsg '[Pingu] Provider atual nao possui terminal interativo configurado; use :PinguPrompt <texto> ou defina g:pingu_prompt_terminal_command'
+    echohl None
+    return
+  endif
   let l:argv = [l:command] + s:pingu_prompt_terminal_model_args(l:command)
   let l:root = s:project_root(l:file)
   let l:strategy = s:issue_terminal_strategy()
