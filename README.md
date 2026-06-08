@@ -881,8 +881,8 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_undo_fix_history_max = 30` limita quantos snapshots de correcoes do Pingu ficam disponiveis por arquivo para rollback manual
 - `let g:pingu_map_key = '<leader>pic'` analisa o arquivo atual
 - `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
-- `let g:pingu_prompt_key = '<leader>pip'` abre o prompt manual assistido em terminal no cursor ou na selecao visual
-- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND` ou `codex`
+- `let g:pingu_prompt_key = '<leader>pip'` abre o provider interativo em terminal flutuante
+- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa o provider configurado quando houver CLI interativo, ou `PINGU_CODEX_COMMAND`/`codex`
 - `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider/modelo assistido da sessao
 - `let g:pingu_model_key_alias = '<leader>pmi'` ativa um alias opcional para o mesmo seletor
 - `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
@@ -901,9 +901,9 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; o menu separa problema e acao sugerida, abre com fallback objetivo, consulta o provider em background para atualizar a acao sugerida daquele diagnostico e usa `a` para aplicar a resolucao assistida, `i` para forcar IA, `p` para abrir painel e `q` para fechar, ou clique/Enter na linha da acao
 - `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu depois que o cursor para na linha; diagnostics LSP com range multilinha tambem acionam o menu em qualquer linha coberta, sem exigir `<leader>`
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
-- `:PinguPrompt` sem argumento abre um terminal interativo no contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para abrir o terminal com o range selecionado como contexto.
+- `:PinguPrompt` sem argumento abre somente um terminal flutuante com o provider interativo; ele nao injeta prompt automatico, arquivo ou range.
 - `:PinguPrompt <texto>` continua executando o prompt como patch direto no buffer: sem selecao visual usa a linha do cursor e contexto ao redor; com selecao visual envia o texto selecionado e aplica a substituicao somente naquele range.
-- `:PinguPromptTerminal` abre explicitamente o terminal interativo, usando o mesmo contexto de cursor ou selecao visual.
+- `:PinguPromptTerminal` abre explicitamente o mesmo terminal flutuante interativo.
 - `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos
 - `:PinguModel` permite alternar entre Copilot, Codex e OpenAI sem reiniciar o editor; depois do provider, o seletor pede o modelo.
 - `:PinguModel codex gpt-5-codex` define provider e modelo diretamente; use `:PinguModel codex -` para voltar ao padrao do provider.
