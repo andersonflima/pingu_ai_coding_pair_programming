@@ -342,9 +342,13 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
 
 test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /function! s:pingu_prompt_terminal\(line1, line2, range_count\) abort/);
+  assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_float\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_native\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_toggleterm\(argv, cwd\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_initial_prompt\(file, start_line, end_line, range_count\) abort/);
+  assert.match(internalRuntime, /lazy_util\.float_term\(payload\.cmd, \{ cwd = payload\.cwd ~= "" and payload\.cwd or nil \}\)/);
+  assert.match(internalRuntime, /'   direction = "float",'/);
+  assert.match(internalRuntime, /let l:argv = \[l:command\] \+ s:pingu_prompt_terminal_model_args\(l:command\)/);
+  assert.match(internalRuntime, /if l:provider ==# 'copilot'\n    return empty\(\$PINGU_COPILOT_COMMAND\) \? 'copilot' : \$PINGU_COPILOT_COMMAND\n  endif/);
   assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);
   assert.match(internalRuntime, /termopen\(a:argv, \{'cwd': a:cwd\}\)/);
@@ -353,6 +357,8 @@ test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /':<C-U>''<,''>PinguPrompt<CR>'/);
   assert.doesNotMatch(internalRuntime, /input\('\[Pingu\] Prompt: '\)/);
   assert.doesNotMatch(internalRuntime, /':PinguPrompt '/);
+  assert.doesNotMatch(internalRuntime, /Pingu prompt no editor/);
+  assert.doesNotMatch(internalRuntime, /Use o arquivo e o range acima como contexto principal/);
 });
 
 test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {

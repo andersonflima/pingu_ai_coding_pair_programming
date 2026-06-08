@@ -8537,6 +8537,11 @@ function! s:pingu_prompt_terminal_command() abort
     return l:command
   endif
 
+  let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
+  if l:provider ==# 'copilot'
+    return empty($PINGU_COPILOT_COMMAND) ? 'copilot' : $PINGU_COPILOT_COMMAND
+  endif
+
   let l:codex_command = trim('' . get(g:, 'pingu_codex_command', ''))
   if !empty(l:codex_command)
     return l:codex_command
@@ -8561,22 +8566,29 @@ function! s:pingu_prompt_terminal_model_args(command) abort
   return ['-m', l:model]
 endfunction
 
-function! s:pingu_prompt_terminal_initial_prompt(file, start_line, end_line, range_count) abort
-  let l:range = a:range_count > 0
-        \ ? printf('%d-%d', a:start_line, a:end_line)
-        \ : string(a:start_line)
-  return join([
-        \ 'Pingu prompt no editor.',
-        \ '',
-        \ 'Arquivo: ' . a:file,
-        \ 'Range: ' . l:range,
-        \ '',
-        \ 'Use o arquivo e o range acima como contexto principal. Ajude de forma objetiva e, quando fizer sentido, edite o projeto diretamente.',
-        \ ], "\n")
-endfunction
-
 function! s:pingu_prompt_terminal_shell_command(argv) abort
   return join(map(copy(a:argv), {_, item -> shellescape(item)}), ' ')
+endfunction
+
+function! s:open_pingu_prompt_terminal_float(argv, cwd) abort
+  if !has('nvim')
+    return v:false
+  endif
+
+  let l:payload = {
+        \ 'cmd': a:argv,
+        \ 'cwd': a:cwd,
+        \ }
+  return luaeval(
+        \ '(function(payload)'
+        \ . ' local ok, lazy_util = pcall(require, "lazy.util")'
+        \ . ' if not ok or not lazy_util or not lazy_util.float_term then return false end'
+        \ . ' lazy_util.float_term(payload.cmd, { cwd = payload.cwd ~= "" and payload.cwd or nil })'
+        \ . ' vim.defer_fn(function() pcall(vim.cmd, "startinsert") end, 20)'
+        \ . ' return true'
+        \ . ' end)(_A)',
+        \ l:payload
+        \ )
 endfunction
 
 function! s:open_pingu_prompt_terminal_native(argv, cwd) abort
@@ -8616,7 +8628,7 @@ function! s:open_pingu_prompt_terminal_toggleterm(argv, cwd) abort
         \ . '   dir = payload.cwd ~= "" and payload.cwd or nil,'
         \ . '   hidden = false,'
         \ . '   close_on_exit = false,'
-        \ . '   direction = "horizontal",'
+        \ . '   direction = "float",'
         \ . '   size = payload.height,'
         \ . '   on_open = function(_) vim.defer_fn(function() pcall(vim.cmd, "startinsert") end, 20) end'
         \ . ' })'
@@ -8639,22 +8651,19 @@ function! s:pingu_prompt_terminal(line1, line2, range_count) abort
     echomsg '[Pingu] Buffer sem arquivo associado'
     return
   endif
-
-  let l:start_line = a:range_count > 0 ? a:line1 : line('.')
-  let l:end_line = a:range_count > 0 ? a:line2 : line('.')
-  if l:start_line > l:end_line
-    let [l:start_line, l:end_line] = [l:end_line, l:start_line]
-  endif
-
   let l:command = s:pingu_prompt_terminal_command()
-  let l:prompt = s:pingu_prompt_terminal_initial_prompt(l:file, l:start_line, l:end_line, a:range_count)
-  let l:argv = [l:command] + s:pingu_prompt_terminal_model_args(l:command) + [l:prompt]
+  let l:argv = [l:command] + s:pingu_prompt_terminal_model_args(l:command)
   let l:root = s:project_root(l:file)
   let l:strategy = s:issue_terminal_strategy()
 
+  if s:open_pingu_prompt_terminal_float(l:argv, l:root)
+    echomsg '[Pingu] Prompt aberto no terminal flutuante'
+    return
+  endif
+
   if l:strategy ==# 'toggleterm' || l:strategy ==# 'auto'
     if s:open_pingu_prompt_terminal_toggleterm(l:argv, l:root)
-      echomsg '[Pingu] Prompt aberto no terminal'
+      echomsg '[Pingu] Prompt aberto no terminal flutuante'
       return
     endif
   endif
