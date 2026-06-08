@@ -215,6 +215,7 @@ test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
   assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
+  assert.match(pluginRuntime, /let g:pingu_prompt_terminal_command = empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\) \? '' : \$PINGU_PROMPT_TERMINAL_COMMAND/);
   assert.match(pluginRuntime, /let g:pingu_model_key = '<leader>pim'/);
   assert.match(pluginRuntime, /let g:pingu_model_key_alias = '<leader>pmi'/);
   assert.match(pluginRuntime, /let g:pingu_ai_provider = empty\(\$PINGU_AI_PROVIDER\) \? 'codex' : \$PINGU_AI_PROVIDER/);
@@ -337,6 +338,21 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
   assert.match(internalRuntime, /command! -nargs=\? PinguPromptClear call s:pingu_prompt_clear_command\(<q-args>\)/);
   assert.match(pluginRuntime, /let g:pingu_prompt_chat_history_max = 12/);
   assert.match(pluginRuntime, /let g:pingu_prompt_chat_entry_max_chars = 320/);
+});
+
+test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal\(line1, line2, range_count\) abort/);
+  assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_native\(argv, cwd\) abort/);
+  assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_toggleterm\(argv, cwd\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_initial_prompt\(file, start_line, end_line, range_count\) abort/);
+  assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
+  assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);
+  assert.match(internalRuntime, /termopen\(a:argv, \{'cwd': a:cwd\}\)/);
+  assert.match(internalRuntime, /call term_start\(a:argv, \{'cwd': a:cwd, 'curwin': 1\}\)/);
+  assert.match(internalRuntime, /':PinguPrompt<CR>'/);
+  assert.match(internalRuntime, /':<C-U>''<,''>PinguPrompt<CR>'/);
+  assert.doesNotMatch(internalRuntime, /input\('\[Pingu\] Prompt: '\)/);
+  assert.doesNotMatch(internalRuntime, /':PinguPrompt '/);
 });
 
 test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {

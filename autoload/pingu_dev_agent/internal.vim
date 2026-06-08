@@ -8531,6 +8531,144 @@ function! s:start_async_pingu_prompt(argv, root, payload, context) abort
   return v:true
 endfunction
 
+function! s:pingu_prompt_terminal_command() abort
+  let l:command = trim('' . get(g:, 'pingu_prompt_terminal_command', ''))
+  if !empty(l:command)
+    return l:command
+  endif
+
+  let l:codex_command = trim('' . get(g:, 'pingu_codex_command', ''))
+  if !empty(l:codex_command)
+    return l:codex_command
+  endif
+
+  return empty($PINGU_CODEX_COMMAND) ? 'codex' : $PINGU_CODEX_COMMAND
+endfunction
+
+function! s:pingu_prompt_terminal_model_args(command) abort
+  if fnamemodify(a:command, ':t') !=# 'codex'
+    return []
+  endif
+
+  let l:model = trim('' . get(g:, 'pingu_ai_model', ''))
+  if empty(l:model)
+    let l:model = trim('' . $PINGU_CODEX_MODEL)
+  endif
+  if empty(l:model)
+    return []
+  endif
+
+  return ['-m', l:model]
+endfunction
+
+function! s:pingu_prompt_terminal_initial_prompt(file, start_line, end_line, range_count) abort
+  let l:range = a:range_count > 0
+        \ ? printf('%d-%d', a:start_line, a:end_line)
+        \ : string(a:start_line)
+  return join([
+        \ 'Pingu prompt no editor.',
+        \ '',
+        \ 'Arquivo: ' . a:file,
+        \ 'Range: ' . l:range,
+        \ '',
+        \ 'Use o arquivo e o range acima como contexto principal. Ajude de forma objetiva e, quando fizer sentido, edite o projeto diretamente.',
+        \ ], "\n")
+endfunction
+
+function! s:pingu_prompt_terminal_shell_command(argv) abort
+  return join(map(copy(a:argv), {_, item -> shellescape(item)}), ' ')
+endfunction
+
+function! s:open_pingu_prompt_terminal_native(argv, cwd) abort
+  let l:height = s:issue_terminal_height()
+  let l:return_winid = win_getid()
+  call s:remember_code_window(l:return_winid)
+
+  if has('nvim')
+    execute 'botright ' . l:height . 'split'
+    enew
+    call termopen(a:argv, {'cwd': a:cwd})
+    startinsert
+    return v:true
+  endif
+
+  if exists('*term_start')
+    execute 'botright ' . l:height . 'split'
+    call term_start(a:argv, {'cwd': a:cwd, 'curwin': 1})
+    return v:true
+  endif
+
+  return v:false
+endfunction
+
+function! s:open_pingu_prompt_terminal_toggleterm(argv, cwd) abort
+  let l:payload = {
+        \ 'cmd': s:pingu_prompt_terminal_shell_command(a:argv),
+        \ 'cwd': a:cwd,
+        \ 'height': s:issue_terminal_height(),
+        \ }
+  return luaeval(
+        \ '(function(payload)'
+        \ . ' local ok, terminal_module = pcall(require, "toggleterm.terminal")'
+        \ . ' if not ok or not terminal_module or not terminal_module.Terminal then return false end'
+        \ . ' local term = terminal_module.Terminal:new({'
+        \ . '   cmd = payload.cmd,'
+        \ . '   dir = payload.cwd ~= "" and payload.cwd or nil,'
+        \ . '   hidden = false,'
+        \ . '   close_on_exit = false,'
+        \ . '   direction = "horizontal",'
+        \ . '   size = payload.height,'
+        \ . '   on_open = function(_) vim.defer_fn(function() pcall(vim.cmd, "startinsert") end, 20) end'
+        \ . ' })'
+        \ . ' term:toggle()'
+        \ . ' return true'
+        \ . ' end)(_A)',
+        \ l:payload
+        \ )
+endfunction
+
+function! s:pingu_prompt_terminal(line1, line2, range_count) abort
+  let l:bufnr = bufnr('%')
+  if l:bufnr <= 0 || !bufloaded(l:bufnr)
+    echomsg '[Pingu] Nenhum buffer ativo para prompt'
+    return
+  endif
+
+  let l:file = fnamemodify(bufname(l:bufnr), ':p')
+  if empty(l:file)
+    echomsg '[Pingu] Buffer sem arquivo associado'
+    return
+  endif
+
+  let l:start_line = a:range_count > 0 ? a:line1 : line('.')
+  let l:end_line = a:range_count > 0 ? a:line2 : line('.')
+  if l:start_line > l:end_line
+    let [l:start_line, l:end_line] = [l:end_line, l:start_line]
+  endif
+
+  let l:command = s:pingu_prompt_terminal_command()
+  let l:prompt = s:pingu_prompt_terminal_initial_prompt(l:file, l:start_line, l:end_line, a:range_count)
+  let l:argv = [l:command] + s:pingu_prompt_terminal_model_args(l:command) + [l:prompt]
+  let l:root = s:project_root(l:file)
+  let l:strategy = s:issue_terminal_strategy()
+
+  if l:strategy ==# 'toggleterm' || l:strategy ==# 'auto'
+    if s:open_pingu_prompt_terminal_toggleterm(l:argv, l:root)
+      echomsg '[Pingu] Prompt aberto no terminal'
+      return
+    endif
+  endif
+
+  if s:open_pingu_prompt_terminal_native(l:argv, l:root)
+    echomsg '[Pingu] Prompt aberto no terminal'
+    return
+  endif
+
+  echohl ErrorMsg
+  echomsg '[Pingu] Terminal indisponivel para prompt'
+  echohl None
+endfunction
+
 function! s:pingu_prompt(line1, line2, args, range_count) abort
   let l:bufnr = bufnr('%')
   if l:bufnr <= 0 || !bufloaded(l:bufnr)
@@ -8546,12 +8684,7 @@ function! s:pingu_prompt(line1, line2, args, range_count) abort
 
   let l:prompt = trim('' . a:args)
   if empty(l:prompt)
-    call inputsave()
-    let l:prompt = input('[Pingu] Prompt: ')
-    call inputrestore()
-  endif
-  if empty(trim(l:prompt))
-    echomsg '[Pingu] Prompt cancelado'
+    call s:pingu_prompt_terminal(a:line1, a:line2, a:range_count)
     return
   endif
 
@@ -9151,6 +9284,7 @@ command! PinguWindowCheck call s:pingu_dev_agent_window_check()
 command! PinguWindowClose call s:window_close()
 command! PinguWindowToggle call s:window_toggle()
 command! -range -nargs=* PinguPrompt call s:pingu_prompt(<line1>, <line2>, <q-args>, <range>)
+command! -range PinguPromptTerminal call s:pingu_prompt_terminal(<line1>, <line2>, <range>)
 command! PinguHintsRefresh call s:update_pingu_all_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()
@@ -9220,12 +9354,12 @@ if !empty(g:pingu_prompt_key)
   " Atalho para prompt manual no cursor ou no range visual selecionado.
   call s:set_global_normal_map(
         \ g:pingu_prompt_key,
-        \ ':PinguPrompt ',
+        \ ':PinguPrompt<CR>',
         \ 'Pingu: prompt manual no cursor',
         \ )
   call s:set_global_visual_map(
         \ g:pingu_prompt_key,
-        \ ':<C-U>''<,''>PinguPrompt ',
+        \ ':<C-U>''<,''>PinguPrompt<CR>',
         \ 'Pingu: prompt manual na selecao',
         \ )
 endif
