@@ -349,6 +349,11 @@ if !exists('g:pingu_window_key')
   let g:pingu_window_key = '<leader>pia'
 endif
 
+if !exists('g:pingu_help_key')
+  " Atalho para abrir ajuda rapida dos comandos e comentarios acionaveis.
+  let g:pingu_help_key = '<leader>pi?'
+endif
+
 if !exists('g:pingu_prompt_key')
   " Atalho para prompt manual assistido no cursor ou selecao visual.
   let g:pingu_prompt_key = '<leader>pip'
