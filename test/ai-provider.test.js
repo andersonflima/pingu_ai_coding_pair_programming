@@ -15,21 +15,23 @@ function buildProvider(name, available = true) {
   };
 }
 
-test('createAiProvider prefers openai in auto mode when both providers are available', () => {
+test('createAiProvider prefers codex in auto mode when both providers are available', () => {
   const provider = createAiProvider({
     openAiProvider: buildProvider('openai', true),
     copilotProvider: buildProvider('copilot', true),
+    codexProvider: buildProvider('codex', true),
   });
 
   const env = { PINGU_AI_PROVIDER: 'auto' };
-  assert.equal(provider.activeProviderName(env), 'openai');
-  assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'openai:task');
+  assert.equal(provider.activeProviderName(env), 'codex');
+  assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'codex:task');
 });
 
 test('createAiProvider uses copilot when mode is copilot', () => {
   const provider = createAiProvider({
     openAiProvider: buildProvider('openai', true),
     copilotProvider: buildProvider('copilot', true),
+    codexProvider: buildProvider('codex', true),
   });
 
   const env = { PINGU_AI_PROVIDER: 'copilot' };
@@ -37,16 +39,43 @@ test('createAiProvider uses copilot when mode is copilot', () => {
   assert.equal(provider.resolveAiIssueFix({}, env).snippet, 'copilot:fix');
 });
 
-test('createAiProvider treats codex mode as openai provider', () => {
+test('createAiProvider uses codex provider when mode is codex', () => {
   const provider = createAiProvider({
     openAiProvider: buildProvider('openai', true),
     copilotProvider: buildProvider('copilot', true),
+    codexProvider: buildProvider('codex', true),
   });
 
   const env = { PINGU_AI_PROVIDER: 'codex' };
-  assert.equal(provider.readProviderMode(env), 'openai');
-  assert.equal(provider.activeProviderName(env), 'openai');
-  assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'openai:task');
+  assert.equal(provider.readProviderMode(env), 'codex');
+  assert.equal(provider.activeProviderName(env), 'codex');
+  assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'codex:task');
+});
+
+test('createAiProvider defaults to codex when provider mode is not configured', () => {
+  const provider = createAiProvider({
+    openAiProvider: buildProvider('openai', true),
+    copilotProvider: buildProvider('copilot', true),
+    codexProvider: buildProvider('codex', true),
+  });
+
+  const env = {};
+  assert.equal(provider.readProviderMode(env), 'codex');
+  assert.equal(provider.activeProviderName(env), 'codex');
+  assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'codex:task');
+});
+
+test('createAiProvider does not fallback to openai in auto mode when only openai is available', () => {
+  const provider = createAiProvider({
+    openAiProvider: buildProvider('openai', true),
+    copilotProvider: buildProvider('copilot', false),
+    codexProvider: buildProvider('codex', false),
+  });
+
+  const env = { PINGU_AI_PROVIDER: 'auto' };
+  assert.equal(provider.activeProviderName(env), 'none');
+  assert.equal(provider.hasOpenAiConfiguration(env), false);
+  assert.equal(provider.resolveAiGeneratedTask({}, env), null);
 });
 
 test('createAiProvider returns none when selected provider is unavailable', () => {
