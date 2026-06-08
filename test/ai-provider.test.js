@@ -44,12 +44,41 @@ test('createAiProvider uses codex provider when mode is codex', () => {
     openAiProvider: buildProvider('openai', true),
     copilotProvider: buildProvider('copilot', true),
     codexProvider: buildProvider('codex', true),
+    claudeProvider: buildProvider('claude', true),
   });
 
   const env = { PINGU_AI_PROVIDER: 'codex' };
   assert.equal(provider.readProviderMode(env), 'codex');
   assert.equal(provider.activeProviderName(env), 'codex');
   assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'codex:task');
+});
+
+test('createAiProvider uses claude provider when mode is claude', () => {
+  const provider = createAiProvider({
+    openAiProvider: buildProvider('openai', true),
+    copilotProvider: buildProvider('copilot', true),
+    codexProvider: buildProvider('codex', true),
+    claudeProvider: buildProvider('claude', true),
+  });
+
+  const env = { PINGU_AI_PROVIDER: 'claude' };
+  assert.equal(provider.readProviderMode(env), 'claude');
+  assert.equal(provider.activeProviderName(env), 'claude');
+  assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'claude:task');
+});
+
+test('createAiProvider treats anthropic mode as claude provider', () => {
+  const provider = createAiProvider({
+    openAiProvider: buildProvider('openai', true),
+    copilotProvider: buildProvider('copilot', true),
+    codexProvider: buildProvider('codex', true),
+    claudeProvider: buildProvider('claude', true),
+  });
+
+  const env = { PINGU_AI_PROVIDER: 'anthropic' };
+  assert.equal(provider.readProviderMode(env), 'anthropic');
+  assert.equal(provider.activeProviderName(env), 'claude');
+  assert.equal(provider.resolveAiIssueFix({}, env).snippet, 'claude:fix');
 });
 
 test('createAiProvider defaults to codex when provider mode is not configured', () => {
@@ -70,12 +99,26 @@ test('createAiProvider does not fallback to openai in auto mode when only openai
     openAiProvider: buildProvider('openai', true),
     copilotProvider: buildProvider('copilot', false),
     codexProvider: buildProvider('codex', false),
+    claudeProvider: buildProvider('claude', false),
   });
 
   const env = { PINGU_AI_PROVIDER: 'auto' };
   assert.equal(provider.activeProviderName(env), 'none');
   assert.equal(provider.hasOpenAiConfiguration(env), false);
   assert.equal(provider.resolveAiGeneratedTask({}, env), null);
+});
+
+test('createAiProvider falls back to claude in auto mode before copilot', () => {
+  const provider = createAiProvider({
+    openAiProvider: buildProvider('openai', true),
+    copilotProvider: buildProvider('copilot', true),
+    codexProvider: buildProvider('codex', false),
+    claudeProvider: buildProvider('claude', true),
+  });
+
+  const env = { PINGU_AI_PROVIDER: 'auto' };
+  assert.equal(provider.activeProviderName(env), 'claude');
+  assert.equal(provider.resolveAiGeneratedTask({}, env).snippet, 'claude:task');
 });
 
 test('createAiProvider returns none when selected provider is unavailable', () => {

@@ -258,11 +258,13 @@ test('runtime permite escolher provider assistido do Pingu', () => {
   assert.match(internalRuntime, /let \$PINGU_AI_PROVIDER = l:provider/);
   assert.match(internalRuntime, /let \$PINGU_AI_MODEL = l:model/);
   assert.match(internalRuntime, /let \$PINGU_CODEX_MODEL = l:model/);
+  assert.match(internalRuntime, /let \$PINGU_CLAUDE_MODEL = l:model/);
   assert.match(internalRuntime, /let \$PINGU_OPENAI_MODEL = l:model/);
   assert.match(internalRuntime, /command! -nargs=\* PinguModel call s:pingu_select_ai_provider\(<q-args>\)/);
   assert.match(internalRuntime, /call s:stop_analysis_daemon\(\)/);
   assert.match(internalRuntime, /echo '1\. Copilot'/);
-  assert.match(internalRuntime, /input\('Escolha provider \[1-3\]: '\)/);
+  assert.match(internalRuntime, /echo '3\. Claude'/);
+  assert.match(internalRuntime, /input\('Escolha provider \[1-4\]: '\)/);
   assert.match(internalRuntime, /input\('Escolha modelo \[0-' \. l:index \. '\]: '\)/);
   assert.match(internalRuntime, /input\('Modelo: '\)/);
   assert.match(internalRuntime, /Opcao ' \. l:choice \. ' selecionada/);
@@ -363,7 +365,7 @@ test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /'   direction = "float",'/);
   assert.match(internalRuntime, /let l:argv = \[l:command\] \+ s:pingu_prompt_terminal_model_args\(l:command\)/);
   assert.match(internalRuntime, /if !empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\)\n    return \$PINGU_PROMPT_TERMINAL_COMMAND\n  endif/);
-  assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'auto'\n    return ''\n  endif/);
+  assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'\n    return ''\n  endif/);
   assert.match(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
   assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);

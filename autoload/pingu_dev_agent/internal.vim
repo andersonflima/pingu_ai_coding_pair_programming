@@ -142,10 +142,13 @@ endfunction
 
 function! s:pingu_normalize_ai_provider(value) abort
   let l:value = tolower(trim('' . a:value))
-  if index(['codex', 'openai', 'copilot', 'auto'], l:value) != -1
+  if index(['codex', 'openai', 'copilot', 'claude', 'anthropic', 'auto'], l:value) != -1
+    if l:value ==# 'anthropic'
+      return 'claude'
+    endif
     return l:value
   endif
-  return 'copilot'
+  return 'codex'
 endfunction
 
 function! s:pingu_ai_provider_env_value() abort
@@ -161,6 +164,9 @@ function! s:pingu_ai_provider_label(value) abort
   if l:provider ==# 'openai'
     return 'OpenAI'
   endif
+  if l:provider ==# 'claude'
+    return 'Claude'
+  endif
   if l:provider ==# 'auto'
     return 'Auto'
   endif
@@ -174,6 +180,9 @@ function! s:pingu_ai_model_env_key(provider) abort
   endif
   if l:provider ==# 'copilot'
     return 'PINGU_COPILOT_MODEL'
+  endif
+  if l:provider ==# 'claude'
+    return 'PINGU_CLAUDE_MODEL'
   endif
   return 'PINGU_CODEX_MODEL'
 endfunction
@@ -191,6 +200,9 @@ function! s:pingu_current_ai_model(provider) abort
   if l:provider ==# 'copilot'
     return $PINGU_COPILOT_MODEL
   endif
+  if l:provider ==# 'claude'
+    return empty($PINGU_CLAUDE_MODEL) ? $PINGU_ANTHROPIC_MODEL : $PINGU_CLAUDE_MODEL
+  endif
   return empty($PINGU_CODEX_MODEL) ? $PINGU_AI_MODEL : $PINGU_CODEX_MODEL
 endfunction
 
@@ -200,6 +212,8 @@ function! s:pingu_provider_model_list(provider) abort
     let l:models = get(g:, 'pingu_openai_models', [])
   elseif l:provider ==# 'copilot'
     let l:models = get(g:, 'pingu_copilot_models', [])
+  elseif l:provider ==# 'claude'
+    let l:models = get(g:, 'pingu_claude_models', [])
   else
     let l:models = get(g:, 'pingu_codex_models', [])
   endif
@@ -218,6 +232,9 @@ function! s:pingu_apply_ai_provider_env() abort
     let $PINGU_COPILOT_MODEL = l:model
   elseif l:provider ==# 'codex'
     let $PINGU_CODEX_MODEL = l:model
+  elseif l:provider ==# 'claude'
+    let $PINGU_CLAUDE_MODEL = l:model
+    let $PINGU_ANTHROPIC_MODEL = l:model
   endif
   return l:provider
 endfunction
@@ -8542,8 +8559,16 @@ function! s:pingu_prompt_terminal_command() abort
   endif
 
   let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
-  if l:provider !=# 'codex' && l:provider !=# 'auto'
+  if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'
     return ''
+  endif
+
+  if l:provider ==# 'claude'
+    let l:claude_command = trim('' . get(g:, 'pingu_claude_command', ''))
+    if !empty(l:claude_command)
+      return l:claude_command
+    endif
+    return empty($PINGU_CLAUDE_COMMAND) ? 'claude' : $PINGU_CLAUDE_COMMAND
   endif
 
   let l:codex_command = trim('' . get(g:, 'pingu_codex_command', ''))
@@ -8555,19 +8580,23 @@ function! s:pingu_prompt_terminal_command() abort
 endfunction
 
 function! s:pingu_prompt_terminal_model_args(command) abort
-  if fnamemodify(a:command, ':t') !=# 'codex'
+  let l:command_name = fnamemodify(a:command, ':t')
+  if l:command_name !=# 'codex' && l:command_name !=# 'claude'
     return []
   endif
 
   let l:model = trim('' . get(g:, 'pingu_ai_model', ''))
-  if empty(l:model)
+  if empty(l:model) && l:command_name ==# 'codex'
     let l:model = trim('' . $PINGU_CODEX_MODEL)
+  endif
+  if empty(l:model) && l:command_name ==# 'claude'
+    let l:model = trim('' . $PINGU_CLAUDE_MODEL)
   endif
   if empty(l:model)
     return []
   endif
 
-  return ['-m', l:model]
+  return l:command_name ==# 'claude' ? ['--model', l:model] : ['-m', l:model]
 endfunction
 
 function! s:pingu_prompt_terminal_shell_command(argv) abort
@@ -9168,15 +9197,18 @@ function! s:pingu_select_ai_provider(...) abort
     echo 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current)
     echo '1. Copilot'
     echo '2. Codex'
-    echo '3. Auto'
+    echo '3. Claude'
+    echo '4. Auto'
     call inputsave()
-    let l:choice = str2nr(input('Escolha provider [1-3]: '))
+    let l:choice = str2nr(input('Escolha provider [1-4]: '))
     call inputrestore()
     if l:choice == 1
       let l:raw = 'copilot'
     elseif l:choice == 2
       let l:raw = 'codex'
     elseif l:choice == 3
+      let l:raw = 'claude'
+    elseif l:choice == 4
       let l:raw = 'auto'
     else
       echomsg '[Pingu] Selecao de provider cancelada'

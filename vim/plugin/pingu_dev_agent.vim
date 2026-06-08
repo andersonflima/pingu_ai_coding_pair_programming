@@ -375,7 +375,7 @@ if !exists('g:pingu_model_key_alias')
 endif
 
 if !exists('g:pingu_ai_provider')
-  " Provider assistido da sessao: copilot, codex, openai ou auto.
+  " Provider assistido da sessao: copilot, codex, claude, openai ou auto.
   let g:pingu_ai_provider = empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER
 endif
 
@@ -390,6 +390,10 @@ endif
 
 if !exists('g:pingu_openai_models')
   let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']
+endif
+
+if !exists('g:pingu_claude_models')
+  let g:pingu_claude_models = ['sonnet', 'opus']
 endif
 
 if !exists('g:pingu_copilot_models')
