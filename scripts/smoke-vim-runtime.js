@@ -32,7 +32,7 @@ function writeSmokeScript(tempDir) {
     'let g:pingu_start_on_editor_enter = 0',
     'let g:pingu_open_window_on_start = 0',
     `execute 'set runtimepath^=' . fnameescape(${vimString(ROOT)})`,
-    'runtime plugin/realtime_dev_agent.vim',
+    'runtime plugin/pingu_dev_agent.vim',
     `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
     "if exists(':PinguCheck') == 0",
     "  echoerr 'PinguCheck ausente'",
