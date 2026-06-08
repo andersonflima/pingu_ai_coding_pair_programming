@@ -214,6 +214,7 @@ test('runtime mantem painel Pingu fechado apos fechamento manual', () => {
 test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
   assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
+  assert.match(pluginRuntime, /let g:pingu_help_key = '<leader>pi\?'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_terminal_command = empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\) \? '' : \$PINGU_PROMPT_TERMINAL_COMMAND/);
   assert.match(pluginRuntime, /let g:pingu_model_key = '<leader>pim'/);
@@ -232,6 +233,19 @@ test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(internalRuntime, /nvim_buf_set_keymap\(0, 'n', a:lhs, a:rhs/);
   assert.match(internalRuntime, /call s:set_buffer_normal_map\(g:pingu_next_issue_key, ':PinguQfNext<CR>', 'Pingu: proximo diagnostico'\)/);
   assert.match(internalRuntime, /call s:set_buffer_normal_map\(g:pingu_prev_issue_key, ':PinguQfPrev<CR>', 'Pingu: diagnostico anterior'\)/);
+});
+
+test('runtime expoe ajuda rapida do Pingu no namespace leader pi', () => {
+  assert.match(internalRuntime, /function! s:pingu_help_lines\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_help_open\(\) abort/);
+  assert.match(internalRuntime, /command! PinguHelp call s:pingu_help_open\(\)/);
+  assert.match(internalRuntime, /call s:pingu_lsp_open_float\('Pingu Help', s:pingu_help_lines\(\)\)/);
+  assert.match(internalRuntime, /printf\('  %s  analisar arquivo atual', get\(g:, 'pingu_map_key', '<leader>pic'\)\)/);
+  assert.match(internalRuntime, /\/\/ @pingu code cria funcao soma/);
+  assert.match(internalRuntime, /\/\/ @pingu terminal roda os testes unitarios/);
+  assert.match(internalRuntime, /\/\/\* executa comando de terminal/);
+  assert.match(internalRuntime, /':PinguHelp<CR>'/);
+  assert.match(internalRuntime, /Pingu: ajuda rapida/);
 });
 
 test('runtime permite escolher provider assistido do Pingu', () => {

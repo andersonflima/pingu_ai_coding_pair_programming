@@ -9246,6 +9246,56 @@ function! s:pingu_stop() abort
   echomsg '[Pingu] Processamento interrompido'
 endfunction
 
+function! s:pingu_help_lines() abort
+  return [
+        \ 'Atalhos',
+        \ printf('  %s  analisar arquivo atual', get(g:, 'pingu_map_key', '<leader>pic')),
+        \ printf('  %s  abrir/atualizar painel', get(g:, 'pingu_window_key', '<leader>pia')),
+        \ printf('  %s  abrir prompt em terminal flutuante', get(g:, 'pingu_prompt_key', '<leader>pip')),
+        \ printf('  %s  corrigir sugestao da linha atual', get(g:, 'pingu_fix_current_key', '<leader>pif')),
+        \ printf('  %s  escolher provider/modelo', get(g:, 'pingu_model_key', '<leader>pim')),
+        \ printf('  %s  interromper processamento', get(g:, 'pingu_stop_key', '<leader>pis')),
+        \ printf('  %s  proximo diagnostico', get(g:, 'pingu_next_issue_key', '<C-j>')),
+        \ printf('  %s  diagnostico anterior', get(g:, 'pingu_prev_issue_key', '<C-k>')),
+        \ '',
+        \ 'Comandos',
+        \ '  :PinguCheck              analisar arquivo atual',
+        \ '  :PinguWindowCheck        abrir painel e analisar',
+        \ '  :PinguPrompt             abrir provider em terminal flutuante',
+        \ '  :PinguPrompt <texto>     aplicar prompt como patch direto',
+        \ '  :PinguPromptTerminal     abrir terminal flutuante',
+        \ '  :PinguFixCurrent         aplicar sugestao da linha atual',
+        \ '  :PinguFixCurrentAI       corrigir linha atual com provider',
+        \ '  :PinguModel              escolher provider/modelo',
+        \ '  :PinguLogs               abrir logs da sessao',
+        \ '  :PinguStop               interromper jobs ativos',
+        \ '',
+        \ 'Comentarios acionaveis',
+        \ '  // @pingu code cria funcao soma',
+        \ '  // @pingu fix refatora essa funcao para ser pura',
+        \ '  // @pingu context bff para crud de usuario',
+        \ '  // @pingu test cobre casos de borda',
+        \ '  // @pingu terminal roda os testes unitarios',
+        \ '',
+        \ 'Aliases de comentario',
+        \ '  //: cria ou ajusta codigo',
+        \ '  //:: cria snippet maior',
+        \ '  //::: cria contexto/scaffold',
+        \ '  //* executa comando de terminal',
+        \ '  # pingu: code implementar funcao em Python',
+        \ '',
+        \ 'Fluxo',
+        \ '  1. Escreva o comentario acionavel no buffer.',
+        \ '  2. Rode :PinguCheck ou aguarde a analise realtime.',
+        \ '  3. Use <C-j>/<C-k> para navegar hints.',
+        \ '  4. Use :PinguFixCurrent ou o menu de hover para aplicar.',
+        \ ]
+endfunction
+
+function! s:pingu_help_open() abort
+  call s:pingu_lsp_open_float('Pingu Help', s:pingu_help_lines())
+endfunction
+
 function! s:set_global_normal_map(lhs, rhs, desc) abort
   if empty(a:lhs) || empty(a:rhs)
     return
@@ -9312,6 +9362,7 @@ command! PinguOutline call s:pingu_lsp_outline()
 command! -nargs=? PinguRename call s:pingu_lsp_rename(<q-args>)
 command! PinguCodeAction call s:pingu_lsp_code_action()
 command! PinguStop call s:pingu_stop()
+command! PinguHelp call s:pingu_help_open()
 command! -bang PinguUndoFix call s:undo_last_pingu_fix(<bang>0)
 command! PinguLatencyMetrics call s:print_latency_metrics()
 command! PinguLogs call s:pingu_logs_open()
@@ -9338,6 +9389,15 @@ if !empty(g:pingu_window_key)
         \ g:pingu_window_key,
         \ ':PinguWindowCheck<CR>',
         \ 'Pingu: abrir painel e analisar',
+        \ )
+endif
+
+if !empty(g:pingu_help_key)
+  " Atalho para abrir ajuda rapida dos comandos e comentarios acionaveis.
+  call s:set_global_normal_map(
+        \ g:pingu_help_key,
+        \ ':PinguHelp<CR>',
+        \ 'Pingu: ajuda rapida',
         \ )
 endif
 
