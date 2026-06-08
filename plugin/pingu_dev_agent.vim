@@ -1,16 +1,16 @@
-if exists('g:loaded_realtime_dev_agent')
+if exists('g:loaded_pingu_dev_agent')
   finish
 endif
-let g:loaded_realtime_dev_agent = 1
+let g:loaded_pingu_dev_agent = 1
 
 if !exists('g:pingu_script')
   " Mantem o caminho do script de agente automaticamente para os cenarios
   " de repo local ou plugin instalado no packpath.
   let s:plugin_dir = fnamemodify(resolve(expand('<sfile>:p')), ':h')
   let s:candidates = [
-    \ fnamemodify(s:plugin_dir . '/../../realtime_dev_agent.js', ':p'),
-    \ fnamemodify(s:plugin_dir . '/../realtime_dev_agent.js', ':p'),
-    \ fnamemodify(s:plugin_dir . '/../../../realtime_dev_agent.js', ':p')
+    \ fnamemodify(s:plugin_dir . '/../../pingu_dev_agent.js', ':p'),
+    \ fnamemodify(s:plugin_dir . '/../pingu_dev_agent.js', ':p'),
+    \ fnamemodify(s:plugin_dir . '/../../../pingu_dev_agent.js', ':p')
   \ ]
   let s:found = ''
   for s:candidate in s:candidates
@@ -23,7 +23,7 @@ if !exists('g:pingu_script')
   if s:found !=# ''
     let g:pingu_script = s:found
   else
-    let g:pingu_script = 'realtime_dev_agent.js'
+    let g:pingu_script = 'pingu_dev_agent.js'
   endif
 
   unlet s:plugin_dir s:candidates s:found s:candidate
@@ -34,10 +34,10 @@ if g:pingu_script =~? '\.exs$' && filereadable(s:js_candidate)
   let g:pingu_script = s:js_candidate
 elseif g:pingu_script =~? '\.js$'
   if !filereadable(expand(g:pingu_script))
-    let g:pingu_script = 'realtime_dev_agent.js'
+    let g:pingu_script = 'pingu_dev_agent.js'
   endif
 elseif !executable('node')
-  let g:pingu_script = 'realtime_dev_agent.js'
+  let g:pingu_script = 'pingu_dev_agent.js'
 endif
 unlet s:js_candidate
 
@@ -355,18 +355,50 @@ if !exists('g:pingu_prompt_key')
 endif
 
 if !exists('g:pingu_model_key')
-  " Atalho para escolher provider assistido da sessao.
+  " Atalho para escolher provider/modelo assistido da sessao.
   let g:pingu_model_key = '<leader>pim'
 endif
 
+if !exists('g:pingu_model_key_alias')
+  " Alias opcional para o seletor provider/modelo quando nao houver conflito local.
+  let g:pingu_model_key_alias = '<leader>pmi'
+endif
+
 if !exists('g:pingu_ai_provider')
-  " Provider assistido da sessao: copilot, codex/openai ou auto.
-  let g:pingu_ai_provider = empty($PINGU_AI_PROVIDER) ? 'copilot' : $PINGU_AI_PROVIDER
+  " Provider assistido da sessao: copilot, codex, openai ou auto.
+  let g:pingu_ai_provider = empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER
+endif
+
+if !exists('g:pingu_ai_model')
+  " Modelo assistido da sessao; vazio preserva o padrao do provider.
+  let g:pingu_ai_model = empty($PINGU_AI_MODEL) ? '' : $PINGU_AI_MODEL
+endif
+
+if !exists('g:pingu_codex_models')
+  let g:pingu_codex_models = ['gpt-5', 'gpt-5-codex', 'o3', 'o4-mini']
+endif
+
+if !exists('g:pingu_openai_models')
+  let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']
+endif
+
+if !exists('g:pingu_copilot_models')
+  let g:pingu_copilot_models = []
 endif
 
 if !exists('g:pingu_prompt_context_radius')
   " Linhas de contexto em volta do cursor/selecao enviadas ao provider no prompt manual.
   let g:pingu_prompt_context_radius = 80
+endif
+
+if !exists('g:pingu_prompt_chat_history_max')
+  " Numero maximo de entradas de conversa mantidas por arquivo para o prompt.
+  let g:pingu_prompt_chat_history_max = 12
+endif
+
+if !exists('g:pingu_prompt_chat_entry_max_chars')
+  " Limite em caracteres de cada entrada da historia de prompt.
+  let g:pingu_prompt_chat_entry_max_chars = 320
 endif
 
 if !exists('g:pingu_next_issue_key')
@@ -675,7 +707,7 @@ if !exists('g:pingu_target_scope')
 endif
 
 
-let s:internal_script = fnamemodify(resolve(expand('<sfile>:p')), ':h:h') . '/autoload/realtime_dev_agent/internal.vim'
+let s:internal_script = fnamemodify(resolve(expand('<sfile>:p')), ':h:h') . '/autoload/pingu_dev_agent/internal.vim'
 if filereadable(s:internal_script)
   execute 'source ' . fnameescape(s:internal_script)
 endif

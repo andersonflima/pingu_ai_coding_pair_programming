@@ -141,6 +141,54 @@ test('resolveAiPromptTask preserves leading indentation in snippet', () => {
   assert.equal(result.mode, 'prompt_task');
 });
 
+test('resolveAiGeneratedTask uses codex exec arguments with selected model', () => {
+  const calls = [];
+  const provider = buildProvider({
+    spawnSync: (command, args) => {
+      calls.push({ command, args });
+      if (args[0] === '--version') {
+        return { status: 0, stdout: 'codex 1.0.0', stderr: '' };
+      }
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          snippet: 'const ok = true;',
+          message: 'ok',
+          suggestion: 'ok',
+          dependencies: [],
+          action: {
+            op: '',
+            target_file: '',
+            mkdir_p: false,
+            remove_trigger: false,
+            command: '',
+            description: '',
+          },
+        }),
+        stderr: '',
+      };
+    },
+  });
+
+  const result = provider.resolveAiGeneratedTask(
+    { instruction: 'criar constante' },
+    { PINGU_COPILOT_COMMAND: 'codex', PINGU_COPILOT_MODEL: 'gpt-5-codex' },
+  );
+
+  assert.ok(result);
+  assert.equal(calls[1].command, 'codex');
+  assert.deepEqual(calls[1].args.slice(0, 7), [
+    'exec',
+    '--skip-git-repo-check',
+    '-s',
+    'read-only',
+    '-m',
+    'gpt-5-codex',
+    calls[1].args[6],
+  ]);
+  assert.match(calls[1].args[6], /Payload:/);
+});
+
 test('hasOpenAiConfiguration enters temporary cooldown after runtime failure', () => {
   let versionCalls = 0;
   let promptCalls = 0;

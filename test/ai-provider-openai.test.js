@@ -41,12 +41,14 @@ test('hasOpenAiConfiguration returns true when key exists and command probe succ
 
 test('resolveAiGeneratedTask parses JSON content from OpenAI chat completion response', () => {
   let promptCalls = 0;
+  let requestBody;
   const provider = buildProvider({
     spawnSync: (_command, args) => {
       if (args[0] === '--version') {
         return { status: 0, stdout: 'curl 8.0.0', stderr: '' };
       }
       promptCalls += 1;
+      requestBody = JSON.parse(args[args.indexOf('-d') + 1]);
       return {
         status: 0,
         stdout: JSON.stringify({
@@ -79,7 +81,7 @@ test('resolveAiGeneratedTask parses JSON content from OpenAI chat completion res
   const env = {
     OPENAI_API_KEY: 'test-key',
     PINGU_OPENAI_COMMAND: 'curl',
-    PINGU_OPENAI_MODEL: 'gpt-4o-mini',
+    PINGU_AI_MODEL: 'gpt-custom',
   };
 
   const result = provider.resolveAiGeneratedTask({ instruction: 'criar funcao soma' }, env);
@@ -87,6 +89,7 @@ test('resolveAiGeneratedTask parses JSON content from OpenAI chat completion res
   assert.equal(result.snippet, 'function soma(a, b) { return a + b; }');
   assert.equal(result.mode, 'comment_task');
   assert.equal(promptCalls, 1);
+  assert.equal(requestBody.model, 'gpt-custom');
 });
 
 test('resolveAiPromptTask preserves leading indentation in snippet', () => {

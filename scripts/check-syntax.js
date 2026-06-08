@@ -6,7 +6,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const SEARCH_DIRS = ['lib', 'test', 'scripts'];
-const ENTRY_FILES = ['realtime_dev_agent.js'];
+const ENTRY_FILES = ['pingu_dev_agent.js'];
 
 function listJavaScriptFiles(dir) {
   const absoluteDir = path.join(ROOT, dir);

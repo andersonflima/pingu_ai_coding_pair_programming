@@ -1,4 +1,5 @@
 .nvimlog
+.brainlink/
 realtime-dev-agent.vsix
 anget_test/elixir/_build/
 anget_test/elixir/deps/

@@ -31,6 +31,27 @@ test('buildPromptTaskRequest captures selected range and constraints', () => {
   assert.equal(request.constraints.some((item) => item.includes('espacos iniciais')), true);
 });
 
+test('buildPromptTaskRequest retains prompt history for chat-like context', () => {
+  const request = buildPromptTaskRequest({
+    file: '/tmp/sample.js',
+    language: 'javascript',
+    prompt: 'corrige esse trecho',
+    lines: ['const a = 1', 'const b = 2'],
+    startLine: 1,
+    endLine: 1,
+    promptHistory: [
+      { role: 'user', text: 'primeiro prompt' },
+      { role: 'assistant', text: 'primeira resposta' },
+      { role: 'system', text: '  ' },
+    ],
+  });
+
+  assert.deepEqual(request.promptHistory, [
+    { role: 'user', text: 'primeiro prompt' },
+    { role: 'assistant', text: 'primeira resposta' },
+  ]);
+});
+
 test('buildPromptTaskRequest limits provider context around selected range', () => {
   const lines = Array.from({ length: 20 }, (_value, index) => `line ${index + 1}`);
   const request = buildPromptTaskRequest({
@@ -108,6 +129,40 @@ test('resolvePromptTask returns replace_range issue for provider snippet', () =>
       end: { line: 2, character: 0 },
     },
   });
+});
+
+test('resolvePromptTask forwards prompt history to provider', () => {
+  let providerRequest;
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiPromptTask: (request) => {
+      providerRequest = request;
+      return {
+        snippet: 'const value = 2;',
+        message: 'Valor ajustado',
+        suggestion: 'Aplicar ajuste solicitado',
+        action: {},
+      };
+    },
+  };
+
+  const result = resolvePromptTask({
+    file: '/tmp/sample.js',
+    prompt: 'agora mude para 2',
+    lines: ['const value = 1;'],
+    startLine: 1,
+    endLine: 1,
+    promptHistory: [
+      { role: 'user', text: 'crie uma constante value' },
+      { role: 'assistant', text: 'const value = 1;' },
+    ],
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(providerRequest.promptHistory, [
+    { role: 'user', text: 'crie uma constante value' },
+    { role: 'assistant', text: 'const value = 1;' },
+  ]);
 });
 
 test('resolvePromptTask preserves provider snippet indentation and exposes base indent', () => {

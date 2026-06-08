@@ -334,14 +334,14 @@ Entrada:
 
 Outputs tipicos:
 
-- atualiza `.gitignore` para ignorar `.realtime-dev-agent/`
-- cria `.realtime-dev-agent/contexts/bff-crud-usuario.md`
+- atualiza `.gitignore` para ignorar `.pingu-dev-agent/`
+- cria `.pingu-dev-agent/contexts/bff-crud-usuario.md`
 - cria scaffold inicial seguindo Onion Architecture e o source root da stack atual
 
 Arquivos tipicos gerados:
 
 ```text
-.realtime-dev-agent/contexts/bff-crud-usuario.md
+.pingu-dev-agent/contexts/bff-crud-usuario.md
 src/domain/entities/usuario.js
 src/domain/repositories/usuario-repository.js
 src/application/use-cases/list-usuarios.js
@@ -358,7 +358,7 @@ src/main/factories/usuario-crud-factory.js
 Exemplo equivalente em Python:
 
 ```text
-.realtime-dev-agent/contexts/bff-crud-usuario.md
+.pingu-dev-agent/contexts/bff-crud-usuario.md
 app/domain/usuario.py
 app/domain/usuario_repository.py
 app/application/create_usuario.py
@@ -585,7 +585,7 @@ Atalhos principais:
 - `<leader>pic`: analisa o arquivo atual
 - `<leader>pia`: abre ou fecha o painel
 - `<leader>pip`: abre prompt manual no cursor ou selecao visual
-- `<leader>pim`: escolhe o provider assistido da sessao
+- `<leader>pim`/`<leader>pmi`: escolhe o provider e o modelo assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
 - ao manter o cursor por um tempo curto em uma linha com hint do Pingu, aparece um menu com o problema, a acao sugerida e os comandos `a` aplicar, `i` corrigir com IA e `p` abrir painel
@@ -665,13 +665,13 @@ pingu doctor
 Equivalentes pelo entrypoint direto:
 
 ```bash
-node realtime_dev_agent.js analyze src/app.js --json
-node realtime_dev_agent.js fix src/app.js --write --json
-node realtime_dev_agent.js prompts src/app.js --write --json
-node realtime_dev_agent.js init --json
-node realtime_dev_agent.js profile --json
-node realtime_dev_agent.js taxonomy --json
-node realtime_dev_agent.js doctor --json
+node pingu_dev_agent.js analyze src/app.js --json
+node pingu_dev_agent.js fix src/app.js --write --json
+node pingu_dev_agent.js prompts src/app.js --write --json
+node pingu_dev_agent.js init --json
+node pingu_dev_agent.js profile --json
+node pingu_dev_agent.js taxonomy --json
+node pingu_dev_agent.js doctor --json
 ```
 
 Contratos:
@@ -833,7 +833,7 @@ O repositorio expoe `plugin/` e `autoload/` na raiz, entao pode ser instalado di
 }
 ```
 
-As variaveis `g:pingu_*` sao a configuracao principal do plugin. As variaveis antigas `g:realtime_dev_agent_*` nao sao mais aceitas.
+As variaveis `g:pingu_*` sao a configuracao principal do plugin. As variaveis antigas `g:pingu_dev_agent_*` nao sao mais aceitas.
 
 ### `vim-plug`
 
@@ -851,7 +851,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - fechar o painel com `q`, `:PinguWindowClose` ou fechamento manual do split mantem o painel fechado ate novo `<leader>pia`/`:PinguWindowCheck`
 - `let g:pingu_start_on_editor_enter = 0` desliga o startup automatico
 - `let g:pingu_review_on_open = 1` mantem revisao automatica ao abrir arquivos
-- `let g:pingu_target_scope = 'current_file'` mantem analise e correcoes no arquivo aberto, mas ainda permite `unit_test` adjacente seguro e `context_file` para `.realtime-dev-agent/` e `.gitignore`
+- `let g:pingu_target_scope = 'current_file'` mantem analise e correcoes no arquivo aberto, mas ainda permite `unit_test` adjacente seguro e `context_file` para `.pingu-dev-agent/` e `.gitignore`
 - `let g:pingu_target_scope = 'workspace'` mantem acoes multi-arquivo amplas fora desse conjunto seguro
 - por padrao, o runtime ignora diretorios de dependencia e cache como `.venv/`, `venv/`, `site-packages/`, `__pycache__/`, `node_modules/`, `vendor/`, `dist/`, `build/` e caches de ferramentas
 - `let g:pingu_auto_fix_enabled = 0` mostra diagnosticos primeiro; use `:PinguAutoFixNow` para aplicar sob demanda ou `:PinguAutoFixEnable` para ligar auto-fix continuo
@@ -882,19 +882,30 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_map_key = '<leader>pic'` analisa o arquivo atual
 - `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
 - `let g:pingu_prompt_key = '<leader>pip'` aciona prompt manual assistido no cursor ou na selecao visual
-- `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider assistido da sessao
+- `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider/modelo assistido da sessao
+- `let g:pingu_model_key_alias = '<leader>pmi'` ativa um alias opcional para o mesmo seletor
 - `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
 - `let g:pingu_prev_issue_key = '<C-k>'` ativa o atalho para o diagnostico/aviso anterior do Pingu no buffer atual
 - `let g:pingu_issue_qf_open = 1` abre quickfix ao navegar pelos diagnosticos do Pingu com `:PinguQfNext`/`:PinguQfPrev`
 - `let g:pingu_lsp_ui = 'float'` usa a UI flutuante do Pingu para finder/references/outline; use `'quickfix'` quando quiser abrir somente a quickfix nativa
-- `let g:pingu_ai_provider = 'copilot'` define o provider inicial; use `codex`/`openai` para OpenAI Codex ou `auto` para fallback automatico
+- `let g:pingu_ai_provider = 'codex'` define o provider inicial; use `codex` para provider local, `copilot` para CLI legado e `openai` para API da OpenAI
+- `let g:pingu_ai_model = ''` define o modelo inicial; vazio preserva o padrao do provider escolhido
+- `let g:pingu_codex_models = ['gpt-5', 'gpt-5-codex', 'o3', 'o4-mini']` define a lista exibida para o provider Codex local
+- `let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']` define a lista exibida para OpenAI
+- `let g:pingu_copilot_models = []` permite declarar modelos quando o provider legado suportar selecao
 - `let g:pingu_prompt_context_radius = 80` limita quantas linhas em volta do cursor/selecao sao enviadas no prompt manual
+- `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
+- `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
 - `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; o menu separa problema e acao sugerida, abre com fallback objetivo, consulta o provider em background para atualizar a acao sugerida daquele diagnostico e usa `a` para aplicar a resolucao assistida, `i` para forcar IA, `p` para abrir painel e `q` para fechar, ou clique/Enter na linha da acao
 - `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu depois que o cursor para na linha; diagnostics LSP com range multilinha tambem acionam o menu em qualquer linha coberta, sem exigir `<leader>`
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
-- `:PinguPrompt` abre um prompt manual para o contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para substituir precisamente o range selecionado
-- `:PinguModel` permite alternar entre Copilot, OpenAI Codex e Auto sem reiniciar o editor; o daemon do Pingu e reiniciado para herdar o provider escolhido
+- `:PinguPrompt` abre um prompt manual para o contexto do cursor; em Visual Mode, selecione um bloco e use o atalho para substituir precisamente o range selecionado.
+- Sem selecao visual, `:PinguPrompt` usa a linha do cursor, uma janela de contexto do arquivo aberto e o historico recente desse arquivo; com selecao visual, envia o texto selecionado e aplica a substituicao somente naquele range.
+- `:PinguPrompt` aceita prompt por argumento de comando, por exemplo `:PinguPrompt remover comentarios dessa funcao`, e o atalho `g:pingu_prompt_key` (`<leader>pip`) já abre em modo de linha de comando para digitar direto o texto.
+- `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos
+- `:PinguModel` permite alternar entre Copilot, Codex e OpenAI sem reiniciar o editor; depois do provider, o seletor pede o modelo.
+- `:PinguModel codex gpt-5-codex` define provider e modelo diretamente; use `:PinguModel codex -` para voltar ao padrao do provider.
 - no Neovim, `:PinguPrompt` executa o provider em background para nao bloquear o editor depois do Enter
 - `:PinguPrompt` preserva a indentacao relativa do bloco selecionado e remove apenas quebras de linha externas do snippet retornado
 - quando `:PinguPrompt` recebe um pedido claro para remover comentarios, o Pingu aplica fallback local seguro se o provider retornar vazio ou estiver indisponivel
@@ -969,15 +980,16 @@ Variáveis comuns:
 
 Provider de IA:
 
-- `PINGU_AI_PROVIDER=copilot` (default): mantém o comportamento legado via Copilot CLI
-- `PINGU_AI_PROVIDER=openai`: força uso do provider OpenAI
-- `PINGU_AI_PROVIDER=codex`: alias de editor para o provider OpenAI/Codex
-- `PINGU_AI_PROVIDER=auto`: tenta OpenAI primeiro e usa Copilot como fallback
+- `PINGU_AI_PROVIDER=codex` (default): usa o provider dedicado do Codex (comando local `codex`), sem dependência de API externa.
+- `PINGU_AI_PROVIDER=auto`: tenta Codex, depois Copilot e não usa OpenAI automaticamente.
+- `PINGU_AI_PROVIDER=copilot`: força o provider legado local de CLI.
+- `PINGU_AI_PROVIDER=openai`: só para quem opta por chamadas remotas (exige chave).
+- `PINGU_AI_MODEL`: modelo generico usado pelo provider ativo quando nao houver variavel especifica.
 
 Variáveis do provider OpenAI:
 
 - `OPENAI_API_KEY` chave da API
-- `PINGU_OPENAI_MODEL` modelo usado no provider (`gpt-4o-mini` por default)
+- `PINGU_OPENAI_MODEL` modelo usado no provider; tem prioridade sobre `PINGU_AI_MODEL`
 - `PINGU_OPENAI_BASE_URL` endpoint base (default: `https://api.openai.com/v1`)
 - `PINGU_OPENAI_TIMEOUT_MS` timeout da chamada HTTP
 - `PINGU_OPENAI_COMMAND` comando HTTP síncrono (default: `curl`)
@@ -986,9 +998,18 @@ Variáveis do provider OpenAI:
 Variáveis do provider Copilot:
 
 - `PINGU_COPILOT_COMMAND` comando do provider (default: `copilot`)
+- `PINGU_COPILOT_MODEL` modelo usado quando o CLI legado suportar selecao; tem prioridade sobre `PINGU_AI_MODEL`
 - `PINGU_COPILOT_TIMEOUT_MS` timeout da chamada ao provider
 - `PINGU_COPILOT_FAILURE_COOLDOWN_MS` cooldown de falha do provider
 - `PINGU_COPILOT_DISABLED=1` desliga o provider Copilot
+
+Variáveis do provider Codex:
+
+- `PINGU_CODEX_COMMAND` comando do provider (default: `codex`)
+- `PINGU_CODEX_MODEL` modelo usado com `codex exec -m`; tem prioridade sobre `PINGU_AI_MODEL`
+- `PINGU_CODEX_TIMEOUT_MS` timeout da chamada ao provider
+- `PINGU_CODEX_FAILURE_COOLDOWN_MS` cooldown de falha do provider
+- `PINGU_CODEX_DISABLED=1` desliga o provider Codex
 
 ### Doppler
 
@@ -998,7 +1019,7 @@ Setup local:
 
 ```bash
 doppler setup
-doppler run -- node realtime_dev_agent.js doctor
+doppler run -- node pingu_dev_agent.js doctor
 doppler run -- nvim
 ```
 
@@ -1012,16 +1033,15 @@ Comandos npm prontos:
 
 No Doppler, configure ao menos:
 
-- `OPENAI_API_KEY`
-- `PINGU_AI_PROVIDER` (`openai`, `copilot` ou `auto`)
-- opcional: `PINGU_OPENAI_MODEL`, `PINGU_OPENAI_BASE_URL`, `PINGU_OPENAI_TIMEOUT_MS`
+- `PINGU_AI_PROVIDER` (`codex`, `copilot`, `openai` ou `auto`)
+- opcional: `OPENAI_API_KEY` (somente necessário quando `PINGU_AI_PROVIDER=openai`), `PINGU_OPENAI_MODEL`, `PINGU_OPENAI_BASE_URL`, `PINGU_OPENAI_TIMEOUT_MS`
 
 Importante:
 
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
-- por default (`PINGU_AI_PROVIDER=copilot`), o runtime mantém o provider legado; para OpenAI, configure `PINGU_AI_PROVIDER=openai` (ou `auto`)
-- no editor, `:PinguModel`/`<leader>pim` alterna o provider da sessao; ao escolher OpenAI Codex, o Pingu usa o provider OpenAI herdado da configuracao ja disponivel no LazyVim
+- por default (`PINGU_AI_PROVIDER=codex`), o runtime inicia com provider local sem dependência de API externa. Para usar OpenAI de forma explícita, configure `PINGU_AI_PROVIDER=openai`.
+- no editor, `:PinguModel`/`<leader>pim`/`<leader>pmi` alterna provider e modelo da sessao; ao escolher Codex, o Pingu usa `PINGU_CODEX_COMMAND` e passa o modelo selecionado via `codex exec -m`
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - `prompt_task` usa o provider ativo para aplicar um patch local no range selecionado por `:PinguPrompt`; comandos de terminal sugeridos pelo provider nao sao executados por esse hotkey
 - `prompt_task` envia somente uma janela de contexto em volta do range (`g:pingu_prompt_context_radius`, padrao `80`) e preserva os espacos iniciais do snippet para nao quebrar indentacao
@@ -1084,7 +1104,7 @@ O workflow de CI (`.github/workflows/ci.yml`) já suporta Doppler de forma opcio
 
 ## Como funciona internamente
 
-- `realtime_dev_agent.js`: entrypoint executavel do runtime
+- `pingu_dev_agent.js`: entrypoint executavel do runtime
 - `lib/cli.js`: comandos CLI, compatibilidade legada da IDE e servidor residente
 - `lib/analyzer.js`: analise e emissao de issues
 - `lib/analyzer-profile.js`: perfil sintetico de latencia da analise
@@ -1108,7 +1128,7 @@ npm run release:check
 
 ## Estrutura principal
 
-- `realtime_dev_agent.js`: entrada executavel do agente
+- `pingu_dev_agent.js`: entrada executavel do agente
 - `lib/`: analise, geracao e suporte
 - `vim/`: implementacao principal do plugin Vim
 - `plugin/` e `autoload/`: wrappers para instalacao direta no Vim

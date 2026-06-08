@@ -7,7 +7,7 @@ const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const cliPath = path.join(__dirname, '..', 'realtime_dev_agent.js');
+const cliPath = path.join(__dirname, '..', 'pingu_dev_agent.js');
 const cliEnv = {
   ...process.env,
   PINGU_AI_MODE: 'off',

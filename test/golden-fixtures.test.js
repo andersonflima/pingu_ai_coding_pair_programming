@@ -8,7 +8,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const root = path.join(__dirname, '..');
-const cliPath = path.join(root, 'realtime_dev_agent.js');
+const cliPath = path.join(root, 'pingu_dev_agent.js');
 const fixturesDir = path.join(__dirname, 'fixtures', 'golden');
 const cliEnv = {
   ...process.env,

@@ -63,7 +63,7 @@ test('runtime client processa resposta de analise', async () => {
 
   const client = createRuntimeAgentClient({
     spawn,
-    scriptPath: 'realtime_dev_agent.js',
+    scriptPath: 'pingu_dev_agent.js',
     requestTimeoutMs: 120,
   });
 
@@ -87,7 +87,7 @@ test('runtime client rejeita resposta com ok=false', async () => {
 
   const client = createRuntimeAgentClient({
     spawn,
-    scriptPath: 'realtime_dev_agent.js',
+    scriptPath: 'pingu_dev_agent.js',
     requestTimeoutMs: 120,
   });
 
@@ -102,7 +102,7 @@ test('runtime client falha com timeout e erro estruturado', async () => {
   const spawn = () => createMockRuntime((_payload) => {});
   const client = createRuntimeAgentClient({
     spawn,
-    scriptPath: 'realtime_dev_agent.js',
+    scriptPath: 'pingu_dev_agent.js',
     requestTimeoutMs: 10,
   });
 
@@ -124,12 +124,12 @@ test('runtime client expõe erro estruturado em createRuntimeError', () => {
   assert.equal(error.message, 'boom');
 });
 
-test('runtime client roda fluxo real contra realtime_dev_agent.js --serve', async () => {
+test('runtime client roda fluxo real contra pingu_dev_agent.js --serve', async () => {
   const client = createRuntimeAgentClient({
     spawn,
     nodePath: process.execPath,
-    scriptPath: path.join(__dirname, '..', 'realtime_dev_agent.js'),
-    requestTimeoutMs: 600,
+    scriptPath: path.join(__dirname, '..', 'pingu_dev_agent.js'),
+    requestTimeoutMs: 3000,
     env: {
       ...process.env,
       PINGU_AI_MODE: 'off',

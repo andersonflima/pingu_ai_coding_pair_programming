@@ -287,7 +287,7 @@ Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo
 ### Depois
 
 - A versão foi avançada para `0.1.30` com bump patch.
-- o runtime agora pode disparar analise no carregamento do buffer via `BufReadPost/BufNewFile` com `g:realtime_dev_agent_realtime_on_buffer_load=1` (default).
+- o runtime agora pode disparar analise no carregamento do buffer via `BufReadPost/BufNewFile` com `g:pingu_dev_agent_realtime_on_buffer_load=1` (default).
 
 ### Motivo
 
