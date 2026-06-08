@@ -883,16 +883,17 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
 - `let g:pingu_help_key = '<leader>pi?'` abre uma ajuda rapida com comandos, atalhos e formatos de comentarios acionaveis
 - `let g:pingu_prompt_key = '<leader>pip'` abre o provider interativo em terminal flutuante
-- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND`/`codex` somente quando o provider for `codex`/`auto`
+- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND`/`codex` para `codex`/`auto` ou `PINGU_CLAUDE_COMMAND`/`claude` para `claude`
 - `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider/modelo assistido da sessao
 - `let g:pingu_model_key_alias = '<leader>pmi'` ativa um alias opcional para o mesmo seletor
 - `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
 - `let g:pingu_prev_issue_key = '<C-k>'` ativa o atalho para o diagnostico/aviso anterior do Pingu no buffer atual
 - `let g:pingu_issue_qf_open = 1` abre quickfix ao navegar pelos diagnosticos do Pingu com `:PinguQfNext`/`:PinguQfPrev`
 - `let g:pingu_lsp_ui = 'float'` usa a UI flutuante do Pingu para finder/references/outline; use `'quickfix'` quando quiser abrir somente a quickfix nativa
-- `let g:pingu_ai_provider = 'codex'` define o provider inicial; use `codex` para provider local, `copilot` para CLI legado e `openai` para API da OpenAI
+- `let g:pingu_ai_provider = 'codex'` define o provider inicial; use `codex` ou `claude` para CLI local autenticada, `copilot` para CLI legado e `openai` para API da OpenAI
 - `let g:pingu_ai_model = ''` define o modelo inicial; vazio preserva o padrao do provider escolhido
 - `let g:pingu_codex_models = ['gpt-5', 'gpt-5-codex', 'o3', 'o4-mini']` define a lista exibida para o provider Codex local
+- `let g:pingu_claude_models = ['sonnet', 'opus']` define a lista exibida para o provider Claude local
 - `let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']` define a lista exibida para OpenAI
 - `let g:pingu_copilot_models = []` permite declarar modelos quando o provider legado suportar selecao
 - `let g:pingu_prompt_context_radius = 80` limita quantas linhas em volta do cursor/selecao sao enviadas no prompt manual
@@ -908,8 +909,9 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguPrompt <texto>` continua executando o prompt como patch direto no buffer: sem selecao visual usa a linha do cursor e contexto ao redor; com selecao visual envia o texto selecionado e aplica a substituicao somente naquele range.
 - `:PinguPromptTerminal` abre explicitamente o mesmo terminal flutuante interativo.
 - `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos
-- `:PinguModel` permite alternar entre Copilot, Codex e OpenAI sem reiniciar o editor; depois do provider, o seletor pede o modelo.
+- `:PinguModel` permite alternar entre Copilot, Codex, Claude e Auto sem reiniciar o editor; depois do provider, o seletor pede o modelo.
 - `:PinguModel codex gpt-5-codex` define provider e modelo diretamente; use `:PinguModel codex -` para voltar ao padrao do provider.
+- `:PinguModel claude sonnet` define o provider Claude local e passa o modelo ao CLI com `--model`.
 - no Neovim, `:PinguPrompt <texto>` executa o provider em background para nao bloquear o editor depois do Enter
 - `:PinguPrompt` preserva a indentacao relativa do bloco selecionado e remove apenas quebras de linha externas do snippet retornado
 - quando `:PinguPrompt` recebe um pedido claro para remover comentarios, o Pingu aplica fallback local seguro se o provider retornar vazio ou estiver indisponivel
@@ -984,8 +986,9 @@ Variáveis comuns:
 
 Provider de IA:
 
-- `PINGU_AI_PROVIDER=codex` (default): usa o provider dedicado do Codex (comando local `codex`), sem dependência de API externa.
-- `PINGU_AI_PROVIDER=auto`: tenta Codex, depois Copilot e não usa OpenAI automaticamente.
+- `PINGU_AI_PROVIDER=codex` (default): usa o provider dedicado do Codex (comando local `codex` autenticado), sem dependência de API externa do Pingu.
+- `PINGU_AI_PROVIDER=claude` ou `PINGU_AI_PROVIDER=anthropic`: usa o provider dedicado do Claude (comando local `claude` autenticado), sem `ANTHROPIC_API_KEY` no Pingu.
+- `PINGU_AI_PROVIDER=auto`: tenta Codex, depois Claude, depois Copilot e não usa OpenAI automaticamente.
 - `PINGU_AI_PROVIDER=copilot`: força o provider legado local de CLI.
 - `PINGU_AI_PROVIDER=openai`: só para quem opta por chamadas remotas (exige chave).
 - `PINGU_AI_MODEL`: modelo generico usado pelo provider ativo quando nao houver variavel especifica.
@@ -1015,6 +1018,15 @@ Variáveis do provider Codex:
 - `PINGU_CODEX_FAILURE_COOLDOWN_MS` cooldown de falha do provider
 - `PINGU_CODEX_DISABLED=1` desliga o provider Codex
 
+Variáveis do provider Claude:
+
+- `PINGU_CLAUDE_COMMAND` comando do provider (default: `claude`)
+- `PINGU_CLAUDE_MODEL` modelo usado com `claude --model`; tem prioridade sobre `PINGU_AI_MODEL`
+- `PINGU_CLAUDE_TIMEOUT_MS` timeout da chamada ao provider
+- `PINGU_CLAUDE_FAILURE_COOLDOWN_MS` cooldown de falha do provider
+- `PINGU_CLAUDE_DISABLED=1` desliga o provider Claude
+- aliases aceitos: `PINGU_ANTHROPIC_COMMAND`, `PINGU_ANTHROPIC_MODEL`, `PINGU_ANTHROPIC_TIMEOUT_MS`, `PINGU_ANTHROPIC_FAILURE_COOLDOWN_MS` e `PINGU_ANTHROPIC_DISABLED`
+
 ### Doppler
 
 O repositório já inclui `doppler.yaml` para bootstrap local do projeto/config.
@@ -1037,7 +1049,7 @@ Comandos npm prontos:
 
 No Doppler, configure ao menos:
 
-- `PINGU_AI_PROVIDER` (`codex`, `copilot`, `openai` ou `auto`)
+- `PINGU_AI_PROVIDER` (`codex`, `claude`, `anthropic`, `copilot`, `openai` ou `auto`)
 - opcional: `OPENAI_API_KEY` (somente necessário quando `PINGU_AI_PROVIDER=openai`), `PINGU_OPENAI_MODEL`, `PINGU_OPENAI_BASE_URL`, `PINGU_OPENAI_TIMEOUT_MS`
 
 Importante:
@@ -1045,7 +1057,7 @@ Importante:
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
 - por default (`PINGU_AI_PROVIDER=codex`), o runtime inicia com provider local sem dependência de API externa. Para usar OpenAI de forma explícita, configure `PINGU_AI_PROVIDER=openai`.
-- no editor, `:PinguModel`/`<leader>pim`/`<leader>pmi` alterna provider e modelo da sessao; ao escolher Codex, o Pingu usa `PINGU_CODEX_COMMAND` e passa o modelo selecionado via `codex exec -m`
+- no editor, `:PinguModel`/`<leader>pim`/`<leader>pmi` alterna provider e modelo da sessao; ao escolher Codex, o Pingu usa `PINGU_CODEX_COMMAND` e passa o modelo selecionado via `codex exec -m`; ao escolher Claude, usa `PINGU_CLAUDE_COMMAND` e passa o modelo via `claude --model`
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - `prompt_task` usa o provider ativo para aplicar um patch local no range selecionado por `:PinguPrompt <texto>`; comandos de terminal sugeridos pelo provider nao sao executados pelo patch direto
 - `prompt_task` envia somente uma janela de contexto em volta do range (`g:pingu_prompt_context_radius`, padrao `80`) e preserva os espacos iniciais do snippet para nao quebrar indentacao
