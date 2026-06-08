@@ -883,7 +883,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
 - `let g:pingu_help_key = '<leader>pi?'` abre uma ajuda rapida com comandos, atalhos e formatos de comentarios acionaveis
 - `let g:pingu_prompt_key = '<leader>pip'` abre o provider interativo em terminal flutuante
-- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa o provider configurado quando houver CLI interativo, ou `PINGU_CODEX_COMMAND`/`codex`
+- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND`/`codex` somente quando o provider for `codex`/`auto`
 - `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider/modelo assistido da sessao
 - `let g:pingu_model_key_alias = '<leader>pmi'` ativa um alias opcional para o mesmo seletor
 - `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
@@ -904,6 +904,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
 - `:PinguPrompt` sem argumento abre somente um terminal flutuante com o provider interativo; ele nao injeta prompt automatico, arquivo ou range.
+- quando o provider atual nao possui CLI interativo, como `copilot` ou `openai`, `:PinguPrompt` sem argumento nao abre terminal automaticamente; use `:PinguPrompt <texto>` para patch direto ou configure `g:pingu_prompt_terminal_command`
 - `:PinguPrompt <texto>` continua executando o prompt como patch direto no buffer: sem selecao visual usa a linha do cursor e contexto ao redor; com selecao visual envia o texto selecionado e aplica a substituicao somente naquele range.
 - `:PinguPromptTerminal` abre explicitamente o mesmo terminal flutuante interativo.
 - `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos

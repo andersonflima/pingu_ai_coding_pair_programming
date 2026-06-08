@@ -362,7 +362,9 @@ test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /lazy_util\.float_term\(payload\.cmd, \{ cwd = payload\.cwd ~= "" and payload\.cwd or nil \}\)/);
   assert.match(internalRuntime, /'   direction = "float",'/);
   assert.match(internalRuntime, /let l:argv = \[l:command\] \+ s:pingu_prompt_terminal_model_args\(l:command\)/);
-  assert.match(internalRuntime, /if l:provider ==# 'copilot'\n    return empty\(\$PINGU_COPILOT_COMMAND\) \? 'copilot' : \$PINGU_COPILOT_COMMAND\n  endif/);
+  assert.match(internalRuntime, /if !empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\)\n    return \$PINGU_PROMPT_TERMINAL_COMMAND\n  endif/);
+  assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'auto'\n    return ''\n  endif/);
+  assert.match(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
   assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);
   assert.match(internalRuntime, /termopen\(a:argv, \{'cwd': a:cwd\}\)/);
