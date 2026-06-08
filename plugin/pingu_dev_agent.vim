@@ -354,6 +354,11 @@ if !exists('g:pingu_prompt_key')
   let g:pingu_prompt_key = '<leader>pip'
 endif
 
+if !exists('g:pingu_prompt_terminal_command')
+  " Comando interativo aberto por :PinguPrompt sem argumento.
+  let g:pingu_prompt_terminal_command = empty($PINGU_PROMPT_TERMINAL_COMMAND) ? '' : $PINGU_PROMPT_TERMINAL_COMMAND
+endif
+
 if !exists('g:pingu_model_key')
   " Atalho para escolher provider/modelo assistido da sessao.
   let g:pingu_model_key = '<leader>pim'
