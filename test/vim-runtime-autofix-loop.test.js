@@ -194,8 +194,8 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Correcao com IA/);
   assert.match(internalRuntime, /Acoes/);
   assert.match(internalRuntime, /a aplicar   d diff   i IA   e explicar/);
-  assert.match(internalRuntime, /:PinguIssueActions abre o modo interativo/);
-  assert.match(internalRuntime, /:PinguIssueApply :PinguIssuePreview :PinguIssueAI/);
+  assert.match(internalRuntime, /t check     u undo   h historico   p painel   q fechar/);
+  assert.doesNotMatch(internalRuntime, /:PinguIssueActions abre o modo interativo/);
   assert.match(internalRuntime, /Acao sugerida/);
   assert.match(internalRuntime, /Explicacao/);
   assert.match(internalRuntime, /Funcao no cursor/);

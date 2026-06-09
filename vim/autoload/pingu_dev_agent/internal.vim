@@ -3224,7 +3224,6 @@ function! s:pingu_preview_fix(issue) abort
 endfunction
 
 function! s:pingu_issue_hover_menu_lines(issue, ...) abort
-  let l:focus_menu = a:0 > 0 ? !!a:1 : v:false
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:message = trim('' . get(a:issue, 'lsp_message', ''))
   if empty(l:message)
@@ -3254,16 +3253,10 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ ? ['Explicacao', '  ' . l:message, '  ' . l:action_summary]
         \ : s:pingu_function_analysis_lines(l:function_context)
   let l:diff_lines = ['Diff padrao'] + s:pingu_issue_hover_diff_lines(a:issue)
-  let l:action_lines = l:focus_menu
-        \ ? [
+  let l:action_lines = [
         \ 'Acoes',
         \ '  a aplicar   d diff   i IA   e explicar',
         \ '  t check     u undo   h historico   p painel   q fechar',
-        \ ]
-        \ : [
-        \ 'Acoes',
-        \ '  :PinguIssueActions abre o modo interativo',
-        \ '  :PinguIssueApply :PinguIssuePreview :PinguIssueAI',
         \ ]
   return [
         \ ' Pingu',
