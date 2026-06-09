@@ -906,9 +906,9 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
-- `let g:pingu_issue_hover_hint = 0` evita abrir menu automaticamente ao passar por uma linha com hint do Pingu; use `:PinguIssueActions` para abrir o menu sob demanda
-- `let g:pingu_issue_hover_hint = 1` reativa o menu automatico experimental depois que o cursor para na linha; mantenha desligado se preferir navegacao sem interferencia
-- `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu automatico quando ele estiver habilitado
+- `let g:pingu_issue_hover_hint = 1` mostra um hover automatico passivo ao passar por uma linha com hint do Pingu, sem focar popup, sem mapear teclas do arquivo e sem executar provider em background
+- `let g:pingu_issue_hover_hint = 0` desliga esse hover passivo; use `:PinguIssueActions` para abrir o menu sob demanda
+- `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir o hover passivo automatico
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
 - `:PinguDoctor` mostra provider ativo, modelo, comando local, runtime, contexto do projeto, ultimo evento e checks do CLI
