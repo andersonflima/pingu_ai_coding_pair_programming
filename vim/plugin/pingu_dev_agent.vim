@@ -486,8 +486,8 @@ if !exists('g:pingu_issue_hints_position')
 endif
 
 if !exists('g:pingu_issue_hover_hint')
-  " 1 mostra uma mensagem de acao do Pingu quando o cursor esta sobre linha com issue aplicavel.
-  let g:pingu_issue_hover_hint = 1
+  " 0 evita abrir menu automaticamente ao passar por linhas com hint; use :PinguIssueActions.
+  let g:pingu_issue_hover_hint = 0
 endif
 
 if !exists('g:pingu_issue_hover_delay_ms')
