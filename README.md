@@ -588,7 +588,7 @@ Atalhos principais:
 - `<leader>pim`/`<leader>pmi`: escolhe o provider e o modelo assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
-- em uma linha com hint do Pingu, o hover automatico mostra actions e comandos sem bloquear o editor; use `:PinguIssueActions` para abrir o modo interativo com `a` aplicar, `d` preview, `i` IA, `e` explicar, `t` check, `u` desfazer, `h` historico, `p` painel e `q` fechar
+- em uma linha com hint do Pingu, o hover automatico mostra actions por letra sem bloquear o editor; use `:PinguIssueActions` para ativar essas letras no modo interativo
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
