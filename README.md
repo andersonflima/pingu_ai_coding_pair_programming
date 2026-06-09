@@ -588,7 +588,7 @@ Atalhos principais:
 - `<leader>pim`/`<leader>pmi`: escolhe o provider e o modelo assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
-- ao manter o cursor por um tempo curto em uma linha com hint do Pingu, aparece um menu focavel com o problema, a acao sugerida e os comandos `a` aplicar, `d` preview, `i` corrigir com IA, `u` desfazer, `h` historico e `p` abrir painel
+- em uma linha com hint do Pingu, use `:PinguIssueActions` para abrir o menu focavel com `a` aplicar, `d` preview, `i` corrigir com IA, `u` desfazer, `h` historico e `p` abrir painel
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
@@ -906,8 +906,9 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
-- `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; o menu separa problema e acao sugerida, abre com fallback objetivo, consulta o provider em background para atualizar a acao sugerida daquele diagnostico e usa `a` para aplicar, `d` para preview, `i` para forcar IA, `e` para explicar, `t` para rodar check/testes, `u` para desfazer, `h` para historico, `p` para abrir painel e `q` para fechar, ou clique/Enter na linha da acao
-- `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu depois que o cursor para na linha; diagnostics LSP com range multilinha tambem acionam o menu em qualquer linha coberta, sem exigir `<leader>`
+- `let g:pingu_issue_hover_hint = 0` evita abrir menu automaticamente ao passar por uma linha com hint do Pingu; use `:PinguIssueActions` para abrir o menu sob demanda
+- `let g:pingu_issue_hover_hint = 1` reativa o menu automatico experimental depois que o cursor para na linha; mantenha desligado se preferir navegacao sem interferencia
+- `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu automatico quando ele estiver habilitado
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
 - `:PinguDoctor` mostra provider ativo, modelo, comando local, runtime, contexto do projeto, ultimo evento e checks do CLI

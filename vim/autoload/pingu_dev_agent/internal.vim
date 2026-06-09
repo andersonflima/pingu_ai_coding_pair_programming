@@ -2563,7 +2563,7 @@ function! s:pingu_issue_actions_open() abort
     echomsg '[Pingu] Nenhuma sugestao na linha atual'
     return
   endif
-  call s:pingu_open_issue_hover_menu(l:issue, v:true)
+  call s:pingu_open_issue_hover_menu(l:issue, v:false)
 endfunction
 
 function! s:pingu_truncate_hover_text(text, limit) abort
@@ -3140,7 +3140,7 @@ function! s:pingu_show_issue_hover_action_hint() abort
     return
   endif
 
-  if str2nr(string(get(g:, 'pingu_issue_hover_hint', 1))) <= 0
+  if str2nr(string(get(g:, 'pingu_issue_hover_hint', 0))) <= 0
     call s:close_pingu_issue_hover_menu()
     let s:pingu_cursor_hover_issue_signature = ''
     return
@@ -3160,7 +3160,7 @@ function! s:pingu_show_issue_hover_action_hint_if_current(bufnr) abort
   if a:bufnr !=# bufnr('%') || mode() !=# 'n'
     return
   endif
-  if str2nr(string(get(g:, 'pingu_issue_hover_hint', 1))) <= 0
+  if str2nr(string(get(g:, 'pingu_issue_hover_hint', 0))) <= 0
     return
   endif
   call s:pingu_show_issue_hover_action_hint()
@@ -3176,7 +3176,7 @@ endfunction
 
 function! s:schedule_pingu_issue_hover_menu() abort
   call s:close_pingu_issue_hover_menu()
-  if !has('nvim') || !exists('*timer_start') || str2nr(string(get(g:, 'pingu_issue_hover_hint', 1))) <= 0
+  if !has('nvim') || !exists('*timer_start') || str2nr(string(get(g:, 'pingu_issue_hover_hint', 0))) <= 0
     return
   endif
   if mode() !=# 'n'
