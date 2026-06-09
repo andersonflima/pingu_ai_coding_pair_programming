@@ -326,7 +326,7 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("history"\)/);
   assert.match(internalRuntime, /e  Explicar problema/);
   assert.match(internalRuntime, /t  Rodar check\/testes/);
-  assert.match(internalRuntime, /call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /if l:focus_menu\n    call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
   assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 'n', l:lhs, l:rhs/);
   assert.match(internalRuntime, /nvim_buf_del_keymap\(l:bufnr, 'n', l:lhs\)/);
   assert.match(internalRuntime, /<SID>pingu_issue_hover_action_for_cursor\(\)<CR>/);
