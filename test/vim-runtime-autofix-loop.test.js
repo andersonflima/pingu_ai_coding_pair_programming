@@ -175,7 +175,7 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
 });
 
 test('runtime mostra hover de issue com layout limpo', () => {
-  assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue, \.\.\.\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_context_at_cursor\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_analysis_lines\(context\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_diff_lines\(issue\) abort/);
@@ -192,6 +192,8 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Correcao com IA/);
   assert.match(internalRuntime, /Acoes/);
   assert.match(internalRuntime, /a aplicar   d diff   i IA   e explicar/);
+  assert.match(internalRuntime, /:PinguIssueActions abre o modo interativo/);
+  assert.match(internalRuntime, /:PinguIssueApply :PinguIssuePreview :PinguIssueAI/);
   assert.match(internalRuntime, /Acao sugerida/);
   assert.match(internalRuntime, /Explicacao/);
   assert.match(internalRuntime, /Funcao no cursor/);
@@ -343,8 +345,8 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("history"\)'\)/);
   assert.match(internalRuntime, /e  Explicar problema/);
   assert.match(internalRuntime, /t  Rodar check\/testes/);
-  assert.match(internalRuntime, /call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
-  assert.doesNotMatch(internalRuntime, /if l:focus_menu\n    call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /if l:focus_menu\n    call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)\n  endif/);
+  assert.match(internalRuntime, /let l:lines = s:pingu_issue_hover_menu_lines\(a:issue, l:focus_menu\)/);
   assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 'n', l:lhs, l:rhs/);
   assert.match(internalRuntime, /nvim_buf_del_keymap\(l:bufnr, 'n', l:lhs\)/);
   assert.match(internalRuntime, /call nvim_buf_set_keymap\(l:bufnr, 'n', 'a'/);
