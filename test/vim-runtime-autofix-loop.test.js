@@ -193,8 +193,9 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
   assert.match(internalRuntime, /Acoes/);
-  assert.match(internalRuntime, /a aplicar   d diff   i IA   e explicar/);
-  assert.match(internalRuntime, /t check     u undo   h historico   p painel   q fechar/);
+  assert.match(internalRuntime, /a  Aplicar resolucao assistida/);
+  assert.match(internalRuntime, /d  Preview diff da correcao/);
+  assert.match(internalRuntime, /Enter\/clique executa a action selecionada/);
   assert.doesNotMatch(internalRuntime, /:PinguIssueActions abre o modo interativo/);
   assert.match(internalRuntime, /Acao sugerida/);
   assert.match(internalRuntime, /Explicacao/);
@@ -367,7 +368,7 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:false\)/);
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:true\)/);
   assert.match(internalRuntime, /if l:focus_menu\n    call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
-  assert.match(internalRuntime, /call cursor\(max\(\[1, len\(l:lines\) - 8\]\), 1\)/);
+  assert.match(internalRuntime, /call cursor\(4, 1\)/);
   assert.match(internalRuntime, /autocmd CursorHold \* if has\('nvim'\)/);
   assert.match(internalRuntime, /autocmd CursorMoved \* if has\('nvim'\)/);
   assert.doesNotMatch(internalRuntime, /autocmd CursorMoved,BufEnter \*/);
