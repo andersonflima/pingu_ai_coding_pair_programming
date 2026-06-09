@@ -588,7 +588,7 @@ Atalhos principais:
 - `<leader>pim`/`<leader>pmi`: escolhe o provider e o modelo assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
-- em uma linha com hint do Pingu, o popup mostra actions no topo; enquanto ele estiver aberto, use `a` aplicar, `d` preview, `i` corrigir com IA, `e` explicar, `t` check, `u` desfazer, `h` historico, `p` painel e `q` fechar
+- em uma linha com hint do Pingu, o hover automatico mostra actions e comandos sem bloquear o editor; use `:PinguIssueActions` para abrir o modo interativo com `a` aplicar, `d` preview, `i` IA, `e` explicar, `t` check, `u` desfazer, `h` historico, `p` painel e `q` fechar
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
@@ -914,7 +914,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
-- `let g:pingu_issue_hover_hint = 1` mostra um hover automatico ao passar por uma linha com hint do Pingu; o popup nao muda o foco visual do editor, mas instala actions temporarias no buffer atual enquanto estiver aberto
+- `let g:pingu_issue_hover_hint = 1` mostra um hover automatico ao passar por uma linha com hint do Pingu; o popup passivo nao muda foco e nao instala mappings de uma letra no buffer atual
 - `let g:pingu_issue_hover_hint = 0` desliga esse hover passivo; use `:PinguIssueActions` para abrir o menu sob demanda
 - `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir o hover passivo automatico
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos

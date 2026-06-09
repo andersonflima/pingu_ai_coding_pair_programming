@@ -3164,7 +3164,8 @@ function! s:pingu_preview_fix(issue) abort
   silent! call nvim_win_set_option(l:winid, 'wrap', v:false)
 endfunction
 
-function! s:pingu_issue_hover_menu_lines(issue) abort
+function! s:pingu_issue_hover_menu_lines(issue, ...) abort
+  let l:focus_menu = a:0 > 0 ? !!a:1 : v:false
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:message = trim('' . get(a:issue, 'lsp_message', ''))
   if empty(l:message)
@@ -3194,12 +3195,21 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
         \ ? ['Explicacao', '  ' . l:message, '  ' . l:action_summary]
         \ : s:pingu_function_analysis_lines(l:function_context)
   let l:diff_lines = ['Diff padrao'] + s:pingu_issue_hover_diff_lines(a:issue)
-  return [
-        \ ' Pingu',
-        \ l:kind_label . ' · ' . l:meta,
+  let l:action_lines = l:focus_menu
+        \ ? [
         \ 'Acoes',
         \ '  a aplicar   d diff   i IA   e explicar',
         \ '  t check     u undo   h historico   p painel   q fechar',
+        \ ]
+        \ : [
+        \ 'Acoes',
+        \ '  :PinguIssueActions abre o modo interativo',
+        \ '  :PinguIssueApply :PinguIssuePreview :PinguIssueAI',
+        \ ]
+  return [
+        \ ' Pingu',
+        \ l:kind_label . ' · ' . l:meta,
+        \ ] + l:action_lines + [
         \ '',
         \ 'Problema',
         \ '  ' . l:message,
@@ -3280,8 +3290,10 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
         \ 'lnum': line('.'),
         \ 'col': col('.'),
         \ }
-  call s:install_pingu_issue_hover_source_maps(bufnr('%'))
-  let l:lines = s:pingu_issue_hover_menu_lines(a:issue)
+  if l:focus_menu
+    call s:install_pingu_issue_hover_source_maps(bufnr('%'))
+  endif
+  let l:lines = s:pingu_issue_hover_menu_lines(a:issue, l:focus_menu)
   let l:width = min([84, max([34] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
   let l:height = min([24, len(l:lines)])
   let l:bufnr = nvim_create_buf(v:false, v:true)
