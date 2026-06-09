@@ -2212,6 +2212,10 @@ function! s:close_pingu_issue_hover_menu() abort
   let s:pingu_issue_hover_menu_bufnr = -1
 endfunction
 
+function! s:pingu_current_buffer_is_issue_hover_menu() abort
+  return getbufvar(bufnr('%'), 'pingu_issue_hover_menu', 0) ? v:true : v:false
+endfunction
+
 function! s:pingu_issue_hover_source_actions() abort
   return [
         \ ['a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>'],
@@ -3072,14 +3076,18 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
     return
   endif
 
+  let l:focus_menu = a:0 > 0 ? !!a:1 : v:false
   let l:signature = s:pingu_issue_hover_signature(a:issue)
   if s:pingu_cursor_hover_issue_signature ==# l:signature
         \ && get(s:, 'pingu_issue_hover_menu_winid', -1) > 0
         \ && nvim_win_is_valid(s:pingu_issue_hover_menu_winid)
-    return
+    let l:existing_bufnr = nvim_win_get_buf(s:pingu_issue_hover_menu_winid)
+    let l:existing_focus_menu = getbufvar(l:existing_bufnr, 'pingu_issue_hover_focus_menu', 0)
+    if l:existing_focus_menu || !l:focus_menu
+      return
+    endif
   endif
 
-  let l:focus_menu = a:0 > 0 ? !!a:1 : v:false
   call s:close_pingu_issue_hover_menu()
   let s:pingu_issue_hover_source_context = {
         \ 'winid': win_getid(),
@@ -3097,6 +3105,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
   call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
   call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
+  call setbufvar(l:bufnr, 'pingu_issue_hover_focus_menu', l:focus_menu ? 1 : 0)
   let l:winid = nvim_open_win(l:bufnr, v:false, {
         \ 'relative': 'cursor',
         \ 'row': 1,
@@ -3179,6 +3188,9 @@ function! s:pingu_issue_hover_delay_ms() abort
 endfunction
 
 function! s:schedule_pingu_issue_hover_menu() abort
+  if s:pingu_current_buffer_is_issue_hover_menu()
+    return
+  endif
   call s:close_pingu_issue_hover_menu()
   if !has('nvim') || !exists('*timer_start') || str2nr(string(get(g:, 'pingu_issue_hover_hint', 1))) <= 0
     return

@@ -303,6 +303,7 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_for_cursor\(\) abort/);
   assert.match(internalRuntime, /function! s:install_pingu_issue_hover_source_maps\(bufnr\) abort/);
   assert.match(internalRuntime, /function! s:clear_pingu_issue_hover_source_maps\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_current_buffer_is_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:schedule_pingu_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:fire_pingu_issue_hover_menu\(timer, bufnr, lnum, changedtick\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_hover_action_hint\(\) abort/);
@@ -312,6 +313,7 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /nvim_open_win\(l:bufnr, v:false, \{/);
   assert.doesNotMatch(internalRuntime, /'focusable': v:true,/);
   assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_menu', 1\)/);
+  assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_focus_menu', l:focus_menu \? 1 : 0\)/);
   assert.match(internalRuntime, /getbufvar\(l:hover_bufnr, 'pingu_issue_hover_menu', 0\)/);
   assert.match(internalRuntime, /l:first_line =~# '\^Pingu:'/);
   assert.match(internalRuntime, /PinguFixCurrentAI/);
@@ -334,6 +336,8 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /<SID>pingu_issue_hover_action_for_cursor\(\)<CR>/);
   assert.match(internalRuntime, /'<LeftMouse>', '<LeftMouse>:/);
   assert.match(internalRuntime, /let l:focus_menu = a:0 > 0 \? !!a:1 : v:false/);
+  assert.match(internalRuntime, /let l:existing_focus_menu = getbufvar\(l:existing_bufnr, 'pingu_issue_hover_focus_menu', 0\)/);
+  assert.match(internalRuntime, /if l:existing_focus_menu \|\| !l:focus_menu\n      return\n    endif/);
   assert.match(internalRuntime, /if l:focus_menu\n    try\n      call nvim_set_current_win\(l:winid\)/);
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:false\)/);
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:true\)/);
@@ -344,6 +348,7 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.doesNotMatch(internalRuntime, /autocmd CursorMoved,BufEnter \*/);
   assert.match(internalRuntime, /autocmd InsertEnter,BufLeave \* if has\('nvim'\)/);
   assert.match(internalRuntime, /s:pingu_show_issue_hover_action_hint\(\)/);
+  assert.match(internalRuntime, /if s:pingu_current_buffer_is_issue_hover_menu\(\)\n    return\n  endif\n  call s:close_pingu_issue_hover_menu\(\)/);
   assert.match(internalRuntime, /get\(g:, 'pingu_issue_hover_hint', 1\)/);
   assert.match(internalRuntime, /let s:pingu_cursor_hover_issue_signature = ''/);
   assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 30\)/);
