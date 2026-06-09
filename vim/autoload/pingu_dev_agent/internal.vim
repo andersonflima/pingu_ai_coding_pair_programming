@@ -3197,6 +3197,10 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
   return [
         \ ' Pingu',
         \ l:kind_label . ' · ' . l:meta,
+        \ 'Acoes',
+        \ '  a aplicar   d diff   i IA   e explicar',
+        \ '  t check     u undo   h historico   p painel   q fechar',
+        \ '',
         \ 'Problema',
         \ '  ' . l:message,
         \ 'Acao sugerida',
@@ -3276,9 +3280,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
         \ 'lnum': line('.'),
         \ 'col': col('.'),
         \ }
-  if l:focus_menu
-    call s:install_pingu_issue_hover_source_maps(bufnr('%'))
-  endif
+  call s:install_pingu_issue_hover_source_maps(bufnr('%'))
   let l:lines = s:pingu_issue_hover_menu_lines(a:issue)
   let l:width = min([84, max([34] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
   let l:height = min([24, len(l:lines)])
@@ -10467,6 +10469,14 @@ command! PinguFixCurrent call s:pingu_fix_current_issue()
 command! PinguFixCurrentAI call s:pingu_fix_current_issue_with_ai()
 command! PinguPreviewFix call s:pingu_preview_current_fix()
 command! PinguIssueActions call s:pingu_issue_actions_open()
+command! PinguIssueApply call s:pingu_issue_hover_action('apply')
+command! PinguIssuePreview call s:pingu_issue_hover_action('preview')
+command! PinguIssueAI call s:pingu_issue_hover_action('ai')
+command! PinguIssueExplain call s:pingu_issue_hover_action('explain')
+command! PinguIssueCheck call s:pingu_issue_hover_action('test')
+command! PinguIssueUndo call s:pingu_issue_hover_action('undo')
+command! PinguIssueHistory call s:pingu_issue_hover_action('history')
+command! PinguIssuePanel call s:pingu_issue_hover_action('panel')
 command! PinguIssueQueue call s:pingu_issue_queue_open()
 command! PinguExplainCurrent call s:pingu_explain_current()
 command! PinguActionHistory call s:pingu_action_history_open()

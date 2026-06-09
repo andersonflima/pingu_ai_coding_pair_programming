@@ -190,6 +190,8 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /' Pingu'/);
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
+  assert.match(internalRuntime, /Acoes/);
+  assert.match(internalRuntime, /a aplicar   d diff   i IA   e explicar/);
   assert.match(internalRuntime, /Acao sugerida/);
   assert.match(internalRuntime, /Explicacao/);
   assert.match(internalRuntime, /Funcao no cursor/);
@@ -341,7 +343,8 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("history"\)'\)/);
   assert.match(internalRuntime, /e  Explicar problema/);
   assert.match(internalRuntime, /t  Rodar check\/testes/);
-  assert.match(internalRuntime, /if l:focus_menu\n    call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
+  assert.doesNotMatch(internalRuntime, /if l:focus_menu\n    call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
   assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 'n', l:lhs, l:rhs/);
   assert.match(internalRuntime, /nvim_buf_del_keymap\(l:bufnr, 'n', l:lhs\)/);
   assert.match(internalRuntime, /call nvim_buf_set_keymap\(l:bufnr, 'n', 'a'/);
@@ -440,6 +443,14 @@ test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {
   assert.match(internalRuntime, /command! PinguDoctor call s:pingu_doctor_open\(\)/);
   assert.match(internalRuntime, /command! -bang PinguProjectContext call s:pingu_project_context_command\(<bang>0\)/);
   assert.match(internalRuntime, /command! PinguIssueActions call s:pingu_issue_actions_open\(\)/);
+  assert.match(internalRuntime, /command! PinguIssueApply call s:pingu_issue_hover_action\('apply'\)/);
+  assert.match(internalRuntime, /command! PinguIssuePreview call s:pingu_issue_hover_action\('preview'\)/);
+  assert.match(internalRuntime, /command! PinguIssueAI call s:pingu_issue_hover_action\('ai'\)/);
+  assert.match(internalRuntime, /command! PinguIssueExplain call s:pingu_issue_hover_action\('explain'\)/);
+  assert.match(internalRuntime, /command! PinguIssueCheck call s:pingu_issue_hover_action\('test'\)/);
+  assert.match(internalRuntime, /command! PinguIssueUndo call s:pingu_issue_hover_action\('undo'\)/);
+  assert.match(internalRuntime, /command! PinguIssueHistory call s:pingu_issue_hover_action\('history'\)/);
+  assert.match(internalRuntime, /command! PinguIssuePanel call s:pingu_issue_hover_action\('panel'\)/);
   assert.match(internalRuntime, /command! PinguPreviewFix call s:pingu_preview_current_fix\(\)/);
   assert.match(internalRuntime, /command! PinguIssueQueue call s:pingu_issue_queue_open\(\)/);
   assert.match(internalRuntime, /command! PinguActionHistory call s:pingu_action_history_open\(\)/);
