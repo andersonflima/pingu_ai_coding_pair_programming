@@ -313,6 +313,16 @@ if !exists('g:pingu_logs_max_entries')
   let g:pingu_logs_max_entries = 200
 endif
 
+if !exists('g:pingu_post_fix_check_command')
+  " Comando opcional executado apos correcao aplicada. Vazio evita efeitos colaterais automaticos.
+  let g:pingu_post_fix_check_command = empty($PINGU_POST_FIX_CHECK_COMMAND) ? '' : $PINGU_POST_FIX_CHECK_COMMAND
+endif
+
+if !exists('g:pingu_project_check_command')
+  " Comando manual usado por :PinguRunProjectCheck; vazio usa sugestao do contexto do projeto.
+  let g:pingu_project_check_command = empty($PINGU_PROJECT_CHECK_COMMAND) ? '' : $PINGU_PROJECT_CHECK_COMMAND
+endif
+
 if !exists('g:pingu_statusline_enabled')
   let g:pingu_statusline_enabled = 1
 endif
