@@ -587,8 +587,9 @@ Atalhos principais:
 - `<leader>pip`: abre prompt manual no cursor ou selecao visual
 - `<leader>pim`/`<leader>pmi`: escolhe o provider e o modelo assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
+- `<leader>pa`: abre o menu interativo de actions da issue atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
-- em uma linha com hint do Pingu, o hover automatico mostra actions por letra sem bloquear o editor; use `:PinguIssueActions` para ativar essas letras no modo interativo
+- em uma linha com hint do Pingu, o hover automatico mostra actions por letra sem bloquear o editor; use `<leader>pa` para ativar essas letras no modo interativo
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
@@ -896,6 +897,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_map_key = '<leader>pic'` analisa o arquivo atual
 - `let g:pingu_window_key = '<leader>pia'` abre ou atualiza o painel do Pingu
 - `let g:pingu_help_key = '<leader>pi?'` abre uma ajuda rapida com comandos, atalhos e formatos de comentarios acionaveis
+- `let g:pingu_action_menu_key = '<leader>pa'` abre o menu focado de actions da issue atual
 - `let g:pingu_prompt_key = '<leader>pip'` abre o provider interativo em terminal flutuante
 - `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND`/`codex` para `codex`/`auto` ou `PINGU_CLAUDE_COMMAND`/`claude` para `claude`
 - `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider/modelo assistido da sessao
@@ -915,13 +917,13 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
 - `let g:pingu_issue_hover_hint = 1` mostra um hover automatico ao passar por uma linha com hint do Pingu; o popup passivo nao muda foco e nao instala mappings de uma letra no buffer atual
-- `let g:pingu_issue_hover_hint = 0` desliga esse hover passivo; use `:PinguIssueActions` para abrir o menu sob demanda
+- `let g:pingu_issue_hover_hint = 0` desliga esse hover passivo; use `<leader>pa` ou `:PinguIssueActions` para abrir o menu sob demanda
 - `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir o hover passivo automatico
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
 - `:PinguDoctor` mostra provider ativo, modelo, comando local, runtime, contexto do projeto, ultimo evento e checks do CLI
 - `:PinguProjectContext` abre o contexto do projeto; `:PinguProjectContext!` cria `.pingu/context.md` quando ainda nao existir
-- `:PinguIssueActions` abre explicitamente o menu de acoes da issue na linha atual; `:PinguIssueApply`, `:PinguIssuePreview`, `:PinguIssueAI`, `:PinguIssueExplain`, `:PinguIssueCheck`, `:PinguIssueUndo`, `:PinguIssueHistory` e `:PinguIssuePanel` executam a mesma action diretamente
+- `<leader>pa`/`:PinguIssueActions` abre explicitamente o menu de acoes da issue na linha atual; `:PinguIssueApply`, `:PinguIssuePreview`, `:PinguIssueAI`, `:PinguIssueExplain`, `:PinguIssueCheck`, `:PinguIssueUndo`, `:PinguIssueHistory` e `:PinguIssuePanel` executam a mesma action diretamente
 - `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao da issue atual
 - `:PinguIssueQueue` mostra a fila de issues agrupada por severidade e origem, com `Enter` para navegar e `a` para abrir acoes
 - `:PinguActionHistory` mostra as acoes recentes da sessao e lembra `:PinguUndoFix`
@@ -955,7 +957,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
 - `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao resolvida para a linha atual; no preview, use `a` ou `Enter` para aplicar
-- `:PinguIssueActions` abre o menu flutuante da issue atual com actions no topo, diff/explicacao no corpo, selecao por cursor, preview, undo e historico
+- `<leader>pa`/`:PinguIssueActions` abre o menu flutuante da issue atual com actions no topo, diff/explicacao no corpo, selecao por cursor, preview, undo e historico
 - `:PinguIssueQueue` mostra uma fila flutuante das issues do arquivo atual agrupada por severidade e origem; `Enter` pula para a issue e `a` abre as acoes
 - `:PinguActionHistory` mostra as acoes recentes da sessao
 - apos correcoes manuais, `g:pingu_post_fix_check_command` permite rodar um check em background quando configurado

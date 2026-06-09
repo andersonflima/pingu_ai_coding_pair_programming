@@ -364,6 +364,11 @@ if !exists('g:pingu_help_key')
   let g:pingu_help_key = '<leader>pi?'
 endif
 
+if !exists('g:pingu_action_menu_key')
+  " Atalho direto para abrir o menu focado de acoes da issue atual.
+  let g:pingu_action_menu_key = '<leader>pa'
+endif
+
 if !exists('g:pingu_prompt_key')
   " Atalho para prompt manual assistido no cursor ou selecao visual.
   let g:pingu_prompt_key = '<leader>pip'
@@ -486,7 +491,7 @@ if !exists('g:pingu_issue_hints_position')
 endif
 
 if !exists('g:pingu_issue_hover_hint')
-  " 1 mostra hover passivo ao passar por linhas com hint; use :PinguIssueActions para acoes.
+  " 1 mostra hover passivo ao passar por linhas com hint; use g:pingu_action_menu_key para acoes.
   let g:pingu_issue_hover_hint = 1
 endif
 
