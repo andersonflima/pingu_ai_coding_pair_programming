@@ -356,7 +356,7 @@ endif
 
 if !exists('g:pingu_window_key')
   " Mapeamento para abrir e fechar a janela de interacao em tempo real.
-  let g:pingu_window_key = '<leader>pia'
+  let g:pingu_window_key = '<leader>piw'
 endif
 
 if !exists('g:pingu_help_key')
@@ -366,7 +366,7 @@ endif
 
 if !exists('g:pingu_action_menu_key')
   " Atalho direto para abrir o menu focado de acoes da issue atual.
-  let g:pingu_action_menu_key = '<leader>pa'
+  let g:pingu_action_menu_key = '<leader>pia'
 endif
 
 if !exists('g:pingu_prompt_key')

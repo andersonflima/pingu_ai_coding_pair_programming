@@ -3224,6 +3224,7 @@ function! s:pingu_preview_fix(issue) abort
 endfunction
 
 function! s:pingu_issue_hover_menu_lines(issue, ...) abort
+  let l:focus_menu = a:0 > 0 ? !!a:1 : v:false
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:message = trim('' . get(a:issue, 'lsp_message', ''))
   if empty(l:message)
@@ -3265,10 +3266,9 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ 'p  Abrir painel',
         \ 'q  Fechar',
         \ ]
-  return [
+  let l:detail_lines = [
         \ ' Pingu',
         \ l:kind_label . ' · ' . l:meta,
-        \ ] + l:action_lines + [
         \ '',
         \ 'Problema',
         \ '  ' . l:message,
@@ -3279,6 +3279,16 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ '',
         \ ] + l:diff_lines + [
         \ '',
+        \ ]
+  if !l:focus_menu
+    return l:detail_lines
+  endif
+  return [
+        \ ' Pingu',
+        \ l:kind_label . ' · ' . l:meta,
+        \ ] + l:action_lines + [
+        \ '',
+        \ ] + l:detail_lines[3:] + [
         \ 'Enter/clique executa a action selecionada',
         \ ]
 endfunction
@@ -3318,7 +3328,7 @@ endfunction
 function! s:pingu_open_issue_hover_menu(issue, ...) abort
   if !has('nvim') || !exists('*nvim_open_win') || !exists('*nvim_create_buf')
     let l:fix_key = get(g:, 'pingu_fix_current_key', '<leader>pif')
-    echomsg '[Pingu] Sugestao nesta linha: ' . l:fix_key . ' aplicar | :PinguFixCurrentAI corrigir com IA | ' . get(g:, 'pingu_window_key', '<leader>pia') . ' painel'
+    echomsg '[Pingu] Sugestao nesta linha: ' . l:fix_key . ' aplicar | :PinguFixCurrentAI corrigir com IA | ' . get(g:, 'pingu_window_key', '<leader>piw') . ' painel'
     return
   endif
 
@@ -10423,10 +10433,10 @@ function! s:pingu_help_lines() abort
   return [
         \ 'Atalhos',
         \ printf('  %s  analisar arquivo atual', get(g:, 'pingu_map_key', '<leader>pic')),
-        \ printf('  %s  abrir/atualizar painel', get(g:, 'pingu_window_key', '<leader>pia')),
+        \ printf('  %s  abrir/atualizar painel', get(g:, 'pingu_window_key', '<leader>piw')),
         \ printf('  %s  abrir prompt em terminal flutuante', get(g:, 'pingu_prompt_key', '<leader>pip')),
         \ printf('  %s  corrigir sugestao da linha atual', get(g:, 'pingu_fix_current_key', '<leader>pif')),
-        \ printf('  %s  abrir menu de acoes da issue atual', get(g:, 'pingu_action_menu_key', '<leader>pa')),
+        \ printf('  %s  abrir menu de acoes da issue atual', get(g:, 'pingu_action_menu_key', '<leader>pia')),
         \ printf('  %s  escolher provider/modelo', get(g:, 'pingu_model_key', '<leader>pim')),
         \ printf('  %s  interromper processamento', get(g:, 'pingu_stop_key', '<leader>pis')),
         \ printf('  %s  proximo diagnostico', get(g:, 'pingu_next_issue_key', '<C-j>')),
@@ -10472,7 +10482,7 @@ function! s:pingu_help_lines() abort
         \ '  1. Escreva o comentario acionavel no buffer.',
         \ '  2. Rode :PinguCheck ou aguarde a analise realtime.',
         \ '  3. Use <C-j>/<C-k> para navegar hints.',
-        \ '  4. Use :PinguFixCurrent ou <leader>pa para aplicar via menu.',
+        \ '  4. Use :PinguFixCurrent ou <leader>pia para aplicar via menu.',
         \ ]
 endfunction
 
