@@ -239,6 +239,39 @@ function! s:pingu_apply_ai_provider_env() abort
   return l:provider
 endfunction
 
+function! s:pingu_provider_command(provider) abort
+  let l:provider = s:pingu_normalize_ai_provider(a:provider)
+  if l:provider ==# 'codex' || l:provider ==# 'auto'
+    return empty($PINGU_CODEX_COMMAND) ? 'codex' : $PINGU_CODEX_COMMAND
+  endif
+  if l:provider ==# 'claude'
+    return empty($PINGU_CLAUDE_COMMAND) ? (empty($PINGU_ANTHROPIC_COMMAND) ? 'claude' : $PINGU_ANTHROPIC_COMMAND) : $PINGU_CLAUDE_COMMAND
+  endif
+  if l:provider ==# 'copilot'
+    return empty($PINGU_COPILOT_COMMAND) ? 'copilot' : $PINGU_COPILOT_COMMAND
+  endif
+  if l:provider ==# 'openai'
+    return empty($OPENAI_API_KEY) ? '' : 'OPENAI_API_KEY'
+  endif
+  return ''
+endfunction
+
+function! s:pingu_provider_status_line(provider) abort
+  let l:provider = s:pingu_normalize_ai_provider(a:provider)
+  let l:command = s:pingu_provider_command(l:provider)
+  let l:model = s:pingu_current_ai_model(l:provider)
+  let l:model_label = empty(l:model) ? 'padrao' : l:model
+  if l:provider ==# 'openai'
+    let l:state = empty($OPENAI_API_KEY) ? 'indisponivel: OPENAI_API_KEY ausente' : 'configurado'
+    return printf('%s · modelo %s · %s', s:pingu_ai_provider_label(l:provider), l:model_label, l:state)
+  endif
+  if empty(l:command)
+    return printf('%s · modelo %s · comando ausente', s:pingu_ai_provider_label(l:provider), l:model_label)
+  endif
+  let l:state = executable(l:command) ? 'comando encontrado' : 'comando nao encontrado'
+  return printf('%s · modelo %s · %s · %s', s:pingu_ai_provider_label(l:provider), l:model_label, l:command, l:state)
+endfunction
+
 function! s:project_command_argv(argv, cwd) abort
   call s:pingu_apply_ai_provider_env()
   let l:inner = s:shell_escape_list(a:argv)
@@ -246,6 +279,27 @@ function! s:project_command_argv(argv, cwd) abort
     let l:inner = 'cd ' . shellescape(a:cwd) . ' && ' . l:inner
   endif
   return [s:sh_binary(), '-lc', l:inner]
+endfunction
+
+function! s:pingu_cli_json(args, cwd, ...) abort
+  let l:runner = s:pingu_dev_agent_script_runner()
+  let l:script = s:pingu_dev_agent_script_path()
+  if empty(l:runner) || empty(l:script) || !exists('*json_decode')
+    return {}
+  endif
+  let l:argv = [l:runner, l:script] + copy(a:args) + ['--json']
+  let l:output = a:0 > 0
+        \ ? s:run_systemlist(l:argv, a:cwd, a:1)
+        \ : s:run_systemlist(l:argv, a:cwd)
+  if v:shell_error != 0 || empty(l:output)
+    return {}
+  endif
+  try
+    let l:decoded = json_decode(join(l:output, "\n"))
+    return type(l:decoded) == v:t_dict ? l:decoded : {}
+  catch
+    return {}
+  endtry
 endfunction
 
 function! s:run_systemlist(argv, cwd, ...) abort
@@ -675,6 +729,111 @@ endfunction
 function! s:pingu_logs_clear() abort
   let s:pingu_logs = []
   echomsg '[Pingu] Logs limpos'
+endfunction
+
+function! s:pingu_doctor_lines() abort
+  let l:file = empty(bufname('%')) ? getcwd() : fnamemodify(bufname('%'), ':p')
+  let l:root = s:project_root(l:file)
+  let l:provider = s:pingu_ai_provider_env_value()
+  let l:model = s:pingu_current_ai_model(l:provider)
+  let l:doctor = s:pingu_cli_json(['doctor'], l:root)
+  let l:lines = [
+        \ 'Pingu Doctor',
+        \ '============',
+        \ '',
+        \ 'Projeto',
+        \ '  root: ' . l:root,
+        \ '  runtime: ' . (empty(s:pingu_dev_agent_script_path()) ? 'nao encontrado' : s:pingu_dev_agent_script_path()),
+        \ '  node: ' . (empty(s:pingu_dev_agent_script_runner()) ? 'nao encontrado' : s:pingu_dev_agent_script_runner()),
+        \ '',
+        \ 'Provider',
+        \ '  ativo: ' . s:pingu_ai_provider_label(l:provider) . ' (' . l:provider . ')',
+        \ '  modelo: ' . (empty(l:model) ? 'padrao do provider' : l:model),
+        \ '  status: ' . s:pingu_provider_status_line(l:provider),
+        \ ]
+  if !empty(l:doctor)
+    let l:checks = get(l:doctor, 'checks', [])
+    if type(l:checks) == v:t_list && !empty(l:checks)
+      call add(l:lines, '')
+      call add(l:lines, 'Checks')
+      for l:check in l:checks
+        if type(l:check) != v:t_dict
+          continue
+        endif
+        call add(l:lines, printf('  %s %s: %s',
+              \ get(l:check, 'ok', v:false) ? 'ok' : 'erro',
+              \ get(l:check, 'name', 'check'),
+              \ get(l:check, 'message', '')))
+      endfor
+    endif
+    let l:context = get(l:doctor, 'context', {})
+    if type(l:context) == v:t_dict
+      call add(l:lines, '')
+      call add(l:lines, 'Contexto')
+      call add(l:lines, '  arquivo: ' . get(l:context, 'file', ''))
+      call add(l:lines, '  status: ' . (get(l:context, 'exists', v:false) ? 'existe' : 'ausente'))
+      let l:suggestions = get(l:context, 'suggestions', {})
+      if type(l:suggestions) == v:t_dict && !empty(get(l:suggestions, 'checkCommand', ''))
+        call add(l:lines, '  check sugerido: ' . get(l:suggestions, 'checkCommand', ''))
+      endif
+    endif
+  else
+    call add(l:lines, '')
+    call add(l:lines, 'Checks')
+    call add(l:lines, '  erro: nao foi possivel executar pingu doctor')
+  endif
+  if !empty(s:pingu_logs)
+    let l:last = get(s:pingu_logs, -1, {})
+    call add(l:lines, '')
+    call add(l:lines, 'Ultimo evento')
+    call add(l:lines, '  ' . get(l:last, 'level', 'INFO') . ' ' . get(l:last, 'source', 'runtime') . ': ' . get(l:last, 'message', ''))
+  endif
+  call add(l:lines, '')
+  call add(l:lines, 'Acoes')
+  call add(l:lines, '  :PinguModel          trocar provider/modelo')
+  call add(l:lines, '  :PinguProjectContext criar/abrir contexto do projeto')
+  call add(l:lines, '  :PinguLogs           ver logs da sessao')
+  return l:lines
+endfunction
+
+function! s:pingu_doctor_open() abort
+  call s:pingu_lsp_open_float('Pingu Doctor', s:pingu_doctor_lines())
+endfunction
+
+function! s:pingu_project_context_open(...) abort
+  let l:file = empty(bufname('%')) ? getcwd() : fnamemodify(bufname('%'), ':p')
+  let l:root = s:project_root(l:file)
+  let l:args = ['context']
+  if a:0 > 0 && a:1 ==# 'write'
+    call add(l:args, '--write')
+  endif
+  let l:context = s:pingu_cli_json(l:args, l:root)
+  if empty(l:context)
+    echomsg '[Pingu] Nao foi possivel carregar contexto do projeto'
+    return
+  endif
+  let l:context_file = get(l:context, 'file', '')
+  if empty(l:context_file)
+    echomsg '[Pingu] Contexto do projeto sem arquivo associado'
+    return
+  endif
+  if get(l:context, 'exists', v:false) || filereadable(l:context_file)
+    execute 'edit ' . fnameescape(l:context_file)
+    return
+  endif
+  call s:pingu_lsp_open_float('Pingu Project Context', [
+        \ 'Contexto de projeto ausente',
+        \ '',
+        \ 'Arquivo sugerido:',
+        \ '  ' . l:context_file,
+        \ '',
+        \ 'Execute:',
+        \ '  :PinguProjectContext!',
+        \ ])
+endfunction
+
+function! s:pingu_project_context_command(bang) abort
+  call s:pingu_project_context_open(a:bang ? 'write' : '')
 endfunction
 
 function! s:latency_metrics_enabled() abort
@@ -2054,6 +2213,8 @@ function! s:pingu_issue_hover_source_actions() abort
   return [
         \ ['a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>'],
         \ ['i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>'],
+        \ ['e', ':<C-U>call <SID>pingu_issue_hover_action("explain")<CR>'],
+        \ ['t', ':<C-U>call <SID>pingu_issue_hover_action("test")<CR>'],
         \ ['p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>'],
         \ ['q', ':<C-U>PinguIssueHoverClose<CR>'],
         \ ]
@@ -2225,6 +2386,7 @@ function! s:pingu_apply_issue_with_ai(issue) abort
   if l:applied
     echo '[Pingu] Correcao com IA aplicada na linha atual'
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
+    call s:pingu_post_fix_check(fnamemodify(bufname('%'), ':p'))
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
     return v:true
@@ -2234,6 +2396,7 @@ function! s:pingu_apply_issue_with_ai(issue) abort
   if !empty(l:local_fix) && s:apply_issue_snippet(l:local_fix, v:false)
     echo '[Pingu] Correcao local aplicada na linha atual'
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
+    call s:pingu_post_fix_check(fnamemodify(bufname('%'), ':p'))
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
     return v:true
@@ -2267,6 +2430,14 @@ function! s:pingu_issue_hover_action(action) abort
     call s:pingu_apply_issue_with_ai(l:issue)
     return
   endif
+  if a:action ==# 'explain'
+    call s:pingu_explain_issue(l:issue)
+    return
+  endif
+  if a:action ==# 'test'
+    call s:pingu_run_project_check()
+    return
+  endif
   if a:action ==# 'panel'
     PinguWindowCheck
     return
@@ -2284,14 +2455,76 @@ function! s:pingu_issue_hover_action_for_cursor() abort
     return
   endif
   if l:line == 9
-    call s:pingu_issue_hover_action('panel')
+    call s:pingu_issue_hover_action('explain')
     return
   endif
   if l:line == 10
+    call s:pingu_issue_hover_action('test')
+    return
+  endif
+  if l:line == 11
+    call s:pingu_issue_hover_action('panel')
+    return
+  endif
+  if l:line == 12
     call s:close_pingu_issue_hover_menu()
     call s:restore_pingu_issue_hover_source()
     return
   endif
+endfunction
+
+function! s:pingu_explain_issue(issue) abort
+  if empty(a:issue) || type(a:issue) != v:t_dict
+    echomsg '[Pingu] Nenhum diagnostico na linha atual'
+    return
+  endif
+  let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:kind = trim('' . get(a:issue, 'kind', 'diagnostico'))
+  let l:message = trim('' . get(a:issue, 'lsp_message', ''))
+  if empty(l:message)
+    let l:message = empty(l:parts[1]) ? get(a:issue, 'text', '') : l:parts[1]
+  endif
+  let l:suggestion = s:pingu_issue_hover_action_summary(a:issue)
+  let l:action = s:issue_effective_action(a:issue)
+  let l:lines = [
+        \ 'Pingu Explain',
+        \ '=============',
+        \ '',
+        \ 'Problema',
+        \ '  ' . substitute(l:message, '\s\+', ' ', 'g'),
+        \ '',
+        \ 'Origem',
+        \ '  kind: ' . l:kind,
+        \ '  linha: ' . get(a:issue, 'lnum', line('.')),
+        \ '  source: ' . get(a:issue, 'lsp_source', 'Pingu'),
+        \ '',
+        \ 'Acao sugerida',
+        \ '  ' . l:suggestion,
+        \ '',
+        \ 'Contrato da correcao',
+        \ '  op: ' . get(l:action, 'op', 'snippet'),
+        \ '  escopo: edicao local e reversivel',
+        \ '',
+        \ 'Comandos uteis',
+        \ '  :PinguFixCurrent    aplicar se houver correcao local',
+        \ '  :PinguFixCurrentAI  pedir correcao assistida',
+        \ '  :PinguRunProjectCheck validar projeto',
+        \ ]
+  call s:pingu_lsp_open_float('Pingu Explain', l:lines)
+endfunction
+
+function! s:pingu_explain_current() abort
+  let l:issue = s:pingu_issue_at_cursor_for_action()
+  call s:pingu_explain_issue(l:issue)
+endfunction
+
+function! s:pingu_issue_actions_open() abort
+  let l:issue = s:pingu_issue_at_cursor_for_action()
+  if empty(l:issue)
+    echomsg '[Pingu] Nenhuma sugestao na linha atual'
+    return
+  endif
+  call s:pingu_open_issue_hover_menu(l:issue)
 endfunction
 
 function! s:pingu_truncate_hover_text(text, limit) abort
@@ -2598,6 +2831,8 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
         \ '  ' . l:action_summary,
         \ 'a  Aplicar resolucao assistida',
         \ 'i  Forcar correcao com IA',
+        \ 'e  Explicar problema',
+        \ 't  Rodar check/testes',
         \ 'p  Abrir painel',
         \ 'q  Fechar',
         \ ]
@@ -2645,6 +2880,8 @@ function! s:pingu_open_issue_hover_menu(issue) abort
         \ })
   call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'e', ':<C-U>call <SID>pingu_issue_hover_action("explain")<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 't', ':<C-U>call <SID>pingu_issue_hover_action("test")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>PinguIssueHoverClose<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_issue_hover_action_for_cursor()<CR>', {'noremap': v:true, 'silent': v:true})
@@ -9142,6 +9379,121 @@ function! s:pingu_auto_fix_now() abort
   endif
 endfunction
 
+function! s:pingu_project_check_command(file) abort
+  let l:configured = trim('' . get(g:, 'pingu_project_check_command', ''))
+  if !empty(l:configured)
+    return l:configured
+  endif
+  let l:root = s:project_root(a:file)
+  let l:context = s:pingu_cli_json(['context'], l:root)
+  let l:suggestions = get(l:context, 'suggestions', {})
+  if type(l:suggestions) == v:t_dict && !empty(get(l:suggestions, 'checkCommand', ''))
+    return get(l:suggestions, 'checkCommand', '')
+  endif
+  if filereadable(l:root . '/package.json')
+    return 'npm run check'
+  endif
+  if filereadable(l:root . '/mix.exs')
+    return 'mix test'
+  endif
+  if filereadable(l:root . '/go.mod')
+    return 'go test ./...'
+  endif
+  if filereadable(l:root . '/Cargo.toml')
+    return 'cargo test'
+  endif
+  if filereadable(l:root . '/pyproject.toml') || filereadable(l:root . '/pytest.ini')
+    return 'pytest'
+  endif
+  return ''
+endfunction
+
+function! s:pingu_check_job_on_stdout(job_id, data, event) abort
+  if type(a:data) != v:t_list || !has_key(s:pingu_dev_agent_hidden_terminal_jobs, a:job_id)
+    return
+  endif
+  let l:entry = get(s:pingu_dev_agent_hidden_terminal_jobs, a:job_id, {})
+  let l:output = get(l:entry, 'output', [])
+  for l:line in a:data
+    if type(l:line) == v:t_string && !empty(trim(l:line))
+      call add(l:output, l:line)
+    endif
+  endfor
+  let l:entry.output = l:output
+  let s:pingu_dev_agent_hidden_terminal_jobs[a:job_id] = l:entry
+endfunction
+
+function! s:pingu_check_job_on_exit(job_id, code, event) abort
+  if !has_key(s:pingu_dev_agent_hidden_terminal_jobs, a:job_id)
+    return
+  endif
+  let l:entry = remove(s:pingu_dev_agent_hidden_terminal_jobs, a:job_id)
+  let l:command = get(l:entry, 'command', 'check')
+  let l:output = filter(copy(get(l:entry, 'output', [])), {_, val -> type(val) == v:t_string && !empty(trim(val))})
+  let l:last = empty(l:output) ? '' : trim(get(l:output, -1, ''))
+  if a:code == 0
+    call s:pingu_log_event('info', 'project-check', 'check passou: ' . l:command, {'command': l:command})
+    echomsg '[Pingu] Check passou: ' . l:command
+  else
+    call s:pingu_log_event('error', 'project-check', 'check falhou: ' . l:command, {'command': l:command, 'last_output': l:last})
+    echohl ErrorMsg
+    echomsg '[Pingu] Check falhou: ' . l:command
+    if !empty(l:last)
+      echomsg '[Pingu] ' . l:last
+    endif
+    echohl None
+  endif
+endfunction
+
+function! s:pingu_run_project_check(...) abort
+  let l:file = empty(bufname('%')) ? getcwd() : fnamemodify(bufname('%'), ':p')
+  let l:root = s:project_root(l:file)
+  let l:command = a:0 > 0 && !empty(trim('' . a:1))
+        \ ? trim('' . a:1)
+        \ : s:pingu_project_check_command(l:file)
+  if empty(l:command)
+    echomsg '[Pingu] Nenhum comando de check configurado; defina g:pingu_project_check_command'
+    return v:false
+  endif
+  if !has('nvim') || !exists('*jobstart')
+    let l:output = s:run_shell_systemlist(l:command, l:root)
+    if v:shell_error == 0
+      echomsg '[Pingu] Check passou: ' . l:command
+      return v:true
+    endif
+    echohl ErrorMsg
+    echomsg '[Pingu] Check falhou: ' . l:command
+    if !empty(l:output)
+      echomsg '[Pingu] ' . trim(get(l:output, -1, ''))
+    endif
+    echohl None
+    return v:false
+  endif
+  let l:job = jobstart(s:issue_terminal_hidden_argv(l:command, l:root), {
+        \ 'on_stdout': function('s:pingu_check_job_on_stdout'),
+        \ 'on_stderr': function('s:pingu_check_job_on_stdout'),
+        \ 'on_exit': function('s:pingu_check_job_on_exit'),
+        \ })
+  if l:job <= 0
+    echomsg '[Pingu] Nao foi possivel iniciar check do projeto'
+    return v:false
+  endif
+  let s:pingu_dev_agent_hidden_terminal_jobs[l:job] = {
+        \ 'command': l:command,
+        \ 'output': [],
+        \ }
+  echomsg '[Pingu] Check em background: ' . l:command
+  return v:true
+endfunction
+
+function! s:pingu_post_fix_check(file) abort
+  let l:command = trim('' . get(g:, 'pingu_post_fix_check_command', ''))
+  if empty(l:command)
+    return
+  endif
+  call s:pingu_run_project_check(l:command)
+endfunction
+
 function! s:pingu_select_ai_model(provider, ...) abort
   let l:provider = s:pingu_normalize_ai_provider(a:provider)
   let l:raw = a:0 > 0 ? trim('' . a:1) : ''
@@ -9187,12 +9539,45 @@ function! s:pingu_select_ai_model(provider, ...) abort
   return g:pingu_ai_model
 endfunction
 
+function! s:pingu_model_overview_lines() abort
+  let l:current = s:pingu_ai_provider_env_value()
+  let l:lines = [
+        \ 'Pingu Provider',
+        \ '==============',
+        \ '',
+        \ 'Atual',
+        \ '  ' . s:pingu_provider_status_line(l:current),
+        \ '',
+        \ 'Opcoes',
+        \ ]
+  let l:index = 1
+  for l:provider in ['copilot', 'codex', 'claude', 'auto']
+    call add(l:lines, printf('  %d. %s', l:index, s:pingu_provider_status_line(l:provider)))
+    let l:models = s:pingu_provider_model_list(l:provider)
+    if !empty(l:models)
+      call add(l:lines, '     modelos: ' . join(l:models, ', '))
+    endif
+    let l:index += 1
+  endfor
+  call add(l:lines, '')
+  call add(l:lines, 'Comandos')
+  call add(l:lines, '  :PinguModel codex gpt-5-codex')
+  call add(l:lines, '  :PinguModel claude sonnet')
+  call add(l:lines, '  :PinguDoctor')
+  return l:lines
+endfunction
+
+function! s:pingu_model_overview_open() abort
+  call s:pingu_lsp_open_float('Pingu Provider', s:pingu_model_overview_lines())
+endfunction
+
 function! s:pingu_select_ai_provider(...) abort
   let l:args = a:0 > 0 ? split(trim('' . a:1)) : []
   let l:raw = len(l:args) > 0 ? l:args[0] : ''
   let l:model = len(l:args) > 1 ? join(l:args[1:], ' ') : ''
   let l:interactive = empty(trim('' . l:raw))
   if l:interactive
+    call s:pingu_model_overview_open()
     let l:current = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
     echo 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current)
     echo '1. Copilot'
@@ -9266,6 +9651,7 @@ function! s:pingu_fix_current_issue() abort
   if s:apply_issue_snippet(l:issue, v:false)
     echo '[Pingu] Correcao aplicada na linha atual'
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
+    call s:pingu_post_fix_check(l:file)
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
     call s:start_async_realtime_check_with_fallback(bufnr('%'), g:pingu_open_qf, 0, l:analysis_mode, v:false)
     return v:true
@@ -9308,6 +9694,12 @@ function! s:pingu_help_lines() abort
         \ '  :PinguPromptTerminal     abrir terminal flutuante',
         \ '  :PinguFixCurrent         aplicar sugestao da linha atual',
         \ '  :PinguFixCurrentAI       corrigir linha atual com provider',
+        \ '  :PinguIssueActions       abrir menu da sugestao atual',
+        \ '  :PinguExplainCurrent     explicar diagnostico atual',
+        \ '  :PinguRunProjectCheck    rodar check/testes do projeto',
+        \ '  :PinguProjectContext     abrir contexto do projeto',
+        \ '  :PinguProjectContext!    criar contexto do projeto',
+        \ '  :PinguDoctor             diagnosticar provider/runtime/contexto',
         \ '  :PinguModel              escolher provider/modelo',
         \ '  :PinguLogs               abrir logs da sessao',
         \ '  :PinguStop               interromper jobs ativos',
@@ -9390,6 +9782,11 @@ command! PinguHintsRefresh call s:update_pingu_all_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()
 command! PinguFixCurrentAI call s:pingu_fix_current_issue_with_ai()
+command! PinguIssueActions call s:pingu_issue_actions_open()
+command! PinguExplainCurrent call s:pingu_explain_current()
+command! -nargs=* PinguRunProjectCheck call s:pingu_run_project_check(<q-args>)
+command! -bang PinguProjectContext call s:pingu_project_context_command(<bang>0)
+command! PinguDoctor call s:pingu_doctor_open()
 command! PinguIssueHoverClose call s:close_pingu_issue_hover_menu()
 command! -nargs=? PinguPromptClear call s:pingu_prompt_clear_command(<q-args>)
 command! PinguQfNext call s:pingu_qf_next()

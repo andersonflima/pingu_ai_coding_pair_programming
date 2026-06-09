@@ -875,6 +875,8 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_latency_metrics_enabled = 1` habilita metricas locais em memoria para diagnosticar latencia do runtime
 - `let g:pingu_latency_metrics_max_entries = 50` limita quantas amostras recentes ficam guardadas na sessao
 - `let g:pingu_logs_max_entries = 200` limita quantos eventos operacionais recentes ficam disponiveis em `:PinguLogs`
+- `let g:pingu_project_check_command = ''` define o comando usado por `:PinguRunProjectCheck`; vazio usa sugestao do contexto/projeto
+- `let g:pingu_post_fix_check_command = ''` define um comando opcional executado em background apos `:PinguFixCurrent`/`:PinguFixCurrentAI`; vazio preserva o comportamento atual sem rodar testes automaticamente
 - `let g:pingu_statusline_enabled = 1` habilita o indicador de status `PinguStatusline()`
 - `let g:pingu_statusline_icon = ''` define o icone exibido na status bar
 - `let g:pingu_statusline_auto = 1` adiciona automaticamente o indicador em statusline nativa; por padrao fica desligado para evitar duplicidade em setups com `lualine`
@@ -900,16 +902,22 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
-- `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; o menu separa problema e acao sugerida, abre com fallback objetivo, consulta o provider em background para atualizar a acao sugerida daquele diagnostico e usa `a` para aplicar a resolucao assistida, `i` para forcar IA, `p` para abrir painel e `q` para fechar, ou clique/Enter na linha da acao
+- `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; o menu separa problema e acao sugerida, abre com fallback objetivo, consulta o provider em background para atualizar a acao sugerida daquele diagnostico e usa `a` para aplicar, `i` para forcar IA, `e` para explicar, `t` para rodar check/testes, `p` para abrir painel e `q` para fechar, ou clique/Enter na linha da acao
 - `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu depois que o cursor para na linha; diagnostics LSP com range multilinha tambem acionam o menu em qualquer linha coberta, sem exigir `<leader>`
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
+- `:PinguDoctor` mostra provider ativo, modelo, comando local, runtime, contexto do projeto, ultimo evento e checks do CLI
+- `:PinguProjectContext` abre o contexto do projeto; `:PinguProjectContext!` cria `.pingu/context.md` quando ainda nao existir
+- `:PinguIssueActions` abre explicitamente o menu de acoes da issue na linha atual
+- `:PinguExplainCurrent` explica o diagnostico atual, origem, acao sugerida e comandos uteis
+- `:PinguRunProjectCheck [comando]` roda check/testes em background; sem argumento usa `g:pingu_project_check_command`, `.pingu/context.md` ou inferencia do projeto
 - `:PinguPrompt` sem argumento abre somente um terminal flutuante com o provider interativo; ele nao injeta prompt automatico, arquivo ou range.
 - quando o provider atual nao possui CLI interativo, como `copilot` ou `openai`, `:PinguPrompt` sem argumento nao abre terminal automaticamente; use `:PinguPrompt <texto>` para patch direto ou configure `g:pingu_prompt_terminal_command`
 - `:PinguPrompt <texto>` continua executando o prompt como patch direto no buffer: sem selecao visual usa a linha do cursor e contexto ao redor; com selecao visual envia o texto selecionado e aplica a substituicao somente naquele range.
 - `:PinguPromptTerminal` abre explicitamente o mesmo terminal flutuante interativo.
 - `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos
 - `:PinguModel` permite alternar entre Copilot, Codex, Claude e Auto sem reiniciar o editor; depois do provider, o seletor pede o modelo.
+- ao abrir `:PinguModel` sem argumentos, o Pingu mostra um painel com provider atual, comandos, modelos e disponibilidade antes de pedir a escolha numerada
 - `:PinguModel codex gpt-5-codex` define provider e modelo diretamente; use `:PinguModel codex -` para voltar ao padrao do provider.
 - `:PinguModel claude sonnet` define o provider Claude local e passa o modelo ao CLI com `--model`.
 - no Neovim, `:PinguPrompt <texto>` executa o provider em background para nao bloquear o editor depois do Enter
@@ -930,6 +938,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
+- apos correcoes manuais, `g:pingu_post_fix_check_command` permite rodar um check em background quando configurado
 - quando `:PinguFixCurrentAI` nao altera o buffer, o Pingu repinta os hints imediatamente, registra o motivo em `:PinguLogs` e tenta fallback local seguro para diagnostics conhecidos antes de desistir
 - apos `:PinguFixCurrent` ou `:PinguFixCurrentAI`, os hints sao repintados imediatamente e novamente apos os diagnostics do LSP atualizarem, evitando que outros erros desaparecam da tela
 - snippets aplicados por correcoes do Pingu removem espacos/tabs no fim das linhas antes de alterar o buffer, evitando que uma correcao gere um novo hint `trailing_whitespace`

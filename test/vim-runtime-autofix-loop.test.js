@@ -314,6 +314,10 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /call s:restore_pingu_issue_hover_source\(\)/);
   assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("apply"\)/);
   assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("ai"\)/);
+  assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("explain"\)/);
+  assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("test"\)/);
+  assert.match(internalRuntime, /e  Explicar problema/);
+  assert.match(internalRuntime, /t  Rodar check\/testes/);
   assert.match(internalRuntime, /call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
   assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 'n', l:lhs, l:rhs/);
   assert.match(internalRuntime, /nvim_buf_del_keymap\(l:bufnr, 'n', l:lhs\)/);
@@ -327,6 +331,25 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /let s:pingu_cursor_hover_issue_signature = ''/);
   assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 30\)/);
   assert.match(internalRuntime, /return max\(\[10, l:delay\]\)/);
+});
+
+test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {
+  assert.match(pluginRuntime, /let g:pingu_post_fix_check_command = empty\(\$PINGU_POST_FIX_CHECK_COMMAND\) \? '' : \$PINGU_POST_FIX_CHECK_COMMAND/);
+  assert.match(pluginRuntime, /let g:pingu_project_check_command = empty\(\$PINGU_PROJECT_CHECK_COMMAND\) \? '' : \$PINGU_PROJECT_CHECK_COMMAND/);
+  assert.match(internalRuntime, /function! s:pingu_doctor_lines\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_doctor_open\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_project_context_command\(bang\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_actions_open\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_explain_current\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_run_project_check\(\.\.\.\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_post_fix_check\(file\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_model_overview_lines\(\) abort/);
+  assert.match(internalRuntime, /call s:pingu_model_overview_open\(\)/);
+  assert.match(internalRuntime, /command! PinguDoctor call s:pingu_doctor_open\(\)/);
+  assert.match(internalRuntime, /command! -bang PinguProjectContext call s:pingu_project_context_command\(<bang>0\)/);
+  assert.match(internalRuntime, /command! PinguIssueActions call s:pingu_issue_actions_open\(\)/);
+  assert.match(internalRuntime, /command! PinguExplainCurrent call s:pingu_explain_current\(\)/);
+  assert.match(internalRuntime, /command! -nargs=\* PinguRunProjectCheck call s:pingu_run_project_check\(<q-args>\)/);
 });
 
 test('runtime permite interromper processamento ativo do Pingu', () => {
