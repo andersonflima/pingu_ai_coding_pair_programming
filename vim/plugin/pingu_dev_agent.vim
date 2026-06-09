@@ -486,8 +486,8 @@ if !exists('g:pingu_issue_hints_position')
 endif
 
 if !exists('g:pingu_issue_hover_hint')
-  " 0 evita abrir menu automaticamente ao passar por linhas com hint; use :PinguIssueActions.
-  let g:pingu_issue_hover_hint = 0
+  " 1 mostra hover passivo ao passar por linhas com hint; use :PinguIssueActions para acoes.
+  let g:pingu_issue_hover_hint = 1
 endif
 
 if !exists('g:pingu_issue_hover_delay_ms')
