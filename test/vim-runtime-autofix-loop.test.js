@@ -192,6 +192,8 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /' Pingu'/);
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
+  assert.match(internalRuntime, /let l:focus_menu = a:0 > 0 \? !!a:1 : v:false/);
+  assert.match(internalRuntime, /if !l:focus_menu\n    return l:detail_lines\n  endif/);
   assert.match(internalRuntime, /Acoes/);
   assert.match(internalRuntime, /a  Aplicar resolucao assistida/);
   assert.match(internalRuntime, /d  Preview diff da correcao/);
@@ -240,9 +242,9 @@ test('runtime mantem painel Pingu fechado apos fechamento manual', () => {
 
 test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
-  assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
+  assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>piw'/);
   assert.match(pluginRuntime, /let g:pingu_help_key = '<leader>pi\?'/);
-  assert.match(pluginRuntime, /let g:pingu_action_menu_key = '<leader>pa'/);
+  assert.match(pluginRuntime, /let g:pingu_action_menu_key = '<leader>pia'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_terminal_command = empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\) \? '' : \$PINGU_PROMPT_TERMINAL_COMMAND/);
   assert.match(pluginRuntime, /let g:pingu_model_key = '<leader>pim'/);
@@ -270,7 +272,7 @@ test('runtime expoe ajuda rapida do Pingu no namespace leader pi', () => {
   assert.match(internalRuntime, /command! PinguHelp call s:pingu_help_open\(\)/);
   assert.match(internalRuntime, /call s:pingu_lsp_open_float\('Pingu Help', s:pingu_help_lines\(\)\)/);
   assert.match(internalRuntime, /printf\('  %s  analisar arquivo atual', get\(g:, 'pingu_map_key', '<leader>pic'\)\)/);
-  assert.match(internalRuntime, /printf\('  %s  abrir menu de acoes da issue atual', get\(g:, 'pingu_action_menu_key', '<leader>pa'\)\)/);
+  assert.match(internalRuntime, /printf\('  %s  abrir menu de acoes da issue atual', get\(g:, 'pingu_action_menu_key', '<leader>pia'\)\)/);
   assert.match(internalRuntime, /\/\/ @pingu code cria funcao soma/);
   assert.match(internalRuntime, /\/\/ @pingu terminal roda os testes unitarios/);
   assert.match(internalRuntime, /\/\/\* executa comando de terminal/);
