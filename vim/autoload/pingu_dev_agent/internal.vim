@@ -3255,8 +3255,15 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
   let l:diff_lines = ['Diff padrao'] + s:pingu_issue_hover_diff_lines(a:issue)
   let l:action_lines = [
         \ 'Acoes',
-        \ '  a aplicar   d diff   i IA   e explicar',
-        \ '  t check     u undo   h historico   p painel   q fechar',
+        \ 'a  Aplicar resolucao assistida',
+        \ 'd  Preview diff da correcao',
+        \ 'i  Forcar correcao com IA',
+        \ 'e  Explicar problema',
+        \ 't  Rodar check/testes',
+        \ 'u  Desfazer ultima correcao',
+        \ 'h  Historico de acoes',
+        \ 'p  Abrir painel',
+        \ 'q  Fechar',
         \ ]
   return [
         \ ' Pingu',
@@ -3272,15 +3279,7 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ '',
         \ ] + l:diff_lines + [
         \ '',
-        \ 'a  Aplicar resolucao assistida',
-        \ 'd  Preview diff da correcao',
-        \ 'i  Forcar correcao com IA',
-        \ 'e  Explicar problema',
-        \ 't  Rodar check/testes',
-        \ 'u  Desfazer ultima correcao',
-        \ 'h  Historico de acoes',
-        \ 'p  Abrir painel',
-        \ 'q  Fechar',
+        \ 'Enter/clique executa a action selecionada',
         \ ]
 endfunction
 
@@ -3382,7 +3381,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   if l:focus_menu
     try
       call nvim_set_current_win(l:winid)
-      call cursor(max([1, len(l:lines) - 8]), 1)
+      call cursor(4, 1)
       silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
     catch
     endtry
