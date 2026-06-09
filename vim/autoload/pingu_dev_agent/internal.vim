@@ -3079,15 +3079,17 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
     return
   endif
 
-  call s:close_pingu_issue_hover_menu()
   let l:focus_menu = a:0 > 0 ? !!a:1 : v:false
+  call s:close_pingu_issue_hover_menu()
   let s:pingu_issue_hover_source_context = {
         \ 'winid': win_getid(),
         \ 'bufnr': bufnr('%'),
         \ 'lnum': line('.'),
         \ 'col': col('.'),
         \ }
-  call s:install_pingu_issue_hover_source_maps(bufnr('%'))
+  if l:focus_menu
+    call s:install_pingu_issue_hover_source_maps(bufnr('%'))
+  endif
   let l:lines = s:pingu_issue_hover_menu_lines(a:issue)
   let l:width = min([84, max([34] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
   let l:bufnr = nvim_create_buf(v:false, v:true)
