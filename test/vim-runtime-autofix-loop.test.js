@@ -176,6 +176,11 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
 
 test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_at_cursor\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_analysis_lines\(context\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_diff_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_open_function_hover_menu\(context\) abort/);
+  assert.match(internalRuntime, /index\(\['if', 'for', 'while', 'switch', 'catch', 'with', 'else', 'elseif'\], tolower\(l:name\)\) != -1/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_summary\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_hover_assisted_suggestion\(issue\) abort/);
   assert.match(internalRuntime, /function! s:start_pingu_issue_hover_ai_suggestion\(issue, signature\) abort/);
@@ -186,6 +191,10 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
   assert.match(internalRuntime, /Acao sugerida/);
+  assert.match(internalRuntime, /Explicacao/);
+  assert.match(internalRuntime, /Funcao no cursor/);
+  assert.match(internalRuntime, /Diff padrao/);
+  assert.match(internalRuntime, /Trecho/);
   assert.match(internalRuntime, /Importar .* de outro arquivo ou implementar .* localmente/);
   assert.match(internalRuntime, /Corrigir import, modulo ou dependencia faltante com a menor declaracao segura/);
   assert.match(internalRuntime, /Resolver simbolo ausente: importar, criar definicao ou ajustar o uso atual/);
@@ -203,9 +212,11 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
   assert.match(internalRuntime, /'--lsp-ai-fix'/);
   assert.match(internalRuntime, /nvim_buf_set_lines\(l:bufnr, 5, 6, v:false, \['  ' \. l:suggestion\]\)/);
-  assert.match(internalRuntime, /if l:line == 7\n    call s:pingu_issue_hover_action\('apply'\)/);
-  assert.match(internalRuntime, /if l:line == 8\n    call s:pingu_issue_hover_action\('preview'\)/);
-  assert.match(internalRuntime, /if l:line == 12\n    call s:pingu_issue_hover_action\('undo'\)/);
+  assert.match(internalRuntime, /let l:height = min\(\[24, len\(l:lines\)\]\)/);
+  assert.match(internalRuntime, /let l:text = trim\(getline\('\.'\)\)/);
+  assert.match(internalRuntime, /if l:text =~# '\^a\\s'\n    call s:pingu_issue_hover_action\('apply'\)/);
+  assert.match(internalRuntime, /if l:text =~# '\^d\\s'\n    call s:pingu_issue_hover_action\('preview'\)/);
+  assert.match(internalRuntime, /if l:text =~# '\^u\\s'\n    call s:pingu_issue_hover_action\('undo'\)/);
   assert.match(internalRuntime, /if empty\(l:issue\)\n    let l:issue = s:pingu_issue_at_cursor_for_action\(\)\n  endif/);
 });
 
@@ -343,7 +354,7 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:false\)/);
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:true\)/);
   assert.match(internalRuntime, /if l:focus_menu\n    call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
-  assert.match(internalRuntime, /call cursor\(7, 1\)/);
+  assert.match(internalRuntime, /call cursor\(max\(\[1, len\(l:lines\) - 8\]\), 1\)/);
   assert.match(internalRuntime, /autocmd CursorHold \* if has\('nvim'\)/);
   assert.match(internalRuntime, /autocmd CursorMoved \* if has\('nvim'\)/);
   assert.doesNotMatch(internalRuntime, /autocmd CursorMoved,BufEnter \*/);

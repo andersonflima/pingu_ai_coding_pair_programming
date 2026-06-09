@@ -2476,40 +2476,40 @@ function! s:pingu_issue_hover_action(action) abort
 endfunction
 
 function! s:pingu_issue_hover_action_for_cursor() abort
-  let l:line = line('.')
-  if l:line == 7
+  let l:text = trim(getline('.'))
+  if l:text =~# '^a\s'
     call s:pingu_issue_hover_action('apply')
     return
   endif
-  if l:line == 8
+  if l:text =~# '^d\s'
     call s:pingu_issue_hover_action('preview')
     return
   endif
-  if l:line == 9
+  if l:text =~# '^i\s'
     call s:pingu_issue_hover_action('ai')
     return
   endif
-  if l:line == 10
+  if l:text =~# '^e\s'
     call s:pingu_issue_hover_action('explain')
     return
   endif
-  if l:line == 11
+  if l:text =~# '^t\s'
     call s:pingu_issue_hover_action('test')
     return
   endif
-  if l:line == 12
+  if l:text =~# '^u\s'
     call s:pingu_issue_hover_action('undo')
     return
   endif
-  if l:line == 13
+  if l:text =~# '^h\s'
     call s:pingu_issue_hover_action('history')
     return
   endif
-  if l:line == 14
+  if l:text =~# '^p\s'
     call s:pingu_issue_hover_action('panel')
     return
   endif
-  if l:line == 15
+  if l:text =~# '^q\s'
     call s:pingu_issue_hover_close_and_restore()
     return
   endif
@@ -2558,6 +2558,122 @@ endfunction
 function! s:pingu_explain_current() abort
   let l:issue = s:pingu_issue_at_cursor_for_action()
   call s:pingu_explain_issue(l:issue)
+endfunction
+
+function! s:pingu_function_decl_match(line) abort
+  let l:patterns = [
+        \ '^\s*\%(async\s\+\)\?def\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
+        \ '^\s*\%(export\s\+\)\?\%(default\s\+\)\?\%(async\s\+\)\?function\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\s*(',
+        \ '^\s*\%(const\|let\|var\)\s\+\([A-Za-z_$][A-Za-z0-9_$]*\)\s*=\s*\%(async\s\+\)\?\%(function\s*\)\?(',
+        \ '^\s*\%(async\s\+\)\?\([A-Za-z_$][A-Za-z0-9_$]*\)\s*(.*)\s*{',
+        \ '^\s*function!*\s\+\([A-Za-z_:#][A-Za-z0-9_:#]*\)\s*(',
+        \ '^\s*\%(local\s\+\)\?function\s\+\([A-Za-z_][A-Za-z0-9_]*\)\s*(',
+        \ '^\s*defp\?\s\+\([A-Za-z_][A-Za-z0-9_?!]*\)\s*\%((\)\?',
+        \ ]
+  for l:pattern in l:patterns
+    let l:match = matchlist(a:line, l:pattern)
+    if len(l:match) > 1 && !empty(l:match[1])
+      let l:name = l:match[1]
+      if index(['if', 'for', 'while', 'switch', 'catch', 'with', 'else', 'elseif'], tolower(l:name)) != -1
+        continue
+      endif
+      return {'name': l:name, 'indent': len(matchstr(a:line, '^\s*'))}
+    endif
+  endfor
+  return {}
+endfunction
+
+function! s:pingu_find_function_start(lnum) abort
+  let l:line = max([1, str2nr(string(a:lnum))])
+  let l:limit = max([1, l:line - 160])
+  while l:line >= l:limit
+    let l:match = s:pingu_function_decl_match(getline(l:line))
+    if !empty(l:match)
+      let l:match.start = l:line
+      return l:match
+    endif
+    let l:line -= 1
+  endwhile
+  return {}
+endfunction
+
+function! s:pingu_find_function_end(start_lnum, base_indent) abort
+  let l:last = line('$')
+  let l:start = max([1, str2nr(string(a:start_lnum))])
+  let l:start_line = getline(l:start)
+  let l:brace_balance = count(l:start_line, '{') - count(l:start_line, '}')
+  if l:brace_balance > 0
+    let l:line = l:start + 1
+    while l:line <= l:last
+      let l:text = getline(l:line)
+      let l:brace_balance += count(l:text, '{') - count(l:text, '}')
+      if l:brace_balance <= 0
+        return l:line
+      endif
+      let l:line += 1
+    endwhile
+    return min([l:last, l:start + 120])
+  endif
+
+  let l:line = l:start + 1
+  while l:line <= l:last
+    let l:text = getline(l:line)
+    if l:text =~# '^\s*\%(endfunction\|end\)\s*$'
+      return l:line
+    endif
+    if l:text !~# '^\s*$'
+      let l:indent = len(matchstr(l:text, '^\s*'))
+      if l:indent <= a:base_indent && l:line > l:start + 1
+        return l:line - 1
+      endif
+    endif
+    let l:line += 1
+  endwhile
+  return min([l:last, l:start + 120])
+endfunction
+
+function! s:pingu_function_context_at_cursor() abort
+  let l:start = s:pingu_find_function_start(line('.'))
+  if empty(l:start)
+    return {}
+  endif
+  let l:end = s:pingu_find_function_end(l:start.start, get(l:start, 'indent', 0))
+  if line('.') < l:start.start || line('.') > l:end
+    return {}
+  endif
+  let l:lines = getline(l:start.start, l:end)
+  return {'name': get(l:start, 'name', 'funcao'), 'start': l:start.start, 'end': l:end, 'lines': l:lines}
+endfunction
+
+function! s:pingu_function_analysis_lines(context) abort
+  if type(a:context) != v:t_dict || empty(a:context)
+    return []
+  endif
+  let l:body = join(get(a:context, 'lines', []), "\n")
+  let l:signals = []
+  if l:body =~# '\<return\>'
+    call add(l:signals, 'retorna valor explicitamente')
+  endif
+  if l:body =~# '\v(if|elseif|else|case|switch|cond)\>'
+    call add(l:signals, 'possui ramificacao condicional')
+  endif
+  if l:body =~# '\v(for|while|map|filter|reduce|each)\>'
+    call add(l:signals, 'itera ou transforma colecoes')
+  endif
+  if l:body =~# '\v(call |execute |system\(|jobstart\(|append|setbufline|writefile)'
+    call add(l:signals, 'executa efeito colateral')
+  endif
+  if empty(l:signals)
+    call add(l:signals, 'fluxo direto sem sinais fortes de efeito externo')
+  endif
+  let l:sample = map(copy(get(a:context, 'lines', [])[:8]), {_, line -> '  ' . line})
+  return [
+        \ 'Funcao no cursor',
+        \ '  ' . get(a:context, 'name', 'funcao') . ' · linhas ' . get(a:context, 'start', 0) . '-' . get(a:context, 'end', 0),
+        \ 'Analise',
+        \ '  ' . join(l:signals, '; '),
+        \ 'Trecho',
+        \ ] + l:sample
 endfunction
 
 function! s:pingu_preview_current_fix() abort
@@ -2957,6 +3073,25 @@ function! s:pingu_issue_preview_diff_lines(issue) abort
   return s:pingu_issue_preview_added_lines(l:snippet_lines) + ['  ' . l:current_line]
 endfunction
 
+function! s:pingu_issue_hover_diff_lines(issue) abort
+  let l:issue = a:issue
+  let l:action = s:issue_effective_action(l:issue)
+  let l:op = trim('' . get(l:action, 'op', ''))
+  if index(['lsp_code_action', 'lsp_ai_fix', 'lsp_diagnostic'], get(l:issue, 'kind', '')) != -1
+        \ || l:op ==# 'lsp_code_action'
+        \ || l:op ==# 'lsp_ai_fix'
+    let l:local_fix = s:pingu_lsp_local_fix_candidate(l:issue)
+    if !empty(l:local_fix)
+      let l:issue = l:local_fix
+    endif
+  endif
+  let l:diff = s:pingu_issue_preview_diff_lines(l:issue)
+  if empty(l:diff)
+    return ['  Sem diff local disponivel']
+  endif
+  return map(copy(l:diff[:7]), {_, line -> '  ' . line})
+endfunction
+
 function! s:pingu_apply_preview_issue() abort
   let l:issue = deepcopy(get(s:, 'pingu_action_preview_issue', {}))
   let s:pingu_action_preview_issue = {}
@@ -3054,6 +3189,11 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
   endif
   let l:meta = empty(l:source) ? l:severity_label : l:severity_label . ' · ' . l:source
   let l:action_summary = s:pingu_issue_hover_action_summary(a:issue)
+  let l:function_context = s:pingu_function_context_at_cursor()
+  let l:explain_lines = empty(l:function_context)
+        \ ? ['Explicacao', '  ' . l:message, '  ' . l:action_summary]
+        \ : s:pingu_function_analysis_lines(l:function_context)
+  let l:diff_lines = ['Diff padrao'] + s:pingu_issue_hover_diff_lines(a:issue)
   return [
         \ ' Pingu',
         \ l:kind_label . ' · ' . l:meta,
@@ -3061,6 +3201,11 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
         \ '  ' . l:message,
         \ 'Acao sugerida',
         \ '  ' . l:action_summary,
+        \ '',
+        \ ] + l:explain_lines + [
+        \ '',
+        \ ] + l:diff_lines + [
+        \ '',
         \ 'a  Aplicar resolucao assistida',
         \ 'd  Preview diff da correcao',
         \ 'i  Forcar correcao com IA',
@@ -3071,6 +3216,38 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
         \ 'p  Abrir painel',
         \ 'q  Fechar',
         \ ]
+endfunction
+
+function! s:pingu_open_function_hover_menu(context) abort
+  if !has('nvim') || !exists('*nvim_open_win') || !exists('*nvim_create_buf')
+    echo join(s:pingu_function_analysis_lines(a:context), "\n")
+    return
+  endif
+  call s:close_pingu_issue_hover_menu()
+  let l:lines = [' Pingu', 'Explicacao de funcao', ''] + s:pingu_function_analysis_lines(a:context)
+  let l:width = min([96, max([42] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([24, len(l:lines)])
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
+  call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
+  call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
+  call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
+  let l:winid = nvim_open_win(l:bufnr, v:false, {
+        \ 'relative': 'cursor',
+        \ 'row': 1,
+        \ 'col': 0,
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ 'focusable': v:true,
+        \ 'zindex': 60,
+        \ })
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'noremap': v:true, 'silent': v:true})
+  let s:pingu_issue_hover_menu_bufnr = l:bufnr
+  let s:pingu_issue_hover_menu_winid = l:winid
+  let s:pingu_cursor_hover_issue_signature = 'function|' . get(a:context, 'name', '') . '|' . get(a:context, 'start', 0) . '|' . get(a:context, 'end', 0)
 endfunction
 
 function! s:pingu_open_issue_hover_menu(issue, ...) abort
@@ -3104,6 +3281,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   endif
   let l:lines = s:pingu_issue_hover_menu_lines(a:issue)
   let l:width = min([84, max([34] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([24, len(l:lines)])
   let l:bufnr = nvim_create_buf(v:false, v:true)
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
@@ -3115,7 +3293,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
         \ 'row': 1,
         \ 'col': 0,
         \ 'width': l:width,
-        \ 'height': len(l:lines),
+        \ 'height': l:height,
         \ 'style': 'minimal',
         \ 'border': 'rounded',
         \ 'focusable': v:true,
@@ -3138,7 +3316,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   if l:focus_menu
     try
       call nvim_set_current_win(l:winid)
-      call cursor(7, 1)
+      call cursor(max([1, len(l:lines) - 8]), 1)
       silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
     catch
     endtry
@@ -3163,8 +3341,13 @@ function! s:pingu_show_issue_hover_action_hint() abort
 
   let l:issue = s:get_buffer_issue_at_cursor_exact()
   if empty(l:issue)
-    call s:close_pingu_issue_hover_menu()
-    let s:pingu_cursor_hover_issue_signature = ''
+    let l:function_context = s:pingu_function_context_at_cursor()
+    if empty(l:function_context)
+      call s:close_pingu_issue_hover_menu()
+      let s:pingu_cursor_hover_issue_signature = ''
+      return
+    endif
+    call s:pingu_open_function_hover_menu(l:function_context)
     return
   endif
 
