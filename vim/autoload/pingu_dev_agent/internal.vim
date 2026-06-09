@@ -10426,6 +10426,7 @@ function! s:pingu_help_lines() abort
         \ printf('  %s  abrir/atualizar painel', get(g:, 'pingu_window_key', '<leader>pia')),
         \ printf('  %s  abrir prompt em terminal flutuante', get(g:, 'pingu_prompt_key', '<leader>pip')),
         \ printf('  %s  corrigir sugestao da linha atual', get(g:, 'pingu_fix_current_key', '<leader>pif')),
+        \ printf('  %s  abrir menu de acoes da issue atual', get(g:, 'pingu_action_menu_key', '<leader>pa')),
         \ printf('  %s  escolher provider/modelo', get(g:, 'pingu_model_key', '<leader>pim')),
         \ printf('  %s  interromper processamento', get(g:, 'pingu_stop_key', '<leader>pis')),
         \ printf('  %s  proximo diagnostico', get(g:, 'pingu_next_issue_key', '<C-j>')),
@@ -10471,7 +10472,7 @@ function! s:pingu_help_lines() abort
         \ '  1. Escreva o comentario acionavel no buffer.',
         \ '  2. Rode :PinguCheck ou aguarde a analise realtime.',
         \ '  3. Use <C-j>/<C-k> para navegar hints.',
-        \ '  4. Use :PinguFixCurrent ou o menu de hover para aplicar.',
+        \ '  4. Use :PinguFixCurrent ou <leader>pa para aplicar via menu.',
         \ ]
 endfunction
 
@@ -10606,6 +10607,15 @@ if !empty(g:pingu_fix_current_key)
         \ g:pingu_fix_current_key,
         \ ':PinguFixCurrent<CR>',
         \ 'Pingu: corrigir sugestao da linha atual',
+        \ )
+endif
+
+if exists('g:pingu_action_menu_key') && !empty(g:pingu_action_menu_key)
+  " Atalho para promover o hover passivo para menu focado com actions.
+  call s:set_global_normal_map(
+        \ g:pingu_action_menu_key,
+        \ ':PinguIssueActions<CR>',
+        \ 'Pingu: menu de acoes da issue atual',
         \ )
 endif
 
