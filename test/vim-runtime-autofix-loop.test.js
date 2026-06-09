@@ -176,6 +176,8 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
 
 test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue, \.\.\.\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_explain_issue_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_show_issue_explain_in_hover\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_context_at_cursor\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_analysis_lines\(context\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_diff_lines\(issue\) abort/);
@@ -221,6 +223,10 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /if l:text =~# '\^a\\s'\n    call s:pingu_issue_hover_action\('apply'\)/);
   assert.match(internalRuntime, /if l:text =~# '\^d\\s'\n    call s:pingu_issue_hover_action\('preview'\)/);
   assert.match(internalRuntime, /if l:text =~# '\^u\\s'\n    call s:pingu_issue_hover_action\('undo'\)/);
+  assert.match(internalRuntime, /if a:action ==# 'explain'\n    call s:restore_pingu_issue_hover_source\(\)\n    call s:clear_pingu_issue_hover_source_maps\(\)/);
+  assert.match(internalRuntime, /call s:pingu_explain_issue\(l:issue\)\n    return\n  endif\n  call s:close_pingu_issue_hover_menu\(\)/);
+  assert.match(internalRuntime, /let l:winid = get\(s:, 'pingu_issue_hover_menu_winid', -1\)/);
+  assert.match(internalRuntime, /call nvim_buf_set_lines\(l:bufnr, 0, -1, v:false, l:lines\)/);
   assert.match(internalRuntime, /if empty\(l:issue\)\n    let l:issue = s:pingu_issue_at_cursor_for_action\(\)\n  endif/);
 });
 

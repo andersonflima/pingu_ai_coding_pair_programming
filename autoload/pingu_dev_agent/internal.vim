@@ -2435,6 +2435,16 @@ function! s:pingu_fix_current_issue_with_ai() abort
 endfunction
 
 function! s:pingu_issue_hover_action(action) abort
+  if a:action ==# 'explain'
+    call s:restore_pingu_issue_hover_source()
+    call s:clear_pingu_issue_hover_source_maps()
+    let l:issue = s:get_buffer_issue_at_cursor_exact()
+    if empty(l:issue)
+      let l:issue = s:pingu_issue_at_cursor_for_action()
+    endif
+    call s:pingu_explain_issue(l:issue)
+    return
+  endif
   call s:close_pingu_issue_hover_menu()
   call s:restore_pingu_issue_hover_source()
   let l:issue = s:get_buffer_issue_at_cursor_exact()
@@ -2451,10 +2461,6 @@ function! s:pingu_issue_hover_action(action) abort
   endif
   if a:action ==# 'preview'
     call s:pingu_preview_fix(l:issue)
-    return
-  endif
-  if a:action ==# 'explain'
-    call s:pingu_explain_issue(l:issue)
     return
   endif
   if a:action ==# 'test'
@@ -2515,11 +2521,7 @@ function! s:pingu_issue_hover_action_for_cursor() abort
   endif
 endfunction
 
-function! s:pingu_explain_issue(issue) abort
-  if empty(a:issue) || type(a:issue) != v:t_dict
-    echomsg '[Pingu] Nenhum diagnostico na linha atual'
-    return
-  endif
+function! s:pingu_explain_issue_lines(issue) abort
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:kind = trim('' . get(a:issue, 'kind', 'diagnostico'))
   let l:message = trim('' . get(a:issue, 'lsp_message', ''))
@@ -2528,9 +2530,9 @@ function! s:pingu_explain_issue(issue) abort
   endif
   let l:suggestion = s:pingu_issue_hover_action_summary(a:issue)
   let l:action = s:issue_effective_action(a:issue)
-  let l:lines = [
-        \ 'Pingu Explain',
-        \ '=============',
+  return [
+        \ ' Pingu',
+        \ 'Explicacao da issue',
         \ '',
         \ 'Problema',
         \ '  ' . substitute(l:message, '\s\+', ' ', 'g'),
@@ -2551,8 +2553,65 @@ function! s:pingu_explain_issue(issue) abort
         \ '  :PinguFixCurrent    aplicar se houver correcao local',
         \ '  :PinguFixCurrentAI  pedir correcao assistida',
         \ '  :PinguRunProjectCheck validar projeto',
+        \ '',
+        \ 'q  Fechar',
         \ ]
-  call s:pingu_lsp_open_float('Pingu Explain', l:lines)
+endfunction
+
+function! s:pingu_show_issue_explain_in_hover(issue) abort
+  if !has('nvim') || !exists('*nvim_open_win') || !exists('*nvim_create_buf')
+    return v:false
+  endif
+  let l:lines = s:pingu_explain_issue_lines(a:issue)
+  let l:width = min([96, max([42] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([24, len(l:lines)])
+  let l:winid = get(s:, 'pingu_issue_hover_menu_winid', -1)
+  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
+    let l:bufnr = nvim_win_get_buf(l:winid)
+    call nvim_buf_set_option(l:bufnr, 'modifiable', v:true)
+    call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
+    call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
+    if exists('*nvim_win_set_config')
+      try
+        call nvim_win_set_config(l:winid, {'relative': 'cursor', 'row': 1, 'col': 0, 'width': l:width, 'height': l:height, 'style': 'minimal', 'border': 'rounded'})
+      catch
+      endtry
+    endif
+  else
+    let l:bufnr = nvim_create_buf(v:false, v:true)
+    call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
+    call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
+    call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
+    let l:winid = nvim_open_win(l:bufnr, v:false, {
+          \ 'relative': 'cursor',
+          \ 'row': 1,
+          \ 'col': 0,
+          \ 'width': l:width,
+          \ 'height': l:height,
+          \ 'style': 'minimal',
+          \ 'border': 'rounded',
+          \ 'focusable': v:true,
+          \ 'zindex': 60,
+          \ })
+  endif
+  call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
+  call setbufvar(l:bufnr, 'pingu_issue_hover_focus_menu', 0)
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', s:script_call_rhs('pingu_issue_hover_close_and_restore()'), {'noremap': v:true, 'silent': v:true, 'nowait': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', s:script_call_rhs('pingu_issue_hover_close_and_restore()'), {'noremap': v:true, 'silent': v:true, 'nowait': v:true})
+  let s:pingu_issue_hover_menu_bufnr = l:bufnr
+  let s:pingu_issue_hover_menu_winid = l:winid
+  return v:true
+endfunction
+
+function! s:pingu_explain_issue(issue) abort
+  if empty(a:issue) || type(a:issue) != v:t_dict
+    echomsg '[Pingu] Nenhum diagnostico na linha atual'
+    return
+  endif
+  if s:pingu_show_issue_explain_in_hover(a:issue)
+    return
+  endif
+  call s:pingu_lsp_open_float('Pingu Explain', s:pingu_explain_issue_lines(a:issue))
 endfunction
 
 function! s:pingu_explain_current() abort
