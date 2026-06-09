@@ -44,6 +44,9 @@ let s:pingu_dev_agent_auto_fix_timer = -1
 let s:pingu_dev_agent_auto_fix_state = {}
 let s:pingu_dev_agent_latency_metrics = []
 let s:pingu_dev_agent_fix_history = {}
+let s:pingu_action_history = []
+let s:pingu_action_preview_issue = {}
+let s:pingu_issue_queue_state = {}
 let s:pingu_logs = []
 let s:pingu_lsp_ai_fix_last_error = ''
 let s:pingu_status = {
@@ -2212,11 +2215,14 @@ endfunction
 function! s:pingu_issue_hover_source_actions() abort
   return [
         \ ['a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>'],
+        \ ['d', ':<C-U>call <SID>pingu_issue_hover_action("preview")<CR>'],
         \ ['i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>'],
         \ ['e', ':<C-U>call <SID>pingu_issue_hover_action("explain")<CR>'],
         \ ['t', ':<C-U>call <SID>pingu_issue_hover_action("test")<CR>'],
+        \ ['u', ':<C-U>call <SID>pingu_issue_hover_action("undo")<CR>'],
+        \ ['h', ':<C-U>call <SID>pingu_issue_hover_action("history")<CR>'],
         \ ['p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>'],
-        \ ['q', ':<C-U>PinguIssueHoverClose<CR>'],
+        \ ['q', ':<C-U>call <SID>pingu_issue_hover_close_and_restore()<CR>'],
         \ ]
 endfunction
 
@@ -2313,6 +2319,11 @@ function! s:restore_pingu_issue_hover_source() abort
     endtry
   endif
   return v:false
+endfunction
+
+function! s:pingu_issue_hover_close_and_restore() abort
+  call s:close_pingu_issue_hover_menu()
+  call s:restore_pingu_issue_hover_source()
 endfunction
 
 function! s:pingu_issue_hover_signature(issue) abort
@@ -2430,6 +2441,10 @@ function! s:pingu_issue_hover_action(action) abort
     call s:pingu_apply_issue_with_ai(l:issue)
     return
   endif
+  if a:action ==# 'preview'
+    call s:pingu_preview_fix(l:issue)
+    return
+  endif
   if a:action ==# 'explain'
     call s:pingu_explain_issue(l:issue)
     return
@@ -2442,6 +2457,14 @@ function! s:pingu_issue_hover_action(action) abort
     PinguWindowCheck
     return
   endif
+  if a:action ==# 'undo'
+    call s:undo_last_pingu_fix(0)
+    return
+  endif
+  if a:action ==# 'history'
+    call s:pingu_action_history_open()
+    return
+  endif
 endfunction
 
 function! s:pingu_issue_hover_action_for_cursor() abort
@@ -2451,24 +2474,35 @@ function! s:pingu_issue_hover_action_for_cursor() abort
     return
   endif
   if l:line == 8
-    call s:pingu_issue_hover_action('ai')
+    call s:pingu_issue_hover_action('preview')
     return
   endif
   if l:line == 9
-    call s:pingu_issue_hover_action('explain')
+    call s:pingu_issue_hover_action('ai')
     return
   endif
   if l:line == 10
-    call s:pingu_issue_hover_action('test')
+    call s:pingu_issue_hover_action('explain')
     return
   endif
   if l:line == 11
-    call s:pingu_issue_hover_action('panel')
+    call s:pingu_issue_hover_action('test')
     return
   endif
   if l:line == 12
-    call s:close_pingu_issue_hover_menu()
-    call s:restore_pingu_issue_hover_source()
+    call s:pingu_issue_hover_action('undo')
+    return
+  endif
+  if l:line == 13
+    call s:pingu_issue_hover_action('history')
+    return
+  endif
+  if l:line == 14
+    call s:pingu_issue_hover_action('panel')
+    return
+  endif
+  if l:line == 15
+    call s:pingu_issue_hover_close_and_restore()
     return
   endif
 endfunction
@@ -2516,6 +2550,11 @@ endfunction
 function! s:pingu_explain_current() abort
   let l:issue = s:pingu_issue_at_cursor_for_action()
   call s:pingu_explain_issue(l:issue)
+endfunction
+
+function! s:pingu_preview_current_fix() abort
+  let l:issue = s:pingu_issue_at_cursor_for_action()
+  call s:pingu_preview_fix(l:issue)
 endfunction
 
 function! s:pingu_issue_actions_open() abort
@@ -2797,6 +2836,191 @@ function! s:start_pingu_issue_hover_ai_suggestion(issue, signature) abort
   endtry
 endfunction
 
+function! s:pingu_issue_assisted_preview_candidate(issue) abort
+  let l:request = s:pingu_issue_hover_lsp_payload(a:issue)
+  if empty(l:request)
+    return {}
+  endif
+
+  let l:output = s:run_systemlist(get(l:request, 'argv', []), get(l:request, 'root', ''), get(l:request, 'payload', '{}'))
+  if v:shell_error != 0 || empty(l:output)
+    call s:pingu_log_event('warn', 'preview-fix', join(l:output, "\n"), {'line': get(a:issue, 'lnum', line('.'))})
+    return {}
+  endif
+
+  try
+    let l:decoded = json_decode(join(l:output, "\n"))
+  catch
+    call s:pingu_log_event('warn', 'preview-fix', 'resposta invalida do provider', {'line': get(a:issue, 'lnum', line('.'))})
+    return {}
+  endtry
+
+  if type(l:decoded) != v:t_dict || !get(l:decoded, 'ok', v:false) || type(get(l:decoded, 'issue', {})) != v:t_dict
+    return {}
+  endif
+  return get(l:decoded, 'issue', {})
+endfunction
+
+function! s:pingu_preview_resolved_issue(issue) abort
+  if empty(a:issue) || type(a:issue) != v:t_dict
+    return {}
+  endif
+
+  let l:action = s:issue_effective_action(a:issue)
+  let l:op = trim('' . get(l:action, 'op', ''))
+  if index(['lsp_code_action', 'lsp_ai_fix', 'lsp_diagnostic'], get(a:issue, 'kind', '')) != -1
+        \ || l:op ==# 'lsp_code_action'
+        \ || l:op ==# 'lsp_ai_fix'
+    let l:assisted = s:pingu_issue_assisted_preview_candidate(a:issue)
+    if !empty(l:assisted)
+      return l:assisted
+    endif
+    let l:local_fix = s:pingu_lsp_local_fix_candidate(a:issue)
+    if !empty(l:local_fix)
+      return l:local_fix
+    endif
+  endif
+
+  return deepcopy(a:issue)
+endfunction
+
+function! s:pingu_issue_preview_added_lines(lines) abort
+  let l:result = []
+  for l:line in a:lines
+    call add(l:result, '+ ' . l:line)
+  endfor
+  return l:result
+endfunction
+
+function! s:pingu_issue_preview_removed_lines(lines) abort
+  let l:result = []
+  for l:line in a:lines
+    call add(l:result, '- ' . l:line)
+  endfor
+  return l:result
+endfunction
+
+function! s:pingu_issue_preview_diff_lines(issue) abort
+  let l:issue = a:issue
+  let l:action = s:issue_effective_action(l:issue)
+  let l:op = trim('' . get(l:action, 'op', ''))
+  let l:filename = fnamemodify(get(l:issue, 'filename', empty(bufname('%')) ? '' : bufname('%')), ':p')
+  let l:target_buf = s:issue_target_buffer(l:filename)
+  let l:lnum = max([1, str2nr(string(get(l:issue, 'lnum', line('.'))))])
+  let l:snippet = get(l:issue, 'snippet', '')
+  let l:snippet_lines = empty(l:snippet) ? [] : s:split_snippet_lines(l:snippet)
+
+  if l:op ==# 'run_command'
+    return ['Comando de terminal', '  ' . get(l:action, 'command', '[sem comando]')]
+  endif
+
+  if l:op ==# 'write_file'
+    return ['Arquivo alvo: ' . fnamemodify(get(l:action, 'target_file', l:filename), ':~:.')] + s:pingu_issue_preview_added_lines(l:snippet_lines)
+  endif
+
+  if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    return ['Buffer alvo nao carregado para preview.']
+  endif
+
+  let l:last = max([1, len(getbufline(l:target_buf, 1, '$'))])
+  let l:lnum = min([l:lnum, l:last])
+  let l:current_line = get(getbufline(l:target_buf, l:lnum), 0, '')
+  if empty(l:op)
+    let l:op = get(s:issue_default_action(get(l:issue, 'kind', '')), 'op', 'insert_before')
+  endif
+
+  if l:op ==# 'replace_range'
+    let l:range = s:issue_action_range(l:action)
+    let l:start_lnum = max([1, get(get(l:range, 'start', {}), 'line', l:lnum - 1) + 1])
+    let l:end_lnum = max([l:start_lnum, get(get(l:range, 'end', {}), 'line', l:start_lnum)])
+    return s:pingu_issue_preview_removed_lines(getbufline(l:target_buf, l:start_lnum, l:end_lnum))
+          \ + s:pingu_issue_preview_added_lines(l:snippet_lines)
+  endif
+  if l:op ==# 'replace_line'
+    return s:pingu_issue_preview_removed_lines([l:current_line])
+          \ + s:pingu_issue_preview_added_lines(l:snippet_lines)
+  endif
+  if l:op ==# 'delete_line'
+    return s:pingu_issue_preview_removed_lines([l:current_line])
+  endif
+  if l:op ==# 'insert_after'
+    return ['  ' . l:current_line] + s:pingu_issue_preview_added_lines(l:snippet_lines)
+  endif
+  return s:pingu_issue_preview_added_lines(l:snippet_lines) + ['  ' . l:current_line]
+endfunction
+
+function! s:pingu_apply_preview_issue() abort
+  let l:issue = deepcopy(get(s:, 'pingu_action_preview_issue', {}))
+  let s:pingu_action_preview_issue = {}
+  silent! close
+  if empty(l:issue)
+    echomsg '[Pingu] Nenhuma correcao em preview para aplicar'
+    return v:false
+  endif
+  if s:apply_issue_snippet(l:issue, v:false)
+    call s:pingu_record_action_history('preview', l:issue, 'applied')
+    echo '[Pingu] Correcao do preview aplicada'
+    call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
+    call s:pingu_post_fix_check(fnamemodify(get(l:issue, 'filename', bufname('%')), ':p'))
+    return v:true
+  endif
+  call s:pingu_record_action_history('preview', l:issue, 'failed')
+  echomsg '[Pingu] Correcao do preview nao alterou o buffer'
+  return v:false
+endfunction
+
+function! s:pingu_preview_fix(issue) abort
+  let l:issue = s:pingu_preview_resolved_issue(a:issue)
+  if empty(l:issue)
+    echomsg '[Pingu] Nenhuma correcao disponivel para preview'
+    return
+  endif
+
+  let s:pingu_action_preview_issue = deepcopy(l:issue)
+  call s:pingu_record_action_history('preview', l:issue, 'open')
+  let l:lines = [
+        \ 'Arquivo: ' . fnamemodify(get(l:issue, 'filename', empty(bufname('%')) ? '' : bufname('%')), ':~:.'),
+        \ 'Linha: ' . max([1, str2nr(string(get(l:issue, 'lnum', line('.'))))]),
+        \ 'Acao: ' . get(s:issue_effective_action(l:issue), 'op', 'snippet'),
+        \ '',
+        \ 'Diff',
+        \ ] + s:pingu_issue_preview_diff_lines(l:issue) + [
+        \ '',
+        \ 'a/Enter aplicar   q/Esc fechar',
+        \ ]
+
+  if !has('nvim') || !exists('*nvim_create_buf') || !exists('*nvim_open_win')
+    echo join(l:lines, "\n")
+    return
+  endif
+
+  call s:define_pingu_lsp_ui_highlights()
+  let l:title = ' Pingu Preview'
+  let l:display = [l:title, repeat('─', max([12, strdisplaywidth(l:title)])), ''] + l:lines
+  let l:width = min([96, max([42] + map(copy(l:display), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([24, len(l:display)])
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:display)
+  call setbufvar(l:bufnr, '&buftype', 'nofile')
+  call setbufvar(l:bufnr, '&bufhidden', 'wipe')
+  call setbufvar(l:bufnr, '&swapfile', 0)
+  call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatTitle', 0, 0, -1)
+  let l:winid = nvim_open_win(l:bufnr, v:true, {
+        \ 'relative': 'editor',
+        \ 'row': 2,
+        \ 'col': 4,
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ })
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_apply_preview_issue()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_apply_preview_issue()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  silent! call nvim_win_set_option(l:winid, 'wrap', v:false)
+endfunction
+
 function! s:pingu_issue_hover_menu_lines(issue) abort
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:message = trim('' . get(a:issue, 'lsp_message', ''))
@@ -2830,9 +3054,12 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
         \ 'Acao sugerida',
         \ '  ' . l:action_summary,
         \ 'a  Aplicar resolucao assistida',
+        \ 'd  Preview diff da correcao',
         \ 'i  Forcar correcao com IA',
         \ 'e  Explicar problema',
         \ 't  Rodar check/testes',
+        \ 'u  Desfazer ultima correcao',
+        \ 'h  Historico de acoes',
         \ 'p  Abrir painel',
         \ 'q  Fechar',
         \ ]
@@ -2879,16 +3106,25 @@ function! s:pingu_open_issue_hover_menu(issue) abort
         \ 'zindex': 60,
         \ })
   call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'd', ':<C-U>call <SID>pingu_issue_hover_action("preview")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'e', ':<C-U>call <SID>pingu_issue_hover_action("explain")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 't', ':<C-U>call <SID>pingu_issue_hover_action("test")<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'u', ':<C-U>call <SID>pingu_issue_hover_action("undo")<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'h', ':<C-U>call <SID>pingu_issue_hover_action("history")<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>PinguIssueHoverClose<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>call <SID>pingu_issue_hover_close_and_restore()<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_issue_hover_action_for_cursor()<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<LeftMouse>', '<LeftMouse>:<C-U>call <SID>pingu_issue_hover_action_for_cursor()<CR>', {'noremap': v:true, 'silent': v:true})
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = l:signature
+  try
+    call nvim_set_current_win(l:winid)
+    call cursor(7, 1)
+    silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
+  catch
+  endtry
   call s:start_pingu_issue_hover_ai_suggestion(a:issue, l:signature)
 endfunction
 
@@ -4765,6 +5001,71 @@ function! s:restore_issue_fix_snapshot(entry) abort
   return v:true
 endfunction
 
+function! s:pingu_action_history_max_entries() abort
+  let l:max_entries = get(g:, 'pingu_action_history_max', 50)
+  if type(l:max_entries) != v:t_number
+    let l:max_entries = str2nr(string(l:max_entries))
+  endif
+  return max([1, l:max_entries])
+endfunction
+
+function! s:pingu_issue_message(issue) abort
+  let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:message = trim('' . get(a:issue, 'lsp_message', ''))
+  if empty(l:message)
+    let l:message = empty(get(l:parts, 1, '')) ? get(a:issue, 'text', '') : l:parts[1]
+  endif
+  return substitute(trim('' . l:message), '\s\+', ' ', 'g')
+endfunction
+
+function! s:pingu_record_action_history(action, issue, status) abort
+  let l:file = fnamemodify(get(a:issue, 'filename', empty(bufname('%')) ? '' : bufname('%')), ':p')
+  let l:entry = {
+        \ 'action': a:action,
+        \ 'status': a:status,
+        \ 'file': l:file,
+        \ 'line': max([1, str2nr(string(get(a:issue, 'lnum', line('.'))))]),
+        \ 'kind': get(a:issue, 'kind', ''),
+        \ 'source': trim('' . get(a:issue, 'lsp_source', 'Pingu')),
+        \ 'message': s:pingu_truncate_hover_text(s:pingu_issue_message(a:issue), 96),
+        \ 'recorded_at': localtime(),
+        \ }
+  call add(s:pingu_action_history, l:entry)
+  let l:limit = s:pingu_action_history_max_entries()
+  if len(s:pingu_action_history) > l:limit
+    let s:pingu_action_history = s:pingu_action_history[-l:limit :]
+  endif
+endfunction
+
+function! s:pingu_action_history_lines() abort
+  if empty(s:pingu_action_history)
+    return ['Nenhuma acao registrada nesta sessao.']
+  endif
+
+  let l:lines = ['Historico da sessao', '']
+  let l:index = 1
+  for l:entry in reverse(copy(s:pingu_action_history))
+    let l:file = fnamemodify(get(l:entry, 'file', ''), ':~:.')
+    let l:status = toupper(trim('' . get(l:entry, 'status', 'ok')))
+    call add(l:lines, printf(
+          \ '%2d  %-8s %-10s %s:%d',
+          \ l:index,
+          \ l:status,
+          \ get(l:entry, 'action', 'acao'),
+          \ empty(l:file) ? '[sem arquivo]' : l:file,
+          \ get(l:entry, 'line', 1)))
+    call add(l:lines, '    ' . get(l:entry, 'message', ''))
+    let l:index += 1
+  endfor
+  call add(l:lines, '')
+  call add(l:lines, 'Use :PinguUndoFix para reverter a ultima correcao do arquivo atual.')
+  return l:lines
+endfunction
+
+function! s:pingu_action_history_open() abort
+  call s:pingu_lsp_open_float('Pingu Action History', s:pingu_action_history_lines())
+endfunction
+
 function! s:undo_last_pingu_fix(force) abort
   if s:pingu_dev_agent_auto_fix_busy
     echomsg '[Pingu] Aguarde o fim do auto-fix para reverter'
@@ -4814,6 +5115,12 @@ function! s:undo_last_pingu_fix(force) abort
     return
   endif
 
+  call s:pingu_record_action_history('undo', {
+        \ 'filename': l:scope_file,
+        \ 'lnum': 1,
+        \ 'kind': get(l:entry, 'kind', ''),
+        \ 'text': 'Reversao da ultima correcao',
+        \ }, 'ok')
   echomsg printf('[Pingu] Reversao aplicada em %d arquivo(s)', len(get(l:entry, 'affected_files', [])))
 endfunction
 
@@ -5616,6 +5923,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
     let l:write_applied = s:apply_issue_write_file(l:issue, l:snippet_lines)
     if l:write_applied
       call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
+      call s:pingu_record_action_history('apply', l:issue, 'ok')
     endif
     return l:write_applied
   endif
@@ -5697,6 +6005,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
       endif
       call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
       call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
+      call s:pingu_record_action_history('apply', l:issue, 'ok')
       return v:true
     endif
     return v:false
@@ -5710,6 +6019,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
       endif
       call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
       call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
+      call s:pingu_record_action_history('apply', l:issue, 'ok')
       return v:true
     endif
     let l:normalized_current = substitute(l:line_content, '^\s*', '', '')
@@ -5743,6 +6053,7 @@ function! s:apply_issue_snippet(issue, keep_focus_code) abort
   endif
   call s:auto_save_buffer_if_modified(l:target_buf, l:target_file)
   call s:record_issue_fix_snapshot(l:issue, l:undo_snapshot)
+  call s:pingu_record_action_history('apply', l:issue, 'ok')
   return v:true
 endfunction
 
@@ -8068,6 +8379,168 @@ function! s:pingu_issue_lines_for_current_buffer() abort
   return sort(l:items, {left, right -> str2nr(string(get(left, 'lnum', 0))) - str2nr(string(get(right, 'lnum', 0)))})
 endfunction
 
+function! s:pingu_issue_queue_group_key(issue) abort
+  let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
+  let l:severity = str2nr(string(get(a:issue, 'lsp_severity', 0)))
+  let l:severity_label = l:severity > 0 ? s:lsp_severity_label(l:severity) : toupper(empty(get(l:parts, 0, '')) ? 'INFO' : l:parts[0])
+  let l:source = trim('' . get(a:issue, 'lsp_source', ''))
+  if empty(l:source)
+    let l:source = 'Pingu'
+  endif
+  return l:severity_label . ' · ' . l:source
+endfunction
+
+function! s:pingu_issue_queue_compare(left, right) abort
+  let l:left_rank = s:pingu_issue_severity_rank(a:left)
+  let l:right_rank = s:pingu_issue_severity_rank(a:right)
+  if l:left_rank !=# l:right_rank
+    return l:left_rank - l:right_rank
+  endif
+  let l:left_group = s:pingu_issue_queue_group_key(a:left)
+  let l:right_group = s:pingu_issue_queue_group_key(a:right)
+  if l:left_group !=# l:right_group
+    return l:left_group ># l:right_group ? 1 : -1
+  endif
+  return str2nr(string(get(a:left, 'lnum', 0))) - str2nr(string(get(a:right, 'lnum', 0)))
+endfunction
+
+function! s:pingu_issue_queue_lines(items) abort
+  let l:items = sort(deepcopy(a:items), function('s:pingu_issue_queue_compare'))
+  let l:lines = [' Pingu Issue Queue', repeat('─', 22), '']
+  let l:line_items = {}
+  let l:last_group = ''
+  let l:index = 1
+  for l:item in l:items
+    let l:group = s:pingu_issue_queue_group_key(l:item)
+    if l:group !=# l:last_group
+      if !empty(l:last_group)
+        call add(l:lines, '')
+      endif
+      call add(l:lines, l:group)
+      let l:last_group = l:group
+    endif
+    let l:message = s:pingu_truncate_hover_text(s:pingu_issue_message(l:item), 82)
+    let l:line_no = len(l:lines) + 1
+    call add(l:lines, printf('%2d  linha %-5d %s', l:index, get(l:item, 'lnum', 1), l:message))
+    let l:line_items[string(l:line_no)] = deepcopy(l:item)
+    let l:index += 1
+  endfor
+  call add(l:lines, '')
+  call add(l:lines, 'Enter/o abrir   a acoes   q/Esc fechar')
+  return {'lines': l:lines, 'line_items': l:line_items}
+endfunction
+
+function! s:pingu_issue_queue_close() abort
+  let l:winid = str2nr(string(get(s:pingu_issue_queue_state, 'winid', -1)))
+  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
+    silent! call nvim_win_close(l:winid, v:true)
+  endif
+  let s:pingu_issue_queue_state = {}
+endfunction
+
+function! s:pingu_issue_queue_selected_issue() abort
+  let l:line_items = get(s:pingu_issue_queue_state, 'line_items', {})
+  if type(l:line_items) != v:t_dict || empty(l:line_items)
+    return {}
+  endif
+  let l:line = line('.')
+  if has_key(l:line_items, string(l:line))
+    return deepcopy(l:line_items[string(l:line)])
+  endif
+  let l:candidates = sort(map(keys(l:line_items), {_, key -> str2nr(key)}))
+  for l:candidate in l:candidates
+    if l:candidate >= l:line
+      return deepcopy(l:line_items[string(l:candidate)])
+    endif
+  endfor
+  return deepcopy(l:line_items[string(get(l:candidates, -1, 0))])
+endfunction
+
+function! s:pingu_issue_queue_jump() abort
+  let l:issue = s:pingu_issue_queue_selected_issue()
+  if empty(l:issue)
+    call s:pingu_issue_queue_close()
+    return
+  endif
+  let l:source_winid = str2nr(string(get(s:pingu_issue_queue_state, 'source_winid', -1)))
+  call s:pingu_issue_queue_close()
+  if l:source_winid > 0 && exists('*win_gotoid')
+    silent! call win_gotoid(l:source_winid)
+  endif
+  execute 'edit ' . fnameescape(get(l:issue, 'filename', ''))
+  call cursor(max([1, str2nr(string(get(l:issue, 'lnum', 1)))]), max([1, str2nr(string(get(l:issue, 'col', 1)))]))
+  normal! zv
+endfunction
+
+function! s:pingu_issue_queue_actions() abort
+  let l:issue = s:pingu_issue_queue_selected_issue()
+  if empty(l:issue)
+    call s:pingu_issue_queue_close()
+    return
+  endif
+  let l:source_winid = str2nr(string(get(s:pingu_issue_queue_state, 'source_winid', -1)))
+  call s:pingu_issue_queue_close()
+  if l:source_winid > 0 && exists('*win_gotoid')
+    silent! call win_gotoid(l:source_winid)
+  endif
+  execute 'edit ' . fnameescape(get(l:issue, 'filename', ''))
+  call cursor(max([1, str2nr(string(get(l:issue, 'lnum', 1)))]), max([1, str2nr(string(get(l:issue, 'col', 1)))]))
+  call s:pingu_open_issue_hover_menu(l:issue)
+endfunction
+
+function! s:pingu_issue_queue_open() abort
+  let l:items = s:pingu_qf_items_for_current_buffer()
+  if empty(l:items)
+    echohl WarningMsg
+    echomsg '[Pingu] Nenhum diagnostico do Pingu para este arquivo'
+    echohl None
+    return
+  endif
+
+  let l:payload = s:pingu_issue_queue_lines(l:items)
+  let l:lines = get(l:payload, 'lines', [])
+  if !has('nvim') || !exists('*nvim_open_win') || !exists('*nvim_create_buf')
+    echo join(l:lines, "\n")
+    return
+  endif
+
+  call s:pingu_issue_queue_close()
+  call s:define_pingu_lsp_ui_highlights()
+  let l:width = min([100, max([48] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([24, len(l:lines)])
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
+  call setbufvar(l:bufnr, '&buftype', 'nofile')
+  call setbufvar(l:bufnr, '&bufhidden', 'wipe')
+  call setbufvar(l:bufnr, '&swapfile', 0)
+  call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatTitle', 0, 0, -1)
+  let l:source_winid = win_getid()
+  let l:winid = nvim_open_win(l:bufnr, v:true, {
+        \ 'relative': 'editor',
+        \ 'row': 2,
+        \ 'col': 4,
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ })
+  let s:pingu_issue_queue_state = {
+        \ 'bufnr': l:bufnr,
+        \ 'winid': l:winid,
+        \ 'line_items': get(l:payload, 'line_items', {}),
+        \ 'source_winid': l:source_winid,
+        \ }
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_issue_queue_jump()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'o', ':<C-U>call <SID>pingu_issue_queue_jump()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_issue_queue_actions()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>call <SID>pingu_issue_queue_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':<C-U>call <SID>pingu_issue_queue_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  let l:first_item_line = min(map(keys(get(l:payload, 'line_items', {'4': {}})), {_, key -> str2nr(key)}))
+  call cursor(max([1, l:first_item_line]), 1)
+  silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
+  silent! call nvim_win_set_option(l:winid, 'wrap', v:false)
+endfunction
+
 function! s:pingu_jump_to_issue(direction) abort
   let l:items = s:pingu_issue_lines_for_current_buffer()
   if empty(l:items)
@@ -9694,8 +10167,12 @@ function! s:pingu_help_lines() abort
         \ '  :PinguPromptTerminal     abrir terminal flutuante',
         \ '  :PinguFixCurrent         aplicar sugestao da linha atual',
         \ '  :PinguFixCurrentAI       corrigir linha atual com provider',
+        \ '  :PinguPreviewFix         mostrar diff antes de aplicar',
         \ '  :PinguIssueActions       abrir menu da sugestao atual',
+        \ '  :PinguIssueQueue         listar issues por severidade/origem',
         \ '  :PinguExplainCurrent     explicar diagnostico atual',
+        \ '  :PinguActionHistory      mostrar acoes recentes',
+        \ '  :PinguUndoFix            reverter ultima correcao',
         \ '  :PinguRunProjectCheck    rodar check/testes do projeto',
         \ '  :PinguProjectContext     abrir contexto do projeto',
         \ '  :PinguProjectContext!    criar contexto do projeto',
@@ -9782,12 +10259,15 @@ command! PinguHintsRefresh call s:update_pingu_all_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()
 command! PinguFixCurrentAI call s:pingu_fix_current_issue_with_ai()
+command! PinguPreviewFix call s:pingu_preview_current_fix()
 command! PinguIssueActions call s:pingu_issue_actions_open()
+command! PinguIssueQueue call s:pingu_issue_queue_open()
 command! PinguExplainCurrent call s:pingu_explain_current()
+command! PinguActionHistory call s:pingu_action_history_open()
 command! -nargs=* PinguRunProjectCheck call s:pingu_run_project_check(<q-args>)
 command! -bang PinguProjectContext call s:pingu_project_context_command(<bang>0)
 command! PinguDoctor call s:pingu_doctor_open()
-command! PinguIssueHoverClose call s:close_pingu_issue_hover_menu()
+command! PinguIssueHoverClose call s:pingu_issue_hover_close_and_restore()
 command! -nargs=? PinguPromptClear call s:pingu_prompt_clear_command(<q-args>)
 command! PinguQfNext call s:pingu_qf_next()
 command! PinguQfPrev call s:pingu_qf_prev()

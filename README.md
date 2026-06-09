@@ -588,7 +588,7 @@ Atalhos principais:
 - `<leader>pim`/`<leader>pmi`: escolhe o provider e o modelo assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
-- ao manter o cursor por um tempo curto em uma linha com hint do Pingu, aparece um menu com o problema, a acao sugerida e os comandos `a` aplicar, `i` corrigir com IA e `p` abrir painel
+- ao manter o cursor por um tempo curto em uma linha com hint do Pingu, aparece um menu focavel com o problema, a acao sugerida e os comandos `a` aplicar, `d` preview, `i` corrigir com IA, `u` desfazer, `h` historico e `p` abrir painel
 - `<Tab>`, `i` ou `a`: aplica a sugestao selecionada
 - `f`: insere follow-up acionavel
 - `r`: reanalisa
@@ -606,6 +606,10 @@ Comandos principais no editor:
 - `:PinguAutoFixNow`
 - `:PinguFixCurrent`
 - `:PinguFixCurrentAI`
+- `:PinguPreviewFix`
+- `:PinguIssueActions`
+- `:PinguIssueQueue`
+- `:PinguActionHistory`
 - `:PinguQfNext`
 - `:PinguQfPrev`
 - `:PinguUndoFix`
@@ -902,13 +906,16 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
-- `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; o menu separa problema e acao sugerida, abre com fallback objetivo, consulta o provider em background para atualizar a acao sugerida daquele diagnostico e usa `a` para aplicar, `i` para forcar IA, `e` para explicar, `t` para rodar check/testes, `p` para abrir painel e `q` para fechar, ou clique/Enter na linha da acao
+- `let g:pingu_issue_hover_hint = 1` mostra um menu flutuante quando o cursor fica sobre uma linha com hint do Pingu; o menu separa problema e acao sugerida, abre com fallback objetivo, consulta o provider em background para atualizar a acao sugerida daquele diagnostico e usa `a` para aplicar, `d` para preview, `i` para forcar IA, `e` para explicar, `t` para rodar check/testes, `u` para desfazer, `h` para historico, `p` para abrir painel e `q` para fechar, ou clique/Enter na linha da acao
 - `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir esse menu depois que o cursor para na linha; diagnostics LSP com range multilinha tambem acionam o menu em qualquer linha coberta, sem exigir `<leader>`
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
 - `:PinguDoctor` mostra provider ativo, modelo, comando local, runtime, contexto do projeto, ultimo evento e checks do CLI
 - `:PinguProjectContext` abre o contexto do projeto; `:PinguProjectContext!` cria `.pingu/context.md` quando ainda nao existir
 - `:PinguIssueActions` abre explicitamente o menu de acoes da issue na linha atual
+- `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao da issue atual
+- `:PinguIssueQueue` mostra a fila de issues agrupada por severidade e origem, com `Enter` para navegar e `a` para abrir acoes
+- `:PinguActionHistory` mostra as acoes recentes da sessao e lembra `:PinguUndoFix`
 - `:PinguExplainCurrent` explica o diagnostico atual, origem, acao sugerida e comandos uteis
 - `:PinguRunProjectCheck [comando]` roda check/testes em background; sem argumento usa `g:pingu_project_check_command`, `.pingu/context.md` ou inferencia do projeto
 - `:PinguPrompt` sem argumento abre somente um terminal flutuante com o provider interativo; ele nao injeta prompt automatico, arquivo ou range.
@@ -938,6 +945,10 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguAutoFixNow` aplica os auto-fixes disponiveis do ultimo diagnostico sob demanda
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
+- `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao resolvida para a linha atual; no preview, use `a` ou `Enter` para aplicar
+- `:PinguIssueActions` abre o menu flutuante da issue atual com selecao por cursor, preview, undo e historico
+- `:PinguIssueQueue` mostra uma fila flutuante das issues do arquivo atual agrupada por severidade e origem; `Enter` pula para a issue e `a` abre as acoes
+- `:PinguActionHistory` mostra as acoes recentes da sessao
 - apos correcoes manuais, `g:pingu_post_fix_check_command` permite rodar um check em background quando configurado
 - quando `:PinguFixCurrentAI` nao altera o buffer, o Pingu repinta os hints imediatamente, registra o motivo em `:PinguLogs` e tenta fallback local seguro para diagnostics conhecidos antes de desistir
 - apos `:PinguFixCurrent` ou `:PinguFixCurrentAI`, os hints sao repintados imediatamente e novamente apos os diagnostics do LSP atualizarem, evitando que outros erros desaparecam da tela
