@@ -300,7 +300,9 @@ test('runtime permite corrigir somente a issue da linha atual', () => {
   assert.match(internalRuntime, /let l:issue = s:pingu_issue_at_cursor_for_action\(\)/);
   assert.match(internalRuntime, /s:get_buffer_issue_at_cursor\(\)/);
   assert.match(internalRuntime, /s:issue_has_applicable_fix\(l:issue\)/);
+  assert.match(internalRuntime, /let l:file = fnamemodify\(get\(l:issue, 'filename', empty\(bufname\('%'\)\) \? '' : bufname\('%'\)\), ':p'\)/);
   assert.match(internalRuntime, /call s:refresh_pingu_hints_after_issue_apply\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /call s:pingu_post_fix_check\(l:file\)/);
   assert.doesNotMatch(internalRuntime, /Correcao aplicada na linha atual'\\n\s*call s:clear_pingu_issue_hints_for_buffer/);
   assert.match(internalRuntime, /':PinguFixCurrent<CR>'/);
 });
