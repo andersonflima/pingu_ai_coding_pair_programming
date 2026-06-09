@@ -296,7 +296,7 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /function! s:issue_covers_line\(issue, line\) abort/);
   assert.match(internalRuntime, /get\(a:issue, 'end_lnum', l:start\)/);
   assert.match(internalRuntime, /function! s:get_buffer_issue_at_cursor_exact\(\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_open_issue_hover_menu\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_open_issue_hover_menu\(issue, \.\.\.\) abort/);
   assert.match(internalRuntime, /let s:pingu_issue_hover_source_context = {}/);
   assert.match(internalRuntime, /function! s:restore_pingu_issue_hover_source\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue_with_ai\(\) abort/);
@@ -331,7 +331,9 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /nvim_buf_del_keymap\(l:bufnr, 'n', l:lhs\)/);
   assert.match(internalRuntime, /<SID>pingu_issue_hover_action_for_cursor\(\)<CR>/);
   assert.match(internalRuntime, /'<LeftMouse>', '<LeftMouse>:/);
-  assert.match(internalRuntime, /call nvim_set_current_win\(l:winid\)/);
+  assert.match(internalRuntime, /let l:focus_menu = a:0 > 0 \? !!a:1 : v:false/);
+  assert.match(internalRuntime, /if l:focus_menu\n    try\n      call nvim_set_current_win\(l:winid\)/);
+  assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:true\)/);
   assert.match(internalRuntime, /call cursor\(7, 1\)/);
   assert.match(internalRuntime, /autocmd CursorHold \* if has\('nvim'\)/);
   assert.match(internalRuntime, /autocmd CursorMoved \* if has\('nvim'\)/);
@@ -341,6 +343,60 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /let s:pingu_cursor_hover_issue_signature = ''/);
   assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 30\)/);
   assert.match(internalRuntime, /return max\(\[10, l:delay\]\)/);
+});
+
+test('runtime nao rouba foco do arquivo durante check com hover de issue ligado', { skip: !commandExists('nvim') }, () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-vim-hover-focus-'));
+  const sourceFile = path.join(tempDir, 'sample.js');
+  const scriptFile = path.join(tempDir, 'hover-focus.vim');
+  const outputFile = path.join(tempDir, 'result.json');
+  fs.writeFileSync(sourceFile, ['const value = 1   ', 'console.log(value)', ''].join('\n'), 'utf8');
+  fs.writeFileSync(scriptFile, [
+    'set nomore',
+    'set hidden',
+    'let g:pingu_start_on_editor_enter = 0',
+    'let g:pingu_open_window_on_start = 0',
+    'let g:pingu_show_window = 0',
+    'let g:pingu_review_on_open = 0',
+    'let g:pingu_realtime_on_change = 0',
+    'let g:pingu_realtime_on_buffer_load = 0',
+    'let g:pingu_realtime_async = 0',
+    'let g:pingu_non_blocking_mode = 0',
+    'let g:pingu_issue_hover_hint = 1',
+    'let g:pingu_issue_hover_delay_ms = 10',
+    'let $PINGU_CODEX_DISABLED = 1',
+    'let $PINGU_CLAUDE_DISABLED = 1',
+    'let $PINGU_COPILOT_DISABLED = 1',
+    'let $PINGU_OPENAI_DISABLED = 1',
+    "let g:pingu_auto_fix_kinds = ['trailing_whitespace']",
+    `execute 'set runtimepath^=' . fnameescape(${vimString(root)})`,
+    'runtime plugin/pingu_dev_agent.vim',
+    `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
+    'call cursor(1, 1)',
+    'silent PinguCheck',
+    'sleep 900m',
+    'let g:pingu_test_hover_open = 0',
+    'for g:pingu_test_winid in nvim_list_wins()',
+    '  let g:pingu_test_bufnr = nvim_win_get_buf(g:pingu_test_winid)',
+    "  if getbufvar(g:pingu_test_bufnr, 'pingu_issue_hover_menu', 0)",
+    '    let g:pingu_test_hover_open = 1',
+    '  endif',
+    'endfor',
+    `call writefile([json_encode({'currentFile': fnamemodify(bufname('%'), ':p'), 'sourceFile': fnamemodify(${vimString(sourceFile)}, ':p'), 'line': line('.'), 'hoverOpen': g:pingu_test_hover_open})], ${vimString(outputFile)})`,
+    'quitall!',
+    '',
+  ].join('\n'), 'utf8');
+
+  const result = spawnSync('nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-S', scriptFile], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 15000,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+  assert.equal(payload.currentFile, payload.sourceFile);
+  assert.equal(payload.line, 1);
 });
 
 test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {

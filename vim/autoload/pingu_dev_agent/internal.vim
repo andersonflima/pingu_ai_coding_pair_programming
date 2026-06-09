@@ -2563,7 +2563,7 @@ function! s:pingu_issue_actions_open() abort
     echomsg '[Pingu] Nenhuma sugestao na linha atual'
     return
   endif
-  call s:pingu_open_issue_hover_menu(l:issue)
+  call s:pingu_open_issue_hover_menu(l:issue, v:true)
 endfunction
 
 function! s:pingu_truncate_hover_text(text, limit) abort
@@ -3065,7 +3065,7 @@ function! s:pingu_issue_hover_menu_lines(issue) abort
         \ ]
 endfunction
 
-function! s:pingu_open_issue_hover_menu(issue) abort
+function! s:pingu_open_issue_hover_menu(issue, ...) abort
   if !has('nvim') || !exists('*nvim_open_win') || !exists('*nvim_create_buf')
     let l:fix_key = get(g:, 'pingu_fix_current_key', '<leader>pif')
     echomsg '[Pingu] Sugestao nesta linha: ' . l:fix_key . ' aplicar | :PinguFixCurrentAI corrigir com IA | ' . get(g:, 'pingu_window_key', '<leader>pia') . ' painel'
@@ -3080,6 +3080,7 @@ function! s:pingu_open_issue_hover_menu(issue) abort
   endif
 
   call s:close_pingu_issue_hover_menu()
+  let l:focus_menu = a:0 > 0 ? !!a:1 : v:false
   let s:pingu_issue_hover_source_context = {
         \ 'winid': win_getid(),
         \ 'bufnr': bufnr('%'),
@@ -3119,12 +3120,14 @@ function! s:pingu_open_issue_hover_menu(issue) abort
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = l:signature
-  try
-    call nvim_set_current_win(l:winid)
-    call cursor(7, 1)
-    silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
-  catch
-  endtry
+  if l:focus_menu
+    try
+      call nvim_set_current_win(l:winid)
+      call cursor(7, 1)
+      silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
+    catch
+    endtry
+  endif
   call s:start_pingu_issue_hover_ai_suggestion(a:issue, l:signature)
 endfunction
 
@@ -3148,7 +3151,7 @@ function! s:pingu_show_issue_hover_action_hint() abort
     return
   endif
 
-  call s:pingu_open_issue_hover_menu(l:issue)
+  call s:pingu_open_issue_hover_menu(l:issue, v:true)
 endfunction
 
 function! s:pingu_show_issue_hover_action_hint_if_current(bufnr) abort
