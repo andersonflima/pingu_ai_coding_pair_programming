@@ -2216,17 +2216,21 @@ function! s:pingu_current_buffer_is_issue_hover_menu() abort
   return getbufvar(bufnr('%'), 'pingu_issue_hover_menu', 0) ? v:true : v:false
 endfunction
 
+function! s:script_call_rhs(call_expr) abort
+  return ':<C-U>call ' . expand('<SID>') . a:call_expr . '<CR>'
+endfunction
+
 function! s:pingu_issue_hover_source_actions() abort
   return [
-        \ ['a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>'],
-        \ ['d', ':<C-U>call <SID>pingu_issue_hover_action("preview")<CR>'],
-        \ ['i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>'],
-        \ ['e', ':<C-U>call <SID>pingu_issue_hover_action("explain")<CR>'],
-        \ ['t', ':<C-U>call <SID>pingu_issue_hover_action("test")<CR>'],
-        \ ['u', ':<C-U>call <SID>pingu_issue_hover_action("undo")<CR>'],
-        \ ['h', ':<C-U>call <SID>pingu_issue_hover_action("history")<CR>'],
-        \ ['p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>'],
-        \ ['q', ':<C-U>call <SID>pingu_issue_hover_close_and_restore()<CR>'],
+        \ ['a', s:script_call_rhs('pingu_issue_hover_action("apply")')],
+        \ ['d', s:script_call_rhs('pingu_issue_hover_action("preview")')],
+        \ ['i', s:script_call_rhs('pingu_issue_hover_action("ai")')],
+        \ ['e', s:script_call_rhs('pingu_issue_hover_action("explain")')],
+        \ ['t', s:script_call_rhs('pingu_issue_hover_action("test")')],
+        \ ['u', s:script_call_rhs('pingu_issue_hover_action("undo")')],
+        \ ['h', s:script_call_rhs('pingu_issue_hover_action("history")')],
+        \ ['p', s:script_call_rhs('pingu_issue_hover_action("panel")')],
+        \ ['q', s:script_call_rhs('pingu_issue_hover_close_and_restore()')],
         \ ]
 endfunction
 
@@ -3018,8 +3022,8 @@ function! s:pingu_preview_fix(issue) abort
         \ 'style': 'minimal',
         \ 'border': 'rounded',
         \ })
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_apply_preview_issue()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_apply_preview_issue()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', s:script_call_rhs('pingu_apply_preview_issue()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', s:script_call_rhs('pingu_apply_preview_issue()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   silent! call nvim_win_set_option(l:winid, 'wrap', v:false)
@@ -3117,17 +3121,17 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
         \ 'focusable': v:true,
         \ 'zindex': 60,
         \ })
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_issue_hover_action("apply")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'd', ':<C-U>call <SID>pingu_issue_hover_action("preview")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'i', ':<C-U>call <SID>pingu_issue_hover_action("ai")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'e', ':<C-U>call <SID>pingu_issue_hover_action("explain")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 't', ':<C-U>call <SID>pingu_issue_hover_action("test")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'u', ':<C-U>call <SID>pingu_issue_hover_action("undo")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'h', ':<C-U>call <SID>pingu_issue_hover_action("history")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'p', ':<C-U>call <SID>pingu_issue_hover_action("panel")<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>call <SID>pingu_issue_hover_close_and_restore()<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_issue_hover_action_for_cursor()<CR>', {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', '<LeftMouse>', '<LeftMouse>:<C-U>call <SID>pingu_issue_hover_action_for_cursor()<CR>', {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', s:script_call_rhs('pingu_issue_hover_action("apply")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'd', s:script_call_rhs('pingu_issue_hover_action("preview")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'i', s:script_call_rhs('pingu_issue_hover_action("ai")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'e', s:script_call_rhs('pingu_issue_hover_action("explain")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 't', s:script_call_rhs('pingu_issue_hover_action("test")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'u', s:script_call_rhs('pingu_issue_hover_action("undo")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'h', s:script_call_rhs('pingu_issue_hover_action("history")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'p', s:script_call_rhs('pingu_issue_hover_action("panel")'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', s:script_call_rhs('pingu_issue_hover_close_and_restore()'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', s:script_call_rhs('pingu_issue_hover_action_for_cursor()'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<LeftMouse>', '<LeftMouse>' . s:script_call_rhs('pingu_issue_hover_action_for_cursor()'), {'noremap': v:true, 'silent': v:true})
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = l:signature
@@ -8549,11 +8553,11 @@ function! s:pingu_issue_queue_open() abort
         \ 'line_items': get(l:payload, 'line_items', {}),
         \ 'source_winid': l:source_winid,
         \ }
-  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':<C-U>call <SID>pingu_issue_queue_jump()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'o', ':<C-U>call <SID>pingu_issue_queue_jump()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', ':<C-U>call <SID>pingu_issue_queue_actions()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':<C-U>call <SID>pingu_issue_queue_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':<C-U>call <SID>pingu_issue_queue_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', s:script_call_rhs('pingu_issue_queue_jump()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'o', s:script_call_rhs('pingu_issue_queue_jump()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'a', s:script_call_rhs('pingu_issue_queue_actions()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', s:script_call_rhs('pingu_issue_queue_close()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', s:script_call_rhs('pingu_issue_queue_close()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   let l:first_item_line = min(map(keys(get(l:payload, 'line_items', {'4': {}})), {_, key -> str2nr(key)}))
   call cursor(max([1, l:first_item_line]), 1)
   silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
@@ -8775,10 +8779,10 @@ function! s:pingu_lsp_open_picker(title, items) abort
         \ 'border': 'rounded',
         \ })
   let s:pingu_lsp_picker_state = {'bufnr': l:bufnr, 'winid': l:winid, 'items': l:items, 'source_winid': l:source_winid}
-  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', ':call <SID>pingu_lsp_picker_apply()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'o', ':call <SID>pingu_lsp_picker_apply()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':call <SID>pingu_lsp_picker_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':call <SID>pingu_lsp_picker_close()<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', s:script_call_rhs('pingu_lsp_picker_apply()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'o', s:script_call_rhs('pingu_lsp_picker_apply()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', s:script_call_rhs('pingu_lsp_picker_close()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', s:script_call_rhs('pingu_lsp_picker_close()'), {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   call cursor(4, 1)
   silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
   silent! call nvim_win_set_option(l:winid, 'wrap', v:false)
