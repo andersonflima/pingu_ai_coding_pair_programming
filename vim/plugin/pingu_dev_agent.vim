@@ -535,6 +535,11 @@ if !exists('g:pingu_undo_fix_history_max')
   let g:pingu_undo_fix_history_max = 30
 endif
 
+if !exists('g:pingu_action_history_max')
+  " Quantidade maxima de acoes recentes exibidas no historico da sessao.
+  let g:pingu_action_history_max = 50
+endif
+
 if !exists('g:pingu_lsp_auto_fix_enabled')
   " 0 evita code actions automaticas do LSP por padrao.
   let g:pingu_lsp_auto_fix_enabled = 0
