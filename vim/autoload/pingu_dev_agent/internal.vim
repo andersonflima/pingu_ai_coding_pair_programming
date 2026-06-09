@@ -10341,6 +10341,7 @@ function! s:pingu_fix_current_issue() abort
     echomsg '[Pingu] Aguarde o fim do auto-fix atual'
     return v:false
   endif
+  let l:file = fnamemodify(get(l:issue, 'filename', empty(bufname('%')) ? '' : bufname('%')), ':p')
   if s:apply_issue_snippet(l:issue, v:false)
     echo '[Pingu] Correcao aplicada na linha atual'
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
