@@ -2611,7 +2611,7 @@ function! s:pingu_show_issue_explain_in_hover(issue) abort
     call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
     call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
     call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
-    let l:winid = nvim_open_win(l:bufnr, v:false, {
+    let l:winid = nvim_open_win(l:bufnr, v:true, {
           \ 'relative': 'cursor',
           \ 'row': 1,
           \ 'col': 0,
@@ -2629,6 +2629,9 @@ function! s:pingu_show_issue_explain_in_hover(issue) abort
   call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', s:script_call_rhs('pingu_issue_hover_close_and_restore()'), {'noremap': v:true, 'silent': v:true, 'nowait': v:true})
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
+  if exists('*nvim_set_current_win') && l:winid > 0 && nvim_win_is_valid(l:winid)
+    call nvim_set_current_win(l:winid)
+  endif
   return v:true
 endfunction
 
@@ -8936,7 +8939,7 @@ endfunction
 function! s:pingu_lsp_open_float(title, lines) abort
   if !has('nvim') || !exists('*nvim_create_buf') || empty(a:lines)
     echo join(a:lines, "\n")
-    return
+    return -1
   endif
 
   call s:define_pingu_lsp_ui_highlights()
@@ -8965,6 +8968,14 @@ function! s:pingu_lsp_open_float(title, lines) abort
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   silent! call nvim_win_set_option(l:winid, 'wrap', v:true)
+  return l:winid
+endfunction
+
+function! s:pingu_close_float(winid) abort
+  let l:winid = str2nr(a:winid)
+  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
+    silent! call nvim_win_close(l:winid, v:true)
+  endif
 endfunction
 
 function! s:pingu_lsp_item_label(item, index) abort
@@ -10356,7 +10367,7 @@ function! s:pingu_model_overview_lines() abort
 endfunction
 
 function! s:pingu_model_overview_open() abort
-  call s:pingu_lsp_open_float('Pingu Provider', s:pingu_model_overview_lines())
+  return s:pingu_lsp_open_float('Pingu Provider', s:pingu_model_overview_lines())
 endfunction
 
 function! s:pingu_select_ai_provider(...) abort
@@ -10365,7 +10376,7 @@ function! s:pingu_select_ai_provider(...) abort
   let l:provider_model_override = len(l:args) > 1 ? join(l:args[1:], ' ') : ''
   let l:interactive = empty(trim('' . l:raw))
   if l:interactive
-    call s:pingu_model_overview_open()
+    let l:provider_overview_winid = s:pingu_model_overview_open()
     let l:current = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
     echo 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current)
     let l:provider_options = s:pingu_supported_ai_provider_overview()
@@ -10374,16 +10385,25 @@ function! s:pingu_select_ai_provider(...) abort
       echo printf('%d. %s', l:index, s:pingu_ai_provider_label(l:provider))
       let l:index += 1
     endfor
+    let l:choice_raw = ''
     call inputsave()
-    let l:choice = str2nr(input('Escolha provider [1-' . len(l:provider_options) . ']: '))
-    call inputrestore()
-    if l:choice >= 1 && l:choice <= len(l:provider_options)
+    try
+      let l:choice_raw = input('Escolha provider [1-' . len(l:provider_options) . ']: ')
+    catch /^Vim\%((\a\+)\)\=:Interrupt$/
+      let l:choice_raw = ''
+    finally
+      call inputrestore()
+    endtry
+    let l:choice = str2nr(trim(l:choice_raw))
+    if l:choice >= 1 && l:choice <= len(l:provider_options) && !empty(trim(l:choice_raw))
       let l:raw = l:provider_options[l:choice - 1]
       echomsg '[Pingu] Opcao ' . l:choice . ' selecionada: ' . s:pingu_ai_provider_label(l:raw)
     else
+      call s:pingu_close_float(l:provider_overview_winid)
       echomsg '[Pingu] Selecao de provider cancelada'
       return
     endif
+    call s:pingu_close_float(l:provider_overview_winid)
   endif
 
   if !empty(l:provider_model_override)

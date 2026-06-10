@@ -459,7 +459,7 @@ test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {
   assert.match(internalRuntime, /function! s:pingu_run_project_check\(\.\.\.\) abort/);
   assert.match(internalRuntime, /function! s:pingu_post_fix_check\(file\) abort/);
   assert.match(internalRuntime, /function! s:pingu_model_overview_lines\(\) abort/);
-  assert.match(internalRuntime, /call s:pingu_model_overview_open\(\)/);
+  assert.match(internalRuntime, /s:pingu_model_overview_open\(\)/);
   assert.match(internalRuntime, /command! PinguDoctor call s:pingu_doctor_open\(\)/);
   assert.match(internalRuntime, /command! -bang PinguProjectContext call s:pingu_project_context_command\(<bang>0\)/);
   assert.match(internalRuntime, /command! PinguIssueActions call s:pingu_issue_actions_open\(\)/);
