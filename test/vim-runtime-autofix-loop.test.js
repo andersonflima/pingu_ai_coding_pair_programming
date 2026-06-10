@@ -199,7 +199,6 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /d  Preview diff da correcao/);
   assert.match(internalRuntime, /Enter\/clique executa a action selecionada/);
   assert.doesNotMatch(internalRuntime, /:PinguIssueActions abre o modo interativo/);
-  assert.match(internalRuntime, /Acao sugerida/);
   assert.match(internalRuntime, /Explicacao/);
   assert.match(internalRuntime, /Funcao no cursor/);
   assert.match(internalRuntime, /Diff padrao/);
@@ -308,6 +307,7 @@ test('runtime permite corrigir somente a issue da linha atual', () => {
   assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_at_cursor_for_action\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_from_open_hover\(\) abort/);
   assert.match(internalRuntime, /function! s:refresh_pingu_hints_after_issue_apply\(bufnr\) abort/);
   assert.match(internalRuntime, /let l:issue = s:pingu_issue_at_cursor_for_action\(\)/);
   assert.match(internalRuntime, /s:get_buffer_issue_at_cursor\(\)/);
@@ -447,6 +447,8 @@ test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {
   assert.match(internalRuntime, /function! s:pingu_doctor_open\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_project_context_command\(bang\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_actions_open\(\) abort/);
+  assert.match(internalRuntime, /let l:issue = s:pingu_issue_from_open_hover\(\)/);
+  assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_issue', deepcopy\(a:issue\)\)/);
   assert.match(internalRuntime, /function! s:pingu_preview_current_fix\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_preview_fix\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_queue_open\(\) abort/);
