@@ -247,7 +247,7 @@ test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_terminal_command = empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\) \? '' : \$PINGU_PROMPT_TERMINAL_COMMAND/);
   assert.match(pluginRuntime, /let g:pingu_model_key = '<leader>pim'/);
-  assert.match(pluginRuntime, /let g:pingu_model_key_alias = '<leader>pmi'/);
+  assert.match(pluginRuntime, /let g:pingu_model_key_alias = ''/);
   assert.match(pluginRuntime, /let g:pingu_ai_provider = empty\(\$PINGU_AI_PROVIDER\) \? 'codex' : \$PINGU_AI_PROVIDER/);
   assert.match(pluginRuntime, /let g:pingu_ai_model = empty\(\$PINGU_AI_MODEL\) \? '' : \$PINGU_AI_MODEL/);
   assert.match(pluginRuntime, /let g:pingu_codex_models = \[/);
@@ -332,6 +332,8 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_for_cursor\(\) abort/);
   assert.match(internalRuntime, /function! s:install_pingu_issue_hover_source_maps\(bufnr\) abort/);
   assert.match(internalRuntime, /function! s:clear_pingu_issue_hover_source_maps\(\) abort/);
+  assert.match(internalRuntime, /let s:pingu_issue_hover_keep_open = 0/);
+  assert.match(internalRuntime, /function! s:release_pingu_issue_hover_keep_open\(timer\) abort/);
   assert.match(internalRuntime, /function! s:pingu_current_buffer_is_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:schedule_pingu_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:fire_pingu_issue_hover_menu\(timer, bufnr, lnum, changedtick\) abort/);
@@ -369,11 +371,13 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /let l:focus_menu = a:0 > 0 \? !!a:1 : v:false/);
   assert.match(internalRuntime, /let l:existing_focus_menu = getbufvar\(l:existing_bufnr, 'pingu_issue_hover_focus_menu', 0\)/);
   assert.match(internalRuntime, /if l:existing_focus_menu \|\| !l:focus_menu\n      return\n    endif/);
-  assert.match(internalRuntime, /if l:focus_menu\n    try\n      call nvim_set_current_win\(l:winid\)/);
+  assert.match(internalRuntime, /call nvim_buf_set_option\(l:bufnr, 'bufhidden', l:focus_menu \? 'hide' : 'wipe'\)/);
+  assert.match(internalRuntime, /if l:focus_menu\n    let s:pingu_issue_hover_keep_open = 1\n  endif\n  let l:winid = nvim_open_win\(l:bufnr, v:false, \{/);
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:false\)/);
   assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:true\)/);
-  assert.match(internalRuntime, /if l:focus_menu\n    call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
-  assert.match(internalRuntime, /call cursor\(4, 1\)/);
+  assert.match(internalRuntime, /call timer_start\(120, function\('s:release_pingu_issue_hover_keep_open'\)\)/);
+  assert.match(internalRuntime, /if l:focus_menu && \(!exists\('\*nvim_win_is_valid'\) \|\| nvim_win_is_valid\(l:winid\)\)\n    call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
+  assert.doesNotMatch(internalRuntime, /function! s:pingu_open_issue_hover_menu\(issue, \.\.\.\) abort[\s\S]*call nvim_set_current_win\(l:winid\)[\s\S]*function! s:pingu_show_issue_hover_action_hint\(\) abort/);
   assert.match(internalRuntime, /autocmd CursorHold \* if has\('nvim'\)/);
   assert.match(internalRuntime, /autocmd CursorMoved \* if has\('nvim'\)/);
   assert.doesNotMatch(internalRuntime, /autocmd CursorMoved,BufEnter \*/);

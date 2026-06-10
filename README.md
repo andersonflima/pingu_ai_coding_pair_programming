@@ -586,7 +586,7 @@ Atalhos principais:
 - `<leader>pia`: abre o menu interativo de actions da issue atual
 - `<leader>piw`: abre ou fecha o painel
 - `<leader>pip`: abre prompt manual no cursor ou selecao visual
-- `<leader>pim`/`<leader>pmi`: escolhe o provider e o modelo assistido da sessao
+- `<leader>pim`: escolhe o provider e o modelo assistido da sessao
 - `<leader>pif`: aplica a correcao disponivel na linha atual
 - `<leader>pis`: interrompe jobs/timers ativos do Pingu
 - em uma linha com hint do Pingu, o hover automatico mostra problema, explicacao e diff sem actions; use `<leader>pia` para abrir o popup interativo com actions
@@ -897,11 +897,11 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_map_key = '<leader>pic'` analisa o arquivo atual
 - `let g:pingu_window_key = '<leader>piw'` abre ou atualiza o painel do Pingu
 - `let g:pingu_help_key = '<leader>pi?'` abre uma ajuda rapida com comandos, atalhos e formatos de comentarios acionaveis
-- `let g:pingu_action_menu_key = '<leader>pia'` abre o menu focado de actions da issue atual
+- `let g:pingu_action_menu_key = '<leader>pia'` abre o menu explicito de actions da issue atual
 - `let g:pingu_prompt_key = '<leader>pip'` abre o provider interativo em terminal flutuante
 - `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND`/`codex` para `codex`/`auto` ou `PINGU_CLAUDE_COMMAND`/`claude` para `claude`
 - `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider/modelo assistido da sessao
-- `let g:pingu_model_key_alias = '<leader>pmi'` ativa um alias opcional para o mesmo seletor
+- `let g:pingu_model_key_alias = ''` ativa um alias opcional para o mesmo seletor quando definido
 - `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
 - `let g:pingu_prev_issue_key = '<C-k>'` ativa o atalho para o diagnostico/aviso anterior do Pingu no buffer atual
 - `let g:pingu_issue_qf_open = 1` abre quickfix ao navegar pelos diagnosticos do Pingu com `:PinguQfNext`/`:PinguQfPrev`
@@ -957,7 +957,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
 - `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao resolvida para a linha atual; no preview, use `a` ou `Enter` para aplicar
-- `<leader>pia`/`:PinguIssueActions` abre o menu flutuante da issue atual com actions no topo, diff/explicacao no corpo, selecao por cursor, preview, undo e historico
+- `<leader>pia`/`:PinguIssueActions` abre o menu flutuante da issue atual com actions no topo, diff/explicacao no corpo, atalhos de action no buffer de origem, preview, undo e historico
 - `:PinguIssueQueue` mostra uma fila flutuante das issues do arquivo atual agrupada por severidade e origem; `Enter` pula para a issue e `a` abre as acoes
 - `:PinguActionHistory` mostra as acoes recentes da sessao
 - apos correcoes manuais, `g:pingu_post_fix_check_command` permite rodar um check em background quando configurado
@@ -1088,7 +1088,7 @@ Importante:
 - Vim e Neovim herdam variaveis de ambiente no momento em que sao iniciados
 - se a chave mudar depois que o editor ja estiver aberto, reinicie o editor
 - por default (`PINGU_AI_PROVIDER=codex`), o runtime inicia com provider local sem dependência de API externa. Para usar OpenAI de forma explícita, configure `PINGU_AI_PROVIDER=openai`.
-- no editor, `:PinguModel`/`<leader>pim`/`<leader>pmi` alterna provider e modelo da sessao; ao escolher Codex, o Pingu usa `PINGU_CODEX_COMMAND` e passa o modelo selecionado via `codex exec -m`; ao escolher Claude, usa `PINGU_CLAUDE_COMMAND` e passa o modelo via `claude --model`
+- no editor, `:PinguModel`/`<leader>pim` alterna provider e modelo da sessao; ao escolher Codex, o Pingu usa `PINGU_CODEX_COMMAND` e passa o modelo selecionado via `codex exec -m`; ao escolher Claude, usa `PINGU_CLAUDE_COMMAND` e passa o modelo via `claude --model`
 - para `comment_task`, `context_file`, `unit_test` e correcoes automaticas, o runtime prioriza provider assistido quando operacional
 - `prompt_task` usa o provider ativo para aplicar um patch local no range selecionado por `:PinguPrompt <texto>`; comandos de terminal sugeridos pelo provider nao sao executados pelo patch direto
 - `prompt_task` envia somente uma janela de contexto em volta do range (`g:pingu_prompt_context_radius`, padrao `80`) e preserva os espacos iniciais do snippet para nao quebrar indentacao

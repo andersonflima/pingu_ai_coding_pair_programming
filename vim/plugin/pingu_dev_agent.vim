@@ -385,8 +385,8 @@ if !exists('g:pingu_model_key')
 endif
 
 if !exists('g:pingu_model_key_alias')
-  " Alias opcional para o seletor provider/modelo quando nao houver conflito local.
-  let g:pingu_model_key_alias = '<leader>pmi'
+  " Alias opcional para o seletor provider/modelo; vazio evita duplicar grupos no which-key.
+  let g:pingu_model_key_alias = ''
 endif
 
 if !exists('g:pingu_ai_provider')
