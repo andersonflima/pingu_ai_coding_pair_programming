@@ -2370,6 +2370,19 @@ function! s:pingu_issue_at_cursor_for_action() abort
   return l:issue
 endfunction
 
+function! s:pingu_issue_from_open_hover() abort
+  let l:bufnr = get(s:, 'pingu_issue_hover_menu_bufnr', -1)
+  let l:winid = get(s:, 'pingu_issue_hover_menu_winid', -1)
+  if l:bufnr <= 0 || l:winid <= 0
+    return {}
+  endif
+  if exists('*nvim_win_is_valid') && !nvim_win_is_valid(l:winid)
+    return {}
+  endif
+  let l:issue = getbufvar(l:bufnr, 'pingu_issue_hover_issue', {})
+  return type(l:issue) == v:t_dict ? l:issue : {}
+endfunction
+
 function! s:refresh_pingu_hints_after_issue_apply(bufnr) abort
   let l:bufnr = a:bufnr > 0 ? a:bufnr : bufnr('%')
   if l:bufnr <= 0 || !bufloaded(l:bufnr)
@@ -2742,6 +2755,9 @@ endfunction
 
 function! s:pingu_issue_actions_open() abort
   let l:issue = s:pingu_issue_at_cursor_for_action()
+  if empty(l:issue)
+    let l:issue = s:pingu_issue_from_open_hover()
+  endif
   if empty(l:issue)
     echomsg '[Pingu] Nenhuma sugestao na linha atual'
     return
@@ -3248,10 +3264,9 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
     let l:message = strpart(l:message, 0, 75) . '...'
   endif
   let l:meta = empty(l:source) ? l:severity_label : l:severity_label . ' · ' . l:source
-  let l:action_summary = s:pingu_issue_hover_action_summary(a:issue)
   let l:function_context = s:pingu_function_context_at_cursor()
   let l:explain_lines = empty(l:function_context)
-        \ ? ['Explicacao', '  ' . l:message, '  ' . l:action_summary]
+        \ ? ['Explicacao', '  ' . l:message]
         \ : s:pingu_function_analysis_lines(l:function_context)
   let l:diff_lines = ['Diff padrao'] + s:pingu_issue_hover_diff_lines(a:issue)
   let l:action_lines = [
@@ -3272,9 +3287,6 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ '',
         \ 'Problema',
         \ '  ' . l:message,
-        \ 'Acao sugerida',
-        \ '  ' . l:action_summary,
-        \ '',
         \ ] + l:explain_lines + [
         \ '',
         \ ] + l:diff_lines + [
@@ -3363,6 +3375,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
   call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
   call setbufvar(l:bufnr, 'pingu_issue_hover_focus_menu', l:focus_menu ? 1 : 0)
+  call setbufvar(l:bufnr, 'pingu_issue_hover_issue', deepcopy(a:issue))
   let l:winid = nvim_open_win(l:bufnr, v:false, {
         \ 'relative': 'cursor',
         \ 'row': 1,
