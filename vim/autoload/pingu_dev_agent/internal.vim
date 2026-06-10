@@ -26,6 +26,7 @@ let s:pingu_issue_hover_menu_timer = -1
 let s:pingu_issue_hover_source_context = {}
 let s:pingu_issue_hover_source_map_bufnr = -1
 let s:pingu_issue_hover_source_maps = []
+let s:pingu_issue_hover_keep_open = 0
 let s:pingu_issue_hover_ai_suggestion_cache = {}
 let s:pingu_issue_hover_ai_suggestion_job = -1
 let s:pingu_issue_hover_ai_suggestion_context = {}
@@ -2181,6 +2182,9 @@ function! s:get_buffer_issue_at_cursor_exact() abort
 endfunction
 
 function! s:close_pingu_issue_hover_menu() abort
+  if get(s:, 'pingu_issue_hover_keep_open', 0)
+    return
+  endif
   let l:timer = get(s:, 'pingu_issue_hover_menu_timer', -1)
   if l:timer > 0 && exists('*timer_stop')
     call timer_stop(l:timer)
@@ -2210,6 +2214,10 @@ function! s:close_pingu_issue_hover_menu() abort
   endif
   let s:pingu_issue_hover_menu_winid = -1
   let s:pingu_issue_hover_menu_bufnr = -1
+endfunction
+
+function! s:release_pingu_issue_hover_keep_open(timer) abort
+  let s:pingu_issue_hover_keep_open = 0
 endfunction
 
 function! s:pingu_current_buffer_is_issue_hover_menu() abort
@@ -3372,21 +3380,10 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   let l:bufnr = nvim_create_buf(v:false, v:true)
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
-  call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
+  call nvim_buf_set_option(l:bufnr, 'bufhidden', l:focus_menu ? 'hide' : 'wipe')
   call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
   call setbufvar(l:bufnr, 'pingu_issue_hover_focus_menu', l:focus_menu ? 1 : 0)
   call setbufvar(l:bufnr, 'pingu_issue_hover_issue', deepcopy(a:issue))
-  let l:winid = nvim_open_win(l:bufnr, v:false, {
-        \ 'relative': 'cursor',
-        \ 'row': 1,
-        \ 'col': 0,
-        \ 'width': l:width,
-        \ 'height': l:height,
-        \ 'style': 'minimal',
-        \ 'border': 'rounded',
-        \ 'focusable': v:true,
-        \ 'zindex': 60,
-        \ })
   call nvim_buf_set_keymap(l:bufnr, 'n', 'a', s:script_call_rhs('pingu_issue_hover_action("apply")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'd', s:script_call_rhs('pingu_issue_hover_action("preview")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'i', s:script_call_rhs('pingu_issue_hover_action("ai")'), {'noremap': v:true, 'silent': v:true})
@@ -3398,18 +3395,31 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', s:script_call_rhs('pingu_issue_hover_close_and_restore()'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', s:script_call_rhs('pingu_issue_hover_action_for_cursor()'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<LeftMouse>', '<LeftMouse>' . s:script_call_rhs('pingu_issue_hover_action_for_cursor()'), {'noremap': v:true, 'silent': v:true})
+  if l:focus_menu
+    let s:pingu_issue_hover_keep_open = 1
+  endif
+  let l:winid = nvim_open_win(l:bufnr, v:false, {
+        \ 'relative': 'cursor',
+        \ 'row': 1,
+        \ 'col': 0,
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ 'focusable': v:true,
+        \ 'zindex': 60,
+        \ })
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = l:signature
   if l:focus_menu
-    try
-      call nvim_set_current_win(l:winid)
-      call cursor(4, 1)
-      silent! call nvim_win_set_option(l:winid, 'cursorline', v:true)
-    catch
-    endtry
+    if exists('*timer_start')
+      call timer_start(120, function('s:release_pingu_issue_hover_keep_open'))
+    else
+      let s:pingu_issue_hover_keep_open = 0
+    endif
   endif
-  if l:focus_menu
+  if l:focus_menu && (!exists('*nvim_win_is_valid') || nvim_win_is_valid(l:winid))
     call s:start_pingu_issue_hover_ai_suggestion(a:issue, l:signature)
   endif
 endfunction
@@ -10634,7 +10644,7 @@ if !empty(g:pingu_fix_current_key)
 endif
 
 if exists('g:pingu_action_menu_key') && !empty(g:pingu_action_menu_key)
-  " Atalho para promover o hover passivo para menu focado com actions.
+  " Atalho para promover o hover passivo para menu explicito com actions.
   call s:set_global_normal_map(
         \ g:pingu_action_menu_key,
         \ ':PinguIssueActions<CR>',
