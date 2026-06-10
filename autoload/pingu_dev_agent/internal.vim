@@ -146,13 +146,21 @@ endfunction
 
 function! s:pingu_normalize_ai_provider(value) abort
   let l:value = tolower(trim('' . a:value))
-  if index(['codex', 'openai', 'copilot', 'claude', 'anthropic', 'auto'], l:value) != -1
+  if index(s:pingu_supported_ai_provider_ids(), l:value) != -1
     if l:value ==# 'anthropic'
       return 'claude'
     endif
     return l:value
   endif
   return 'codex'
+endfunction
+
+function! s:pingu_supported_ai_provider_ids() abort
+  return ['copilot', 'openai', 'codex', 'claude', 'auto']
+endfunction
+
+function! s:pingu_supported_ai_provider_overview() abort
+  return s:pingu_supported_ai_provider_ids()
 endfunction
 
 function! s:pingu_ai_provider_env_value() abort
@@ -794,7 +802,7 @@ function! s:pingu_doctor_lines() abort
   endif
   call add(l:lines, '')
   call add(l:lines, 'Acoes')
-  call add(l:lines, '  :PinguModel          trocar provider/modelo')
+  call add(l:lines, '  :PinguModel          trocar provider assistido')
   call add(l:lines, '  :PinguProjectContext criar/abrir contexto do projeto')
   call add(l:lines, '  :PinguLogs           ver logs da sessao')
   return l:lines
@@ -10328,7 +10336,7 @@ function! s:pingu_model_overview_lines() abort
         \ 'Opcoes',
         \ ]
   let l:index = 1
-  for l:provider in ['copilot', 'codex', 'claude', 'auto']
+  for l:provider in s:pingu_supported_ai_provider_overview()
     call add(l:lines, printf('  %d. %s', l:index, s:pingu_provider_status_line(l:provider)))
     let l:models = s:pingu_provider_model_list(l:provider)
     if !empty(l:models)
@@ -10338,8 +10346,11 @@ function! s:pingu_model_overview_lines() abort
   endfor
   call add(l:lines, '')
   call add(l:lines, 'Comandos')
-  call add(l:lines, '  :PinguModel codex gpt-5-codex')
-  call add(l:lines, '  :PinguModel claude sonnet')
+  call add(l:lines, '  :PinguModel copilot')
+  call add(l:lines, '  :PinguModel openai')
+  call add(l:lines, '  :PinguModel codex')
+  call add(l:lines, '  :PinguModel claude')
+  call add(l:lines, '  :PinguModel auto')
   call add(l:lines, '  :PinguDoctor')
   return l:lines
 endfunction
@@ -10351,39 +10362,37 @@ endfunction
 function! s:pingu_select_ai_provider(...) abort
   let l:args = a:0 > 0 ? split(trim('' . a:1)) : []
   let l:raw = len(l:args) > 0 ? l:args[0] : ''
-  let l:model = len(l:args) > 1 ? join(l:args[1:], ' ') : ''
+  let l:provider_model_override = len(l:args) > 1 ? join(l:args[1:], ' ') : ''
   let l:interactive = empty(trim('' . l:raw))
   if l:interactive
     call s:pingu_model_overview_open()
     let l:current = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
     echo 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current)
-    echo '1. Copilot'
-    echo '2. Codex'
-    echo '3. Claude'
-    echo '4. Auto'
+    let l:provider_options = s:pingu_supported_ai_provider_overview()
+    let l:index = 1
+    for l:provider in l:provider_options
+      echo printf('%d. %s', l:index, s:pingu_ai_provider_label(l:provider))
+      let l:index += 1
+    endfor
     call inputsave()
-    let l:choice = str2nr(input('Escolha provider [1-4]: '))
+    let l:choice = str2nr(input('Escolha provider [1-' . len(l:provider_options) . ']: '))
     call inputrestore()
-    if l:choice == 1
-      let l:raw = 'copilot'
-    elseif l:choice == 2
-      let l:raw = 'codex'
-    elseif l:choice == 3
-      let l:raw = 'claude'
-    elseif l:choice == 4
-      let l:raw = 'auto'
+    if l:choice >= 1 && l:choice <= len(l:provider_options)
+      let l:raw = l:provider_options[l:choice - 1]
+      echomsg '[Pingu] Opcao ' . l:choice . ' selecionada: ' . s:pingu_ai_provider_label(l:raw)
     else
       echomsg '[Pingu] Selecao de provider cancelada'
       return
     endif
-    echomsg '[Pingu] Opcao ' . l:choice . ' selecionada: ' . s:pingu_ai_provider_label(l:raw)
+  endif
+
+  if !empty(l:provider_model_override)
+    echomsg '[Pingu] :PinguModel agora usa apenas provider; ajuste o modelo via variaveis do provider.'
   endif
 
   let l:provider = s:pingu_normalize_ai_provider(l:raw)
   let g:pingu_ai_provider = l:provider
-  let l:selected_model = l:interactive || !empty(l:model)
-        \ ? s:pingu_select_ai_model(l:provider, l:model)
-        \ : s:pingu_current_ai_model(l:provider)
+  let l:selected_model = s:pingu_current_ai_model(l:provider)
   let l:env_provider = s:pingu_apply_ai_provider_env()
   call s:stop_analysis_daemon()
   call s:stop_pingu_prompt_job()
@@ -10460,7 +10469,7 @@ function! s:pingu_help_lines() abort
         \ printf('  %s  abrir prompt em terminal flutuante', get(g:, 'pingu_prompt_key', '<leader>pip')),
         \ printf('  %s  corrigir sugestao da linha atual', get(g:, 'pingu_fix_current_key', '<leader>pif')),
         \ printf('  %s  abrir menu de acoes da issue atual', get(g:, 'pingu_action_menu_key', '<leader>pia')),
-        \ printf('  %s  escolher provider/modelo', get(g:, 'pingu_model_key', '<leader>pim')),
+        \ printf('  %s  escolher provider assistido', get(g:, 'pingu_model_key', '<leader>pim')),
         \ printf('  %s  interromper processamento', get(g:, 'pingu_stop_key', '<leader>pis')),
         \ printf('  %s  proximo diagnostico', get(g:, 'pingu_next_issue_key', '<C-j>')),
         \ printf('  %s  diagnostico anterior', get(g:, 'pingu_prev_issue_key', '<C-k>')),
@@ -10483,7 +10492,7 @@ function! s:pingu_help_lines() abort
         \ '  :PinguProjectContext     abrir contexto do projeto',
         \ '  :PinguProjectContext!    criar contexto do projeto',
         \ '  :PinguDoctor             diagnosticar provider/runtime/contexto',
-        \ '  :PinguModel              escolher provider/modelo',
+        \ '  :PinguModel              escolher provider assistido',
         \ '  :PinguLogs               abrir logs da sessao',
         \ '  :PinguStop               interromper jobs ativos',
         \ '',
@@ -10676,11 +10685,11 @@ if !empty(g:pingu_prompt_key)
 endif
 
 if !empty(g:pingu_model_key)
-  " Atalho para escolher o provider/modelo assistido da sessao.
+  " Atalho para escolher o provider assistido da sessao.
   call s:set_global_normal_map(
         \ g:pingu_model_key,
         \ ':PinguModel<CR>',
-        \ 'Pingu: escolher provider/modelo assistido',
+        \ 'Pingu: escolher provider assistido',
         \ )
 endif
 
@@ -10688,7 +10697,7 @@ if exists('g:pingu_model_key_alias') && !empty(g:pingu_model_key_alias) && g:pin
   call s:set_global_normal_map(
         \ g:pingu_model_key_alias,
         \ ':PinguModel<CR>',
-        \ 'Pingu: escolher provider/modelo assistido',
+        \ 'Pingu: escolher provider assistido',
         \ )
 endif
 

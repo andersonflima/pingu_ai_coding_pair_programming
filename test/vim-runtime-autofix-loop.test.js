@@ -281,7 +281,9 @@ test('runtime expoe ajuda rapida do Pingu no namespace leader pi', () => {
 
 test('runtime permite escolher provider assistido do Pingu', () => {
   assert.ok(internalRuntime.includes("function! s:pingu_ai_provider_env_value() abort\n  let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))\n  return l:provider"));
-  assert.match(internalRuntime, /echo '2\. Codex'/);
+  assert.match(internalRuntime, /return \['copilot', 'openai', 'codex', 'claude', 'auto'\]/);
+  assert.match(internalRuntime, /for l:provider in s:pingu_supported_ai_provider_overview\(\)/);
+  assert.match(internalRuntime, /echo printf\('%d\. %s', l:index, s:pingu_ai_provider_label\(l:provider\)\)/);
   assert.match(internalRuntime, /function! s:pingu_select_ai_provider\(\.\.\.\) abort/);
   assert.match(internalRuntime, /function! s:pingu_select_ai_model\(provider, \.\.\.\) abort/);
   assert.match(internalRuntime, /function! s:pingu_provider_model_list\(provider\) abort/);
@@ -293,11 +295,7 @@ test('runtime permite escolher provider assistido do Pingu', () => {
   assert.match(internalRuntime, /let \$PINGU_OPENAI_MODEL = l:model/);
   assert.match(internalRuntime, /command! -nargs=\* PinguModel call s:pingu_select_ai_provider\(<q-args>\)/);
   assert.match(internalRuntime, /call s:stop_analysis_daemon\(\)/);
-  assert.match(internalRuntime, /echo '1\. Copilot'/);
-  assert.match(internalRuntime, /echo '3\. Claude'/);
-  assert.match(internalRuntime, /input\('Escolha provider \[1-4\]: '\)/);
-  assert.match(internalRuntime, /input\('Escolha modelo \[0-' \. l:index \. '\]: '\)/);
-  assert.match(internalRuntime, /input\('Modelo: '\)/);
+  assert.match(internalRuntime, /input\('Escolha provider \[1-' \. len\(l:provider_options\) \. '\]: '\)/);
   assert.match(internalRuntime, /Opcao ' \. l:choice \. ' selecionada/);
   assert.match(internalRuntime, /':PinguModel<CR>'/);
   assert.match(internalRuntime, /g:pingu_model_key_alias/);
