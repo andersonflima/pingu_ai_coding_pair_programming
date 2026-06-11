@@ -907,11 +907,11 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_issue_qf_open = 1` abre quickfix ao navegar pelos diagnosticos do Pingu com `:PinguQfNext`/`:PinguQfPrev`
 - `let g:pingu_lsp_ui = 'float'` usa a UI flutuante do Pingu para finder/references/outline; use `'quickfix'` quando quiser abrir somente a quickfix nativa
 - `let g:pingu_ai_provider = 'codex'` define o provider inicial; use `codex` ou `claude` para CLI local autenticada, `copilot` para CLI legado e `openai` para API da OpenAI
-- `let g:pingu_ai_model = ''` define o modelo inicial; vazio preserva o padrao do provider escolhido
-- `let g:pingu_codex_models = ['gpt-5', 'gpt-5-codex', 'o3', 'o4-mini']` define a lista exibida para o provider Codex local
-- `let g:pingu_claude_models = ['sonnet', 'opus']` define a lista exibida para o provider Claude local
-- `let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']` define a lista exibida para OpenAI
-- `let g:pingu_copilot_models = []` permite declarar modelos quando o provider legado suportar selecao
+- `let g:pingu_ai_model = ''` define um modelo inicial opcional; vazio preserva o padrao do provider escolhido
+- `let g:pingu_codex_models = ['gpt-5', 'gpt-5-codex', 'o3', 'o4-mini']` mantem compatibilidade com configuracoes legadas do provider Codex local
+- `let g:pingu_claude_models = ['sonnet', 'opus']` mantem compatibilidade com configuracoes legadas do provider Claude local
+- `let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']` mantem compatibilidade com configuracoes legadas de OpenAI
+- `let g:pingu_copilot_models = []` mantem compatibilidade com configuracoes legadas de Copilot
 - `let g:pingu_prompt_context_radius = 80` limita quantas linhas em volta do cursor/selecao sao enviadas no prompt manual
 - `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
@@ -935,7 +935,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguPromptTerminal` abre explicitamente o mesmo terminal flutuante interativo.
 - `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos
 - `:PinguModel` alterna entre Copilot, OpenAI, Codex, Claude e Auto sem reiniciar o editor; o modelo passa a vir da configuração do provider selecionado.
-- ao abrir `:PinguModel` sem argumentos, o Pingu mostra um painel com provider atual, comandos e disponibilidade antes de pedir a escolha numerada
+- ao abrir `:PinguModel` sem argumentos, o Pingu mostra um painel centralizado com provider atual, comandos e disponibilidade antes de abrir o seletor nativo
 - `:PinguModel codex` define `codex` como provider da sessão.
 - `:PinguModel openai` define OpenAI como provider da sessão.
 - `:PinguModel claude` define Claude como provider da sessão.

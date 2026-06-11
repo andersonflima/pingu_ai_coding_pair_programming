@@ -271,17 +271,15 @@ endfunction
 function! s:pingu_provider_status_line(provider) abort
   let l:provider = s:pingu_normalize_ai_provider(a:provider)
   let l:command = s:pingu_provider_command(l:provider)
-  let l:model = s:pingu_current_ai_model(l:provider)
-  let l:model_label = empty(l:model) ? 'padrao' : l:model
   if l:provider ==# 'openai'
     let l:state = empty($OPENAI_API_KEY) ? 'indisponivel: OPENAI_API_KEY ausente' : 'configurado'
-    return printf('%s · modelo %s · %s', s:pingu_ai_provider_label(l:provider), l:model_label, l:state)
+    return printf('%s · %s', s:pingu_ai_provider_label(l:provider), l:state)
   endif
   if empty(l:command)
-    return printf('%s · modelo %s · comando ausente', s:pingu_ai_provider_label(l:provider), l:model_label)
+    return printf('%s · comando ausente', s:pingu_ai_provider_label(l:provider))
   endif
   let l:state = executable(l:command) ? 'comando encontrado' : 'comando nao encontrado'
-  return printf('%s · modelo %s · %s · %s', s:pingu_ai_provider_label(l:provider), l:model_label, l:command, l:state)
+  return printf('%s · %s · %s', s:pingu_ai_provider_label(l:provider), l:command, l:state)
 endfunction
 
 function! s:project_command_argv(argv, cwd) abort
@@ -8936,18 +8934,49 @@ function! s:define_pingu_lsp_ui_highlights() abort
   silent! highlight default link PinguLspFloatLocation Directory
 endfunction
 
-function! s:pingu_lsp_open_float(title, lines) abort
+function! s:pingu_float_layout(lines, ...) abort
+  let l:opts = a:0 > 0 && type(a:1) == v:t_dict ? a:1 : {}
+  let l:columns = exists('&columns') ? &columns : 100
+  let l:screen_lines = exists('&lines') ? &lines : 40
+  let l:max_width = get(l:opts, 'max_width', min([96, max([50, float2nr(l:columns * 0.78)])]))
+  let l:min_width = get(l:opts, 'min_width', 42)
+  let l:max_height = get(l:opts, 'max_height', min([28, max([10, float2nr(l:screen_lines * 0.70)])]))
+  let l:width = min([l:max_width, max([l:min_width] + map(copy(a:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([l:max_height, max([1, len(a:lines)])])
+  let l:position = get(l:opts, 'position', 'center')
+  if l:position ==# 'cursor'
+    return {
+          \ 'relative': 'cursor',
+          \ 'row': get(l:opts, 'row', 1),
+          \ 'col': get(l:opts, 'col', 0),
+          \ 'width': l:width,
+          \ 'height': l:height,
+          \ 'style': 'minimal',
+          \ 'border': get(l:opts, 'border', 'rounded'),
+          \ }
+  endif
+  return {
+        \ 'relative': 'editor',
+        \ 'row': max([1, float2nr((l:screen_lines - l:height) / 2) - 1]),
+        \ 'col': max([0, float2nr((l:columns - l:width) / 2)]),
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': get(l:opts, 'border', 'rounded'),
+        \ }
+endfunction
+
+function! s:pingu_lsp_open_float(title, lines, ...) abort
   if !has('nvim') || !exists('*nvim_create_buf') || empty(a:lines)
     echo join(a:lines, "\n")
     return -1
   endif
 
+  let l:opts = a:0 > 0 && type(a:1) == v:t_dict ? a:1 : {}
   call s:define_pingu_lsp_ui_highlights()
   let l:title = ' ' . a:title
-  let l:footer = ' q/Esc fechar '
+  let l:footer = get(l:opts, 'footer', ' q/Esc fechar ')
   let l:lines = [l:title, repeat('─', max([12, strdisplaywidth(l:title)])), ''] + copy(a:lines) + ['', l:footer]
-  let l:width = min([90, max([34] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
-  let l:height = min([20, max([1, len(l:lines)])])
   let l:bufnr = nvim_create_buf(v:false, v:true)
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call setbufvar(l:bufnr, '&buftype', 'nofile')
@@ -8956,15 +8985,7 @@ function! s:pingu_lsp_open_float(title, lines) abort
   call setbufvar(l:bufnr, 'pingu_lsp_float', 1)
   call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatTitle', 0, 0, -1)
   call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatFooter', len(l:lines) - 1, 0, -1)
-  let l:winid = nvim_open_win(l:bufnr, v:false, {
-        \ 'relative': 'cursor',
-        \ 'row': 1,
-        \ 'col': 0,
-        \ 'width': l:width,
-        \ 'height': l:height,
-        \ 'style': 'minimal',
-        \ 'border': 'rounded',
-        \ })
+  let l:winid = nvim_open_win(l:bufnr, get(l:opts, 'enter', v:false), s:pingu_float_layout(l:lines, l:opts))
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   silent! call nvim_win_set_option(l:winid, 'wrap', v:true)
@@ -10338,36 +10359,43 @@ endfunction
 function! s:pingu_model_overview_lines() abort
   let l:current = s:pingu_ai_provider_env_value()
   let l:lines = [
-        \ 'Pingu Provider',
-        \ '==============',
-        \ '',
         \ 'Atual',
-        \ '  ' . s:pingu_provider_status_line(l:current),
+        \ '  ' . s:pingu_ai_provider_label(l:current),
         \ '',
-        \ 'Opcoes',
+        \ 'Providers disponiveis',
         \ ]
   let l:index = 1
   for l:provider in s:pingu_supported_ai_provider_overview()
-    call add(l:lines, printf('  %d. %s', l:index, s:pingu_provider_status_line(l:provider)))
-    let l:models = s:pingu_provider_model_list(l:provider)
-    if !empty(l:models)
-      call add(l:lines, '     modelos: ' . join(l:models, ', '))
-    endif
+    let l:marker = l:provider ==# l:current ? '*' : ' '
+    call add(l:lines, printf('  %s %d. %s', l:marker, l:index, s:pingu_provider_status_line(l:provider)))
     let l:index += 1
   endfor
   call add(l:lines, '')
-  call add(l:lines, 'Comandos')
-  call add(l:lines, '  :PinguModel copilot')
-  call add(l:lines, '  :PinguModel openai')
-  call add(l:lines, '  :PinguModel codex')
-  call add(l:lines, '  :PinguModel claude')
-  call add(l:lines, '  :PinguModel auto')
+  call add(l:lines, 'Como usar')
+  call add(l:lines, '  :PinguModel          abrir seletor')
+  call add(l:lines, '  :PinguModel copilot  usar Copilot')
+  call add(l:lines, '  :PinguModel openai   usar OpenAI')
+  call add(l:lines, '  :PinguModel codex    usar Codex')
+  call add(l:lines, '  :PinguModel claude   usar Claude')
+  call add(l:lines, '  :PinguModel auto     usar fallback automatico')
   call add(l:lines, '  :PinguDoctor')
   return l:lines
 endfunction
 
 function! s:pingu_model_overview_open() abort
-  return s:pingu_lsp_open_float('Pingu Provider', s:pingu_model_overview_lines())
+  return s:pingu_lsp_open_float('Pingu Provider', s:pingu_model_overview_lines(), {'enter': v:false, 'max_width': 104})
+endfunction
+
+function! s:pingu_select_provider_choice(provider_options) abort
+  let l:labels = ['Cancelar']
+  for l:provider in a:provider_options
+    call add(l:labels, s:pingu_ai_provider_label(l:provider))
+  endfor
+  try
+    return confirm('Pingu provider', join(l:labels, "\n"), 0)
+  catch /^Vim\%((\a\+)\)\=:Interrupt$/
+    return 0
+  endtry
 endfunction
 
 function! s:pingu_select_ai_provider(...) abort
@@ -10380,25 +10408,11 @@ function! s:pingu_select_ai_provider(...) abort
     let l:current = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
     echo 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current)
     let l:provider_options = s:pingu_supported_ai_provider_overview()
-    let l:index = 1
-    for l:provider in l:provider_options
-      echo printf('%d. %s', l:index, s:pingu_ai_provider_label(l:provider))
-      let l:index += 1
-    endfor
-    let l:choice_raw = ''
-    call inputsave()
-    try
-      let l:choice_raw = trim(input('Escolha provider [1-' . len(l:provider_options) . ']: '))
-    catch /^Vim\%((\a\+)\)\=:Interrupt$/
-      let l:choice_raw = ''
-    finally
-      call inputrestore()
-      call s:pingu_close_float(l:provider_overview_winid)
-    endtry
-    let l:choice = str2nr(l:choice_raw)
-    if l:choice_raw =~# '^\d\+$' && l:choice >= 1 && l:choice <= len(l:provider_options)
-      let l:raw = l:provider_options[l:choice - 1]
-      echomsg '[Pingu] Opcao ' . l:choice . ' selecionada: ' . s:pingu_ai_provider_label(l:raw)
+    let l:choice = s:pingu_select_provider_choice(l:provider_options)
+    call s:pingu_close_float(l:provider_overview_winid)
+    if l:choice > 1 && l:choice <= len(l:provider_options) + 1
+      let l:raw = l:provider_options[l:choice - 2]
+      echomsg '[Pingu] Provider selecionado: ' . s:pingu_ai_provider_label(l:raw)
     else
       echomsg '[Pingu] Selecao de provider cancelada'
       return
