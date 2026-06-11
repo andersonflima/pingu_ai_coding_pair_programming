@@ -380,12 +380,12 @@ if !exists('g:pingu_prompt_terminal_command')
 endif
 
 if !exists('g:pingu_model_key')
-  " Atalho para escolher provider/modelo assistido da sessao.
+  " Atalho para escolher o provider assistido da sessao.
   let g:pingu_model_key = '<leader>pim'
 endif
 
 if !exists('g:pingu_model_key_alias')
-  " Alias opcional para o seletor provider/modelo; vazio evita duplicar grupos no which-key.
+  " Alias opcional para o seletor de provider; vazio evita duplicar grupos no which-key.
   let g:pingu_model_key_alias = ''
 endif
 
