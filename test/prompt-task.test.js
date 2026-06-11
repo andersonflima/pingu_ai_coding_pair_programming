@@ -23,9 +23,12 @@ test('buildPromptTaskRequest captures selected range and constraints', () => {
 
   assert.equal(request.mode, 'prompt_task');
   assert.equal(request.prompt, 'corrige esse bloco');
+  assert.equal(request.projectRoot, '/tmp');
   assert.equal(request.selectedText, 'const b = 2\nconsole.log(a + b)');
   assert.deepEqual(request.selection, { startLine: 2, endLine: 3, hasExplicitRange: false });
   assert.deepEqual(request.context, { startLine: 1, endLine: 3, radius: 80 });
+  assert.equal(request.constraints.some((item) => item.includes('contexto primario')), true);
+  assert.equal(request.constraints.some((item) => item.includes('outros arquivos')), true);
   assert.equal(request.constraints.some((item) => item.includes('range selecionado')), true);
   assert.equal(request.constraints.some((item) => item.includes('indentacao relativa')), true);
   assert.equal(request.constraints.some((item) => item.includes('espacos iniciais')), true);

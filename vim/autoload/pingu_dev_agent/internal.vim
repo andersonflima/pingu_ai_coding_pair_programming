@@ -9657,6 +9657,54 @@ function! s:pingu_prompt_terminal_shell_command(argv) abort
   return join(map(copy(a:argv), {_, item -> shellescape(item)}), ' ')
 endfunction
 
+function! s:pingu_prompt_terminal_session_lines(file, root, line1, line2, range_count) abort
+  let l:provider = s:pingu_ai_provider_env_value()
+  let l:lines = [
+        \ 'Pingu Prompt Session',
+        \ '====================',
+        \ '',
+        \ 'Provider',
+        \ '  ' . s:pingu_ai_provider_label(l:provider),
+        \ '',
+        \ 'Contexto primario',
+        \ '  arquivo: ' . fnamemodify(a:file, ':~:.'),
+        \ '  root: ' . fnamemodify(a:root, ':~:.'),
+        \ ]
+  if a:range_count > 0
+    call add(l:lines, '  range: ' . a:line1 . '-' . a:line2)
+  else
+    call add(l:lines, '  linha: ' . line('.'))
+  endif
+  call add(l:lines, '')
+  call add(l:lines, 'Uso')
+  call add(l:lines, '  :PinguPrompt <texto> envia o prompt ao provider ativo em background.')
+  call add(l:lines, '  O Pingu envia primeiro o buffer aberto e o range/cursor atual como contexto.')
+  call add(l:lines, '  Se o texto citar outro arquivo, o provider recebe tambem a raiz do projeto.')
+  call add(l:lines, '  :PinguPromptClear limpa o historico deste arquivo.')
+  call add(l:lines, '')
+  call add(l:lines, 'Historico recente')
+  let l:history = s:pingu_prompt_history_for_file(a:file)
+  if empty(l:history)
+    call add(l:lines, '  sem solicitacoes registradas neste arquivo')
+  else
+    for l:entry in l:history
+      call add(l:lines, '  ' . get(l:entry, 'role', 'user') . ': ' . get(l:entry, 'text', ''))
+    endfor
+  endif
+  call add(l:lines, '')
+  call add(l:lines, 'Este terminal fica aberto para acompanhar o historico e executar comandos manuais.')
+  return l:lines
+endfunction
+
+function! s:pingu_prompt_terminal_session_argv(file, root, line1, line2, range_count) abort
+  let l:session_file = tempname()
+  call writefile(s:pingu_prompt_terminal_session_lines(a:file, a:root, a:line1, a:line2, a:range_count), l:session_file)
+  let l:script = 'cat ' . shellescape(l:session_file)
+        \ . '; rm -f ' . shellescape(l:session_file)
+        \ . '; printf "\n"; exec "${SHELL:-sh}"'
+  return [s:sh_binary(), '-lc', l:script]
+endfunction
+
 function! s:open_pingu_prompt_terminal_float(argv, cwd) abort
   if !has('nvim')
     return v:false
@@ -9738,31 +9786,29 @@ function! s:pingu_prompt_terminal(line1, line2, range_count) abort
     echomsg '[Pingu] Buffer sem arquivo associado'
     return
   endif
+  let l:root = s:project_root(l:file)
   let l:command = s:pingu_prompt_terminal_command()
   if empty(l:command)
-    echohl WarningMsg
-    echomsg '[Pingu] Provider atual nao possui terminal interativo configurado; use :PinguPrompt <texto> ou defina g:pingu_prompt_terminal_command'
-    echohl None
-    return
+    let l:argv = s:pingu_prompt_terminal_session_argv(l:file, l:root, a:line1, a:line2, a:range_count)
+  else
+    let l:argv = [l:command] + s:pingu_prompt_terminal_model_args(l:command)
   endif
-  let l:argv = [l:command] + s:pingu_prompt_terminal_model_args(l:command)
-  let l:root = s:project_root(l:file)
   let l:strategy = s:issue_terminal_strategy()
 
   if s:open_pingu_prompt_terminal_float(l:argv, l:root)
-    echomsg '[Pingu] Prompt aberto no terminal flutuante'
+    echomsg empty(l:command) ? '[Pingu] Sessao de prompt aberta no terminal flutuante' : '[Pingu] Prompt aberto no terminal flutuante'
     return
   endif
 
   if l:strategy ==# 'toggleterm' || l:strategy ==# 'auto'
     if s:open_pingu_prompt_terminal_toggleterm(l:argv, l:root)
-      echomsg '[Pingu] Prompt aberto no terminal flutuante'
+      echomsg empty(l:command) ? '[Pingu] Sessao de prompt aberta no terminal flutuante' : '[Pingu] Prompt aberto no terminal flutuante'
       return
     endif
   endif
 
   if s:open_pingu_prompt_terminal_native(l:argv, l:root)
-    echomsg '[Pingu] Prompt aberto no terminal'
+    echomsg empty(l:command) ? '[Pingu] Sessao de prompt aberta no terminal' : '[Pingu] Prompt aberto no terminal'
     return
   endif
 
@@ -9819,6 +9865,7 @@ function! s:pingu_prompt(line1, line2, args, range_count) abort
         \ }
   let l:argv = [l:runner, l:script, '--prompt-task']
   let l:root = s:project_root(l:file)
+  let l:payload.projectRoot = l:root
   let l:stdin_payload = json_encode(l:payload)
   let l:context = {
         \ 'bufnr': l:bufnr,

@@ -898,8 +898,8 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_window_key = '<leader>piw'` abre ou atualiza o painel do Pingu
 - `let g:pingu_help_key = '<leader>pi?'` abre uma ajuda rapida com comandos, atalhos e formatos de comentarios acionaveis
 - `let g:pingu_action_menu_key = '<leader>pia'` abre o menu explicito de actions da issue atual
-- `let g:pingu_prompt_key = '<leader>pip'` abre o provider interativo em terminal flutuante
-- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND`/`codex` para `codex`/`auto` ou `PINGU_CLAUDE_COMMAND`/`claude` para `claude`
+- `let g:pingu_prompt_key = '<leader>pip'` abre a sessao de prompt do Pingu ou envia prompt manual no cursor/selecao
+- `let g:pingu_prompt_terminal_command = ''` define o comando interativo aberto por `:PinguPrompt` sem argumento; vazio usa `PINGU_CODEX_COMMAND`/`codex` para `codex`/`auto`, `PINGU_CLAUDE_COMMAND`/`claude` para `claude`, ou abre uma sessao de historico/contexto do Pingu para providers sem terminal interativo
 - `let g:pingu_model_key = '<leader>pim'` abre o seletor de provider assistido da sessão
 - `let g:pingu_model_key_alias = ''` ativa um alias opcional para o mesmo seletor quando definido
 - `let g:pingu_next_issue_key = '<C-j>'` ativa o atalho para ir ao proximo diagnostico/aviso do Pingu no buffer atual
@@ -929,9 +929,9 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguActionHistory` mostra as acoes recentes da sessao e lembra `:PinguUndoFix`
 - `:PinguExplainCurrent` explica o diagnostico atual, origem, acao sugerida e comandos uteis
 - `:PinguRunProjectCheck [comando]` roda check/testes em background; sem argumento usa `g:pingu_project_check_command`, `.pingu/context.md` ou inferencia do projeto
-- `:PinguPrompt` sem argumento abre somente um terminal flutuante com o provider interativo; ele nao injeta prompt automatico, arquivo ou range.
-- quando o provider atual nao possui CLI interativo, como `copilot` ou `openai`, `:PinguPrompt` sem argumento nao abre terminal automaticamente; use `:PinguPrompt <texto>` para patch direto ou configure `g:pingu_prompt_terminal_command`
+- `:PinguPrompt` sem argumento abre um terminal flutuante. Para providers com CLI interativo, abre o CLI; para providers sem terminal interativo, como `copilot` ou `openai`, abre uma sessao do Pingu com arquivo atual, root e historico recente.
 - `:PinguPrompt <texto>` continua executando o prompt como patch direto no buffer: sem selecao visual usa a linha do cursor e contexto ao redor; com selecao visual envia o texto selecionado e aplica a substituicao somente naquele range.
+- o prompt manual sempre usa o buffer aberto como contexto primario; quando o texto citar outro arquivo ou contexto de diretorio, o provider tambem recebe a raiz do projeto para responder com mais precisao.
 - `:PinguPromptTerminal` abre explicitamente o mesmo terminal flutuante interativo.
 - `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos
 - `:PinguModel` alterna entre Copilot, OpenAI, Codex, Claude e Auto sem reiniciar o editor; o modelo passa a vir da configuração do provider selecionado.

@@ -516,15 +516,21 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
 
 test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /function! s:pingu_prompt_terminal\(line1, line2, range_count\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_lines\(file, root, line1, line2, range_count\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_argv\(file, root, line1, line2, range_count\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_float\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_native\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_toggleterm\(argv, cwd\) abort/);
   assert.match(internalRuntime, /lazy_util\.float_term\(payload\.cmd, \{ cwd = payload\.cwd ~= "" and payload\.cwd or nil \}\)/);
   assert.match(internalRuntime, /'   direction = "float",'/);
+  assert.match(internalRuntime, /let l:argv = s:pingu_prompt_terminal_session_argv\(l:file, l:root, a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /let l:argv = \[l:command\] \+ s:pingu_prompt_terminal_model_args\(l:command\)/);
   assert.match(internalRuntime, /if !empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\)\n    return \$PINGU_PROMPT_TERMINAL_COMMAND\n  endif/);
   assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'\n    return ''\n  endif/);
-  assert.match(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
+  assert.match(internalRuntime, /Pingu Prompt Session/);
+  assert.match(internalRuntime, /Contexto primario/);
+  assert.match(internalRuntime, /Sessao de prompt aberta no terminal/);
+  assert.doesNotMatch(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
   assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);
   assert.match(internalRuntime, /termopen\(a:argv, \{'cwd': a:cwd\}\)/);
