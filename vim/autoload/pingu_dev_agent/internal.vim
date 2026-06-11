@@ -10386,10 +10386,27 @@ function! s:pingu_model_overview_open() abort
   return s:pingu_lsp_open_float('Pingu Provider', s:pingu_model_overview_lines(), {'enter': v:false, 'max_width': 104})
 endfunction
 
+function! s:pingu_provider_confirm_label(provider) abort
+  let l:provider = s:pingu_normalize_ai_provider(a:provider)
+  if l:provider ==# 'copilot'
+    return '&Copilot'
+  endif
+  if l:provider ==# 'openai'
+    return '&OpenAI'
+  endif
+  if l:provider ==# 'codex'
+    return 'Co&dex'
+  endif
+  if l:provider ==# 'claude'
+    return 'C&laude'
+  endif
+  return '&Auto'
+endfunction
+
 function! s:pingu_select_provider_choice(provider_options) abort
-  let l:labels = ['Cancelar']
+  let l:labels = ['Ca&ncelar']
   for l:provider in a:provider_options
-    call add(l:labels, s:pingu_ai_provider_label(l:provider))
+    call add(l:labels, s:pingu_provider_confirm_label(l:provider))
   endfor
   try
     return confirm('Pingu provider', join(l:labels, "\n"), 0)

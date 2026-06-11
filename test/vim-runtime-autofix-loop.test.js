@@ -285,6 +285,12 @@ test('runtime permite escolher provider assistido do Pingu', () => {
   assert.match(internalRuntime, /for l:provider in s:pingu_supported_ai_provider_overview\(\)/);
   assert.match(internalRuntime, /Providers disponiveis/);
   assert.match(internalRuntime, /s:pingu_provider_status_line\(l:provider\)/);
+  assert.match(internalRuntime, /function! s:pingu_provider_confirm_label\(provider\) abort/);
+  assert.match(internalRuntime, /return '&Copilot'/);
+  assert.match(internalRuntime, /return '&OpenAI'/);
+  assert.match(internalRuntime, /return 'Co&dex'/);
+  assert.match(internalRuntime, /return 'C&laude'/);
+  assert.match(internalRuntime, /let l:labels = \['Ca&ncelar'\]/);
   assert.match(internalRuntime, /function! s:pingu_select_provider_choice\(provider_options\) abort/);
   assert.match(internalRuntime, /return confirm\('Pingu provider', join\(l:labels, "\\n"\), 0\)/);
   assert.match(internalRuntime, /function! s:pingu_select_ai_provider\(\.\.\.\) abort/);
