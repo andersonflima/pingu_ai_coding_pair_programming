@@ -10388,22 +10388,21 @@ function! s:pingu_select_ai_provider(...) abort
     let l:choice_raw = ''
     call inputsave()
     try
-      let l:choice_raw = input('Escolha provider [1-' . len(l:provider_options) . ']: ')
+      let l:choice_raw = trim(input('Escolha provider [1-' . len(l:provider_options) . ']: '))
     catch /^Vim\%((\a\+)\)\=:Interrupt$/
       let l:choice_raw = ''
     finally
       call inputrestore()
+      call s:pingu_close_float(l:provider_overview_winid)
     endtry
-    let l:choice = str2nr(trim(l:choice_raw))
-    if l:choice >= 1 && l:choice <= len(l:provider_options) && !empty(trim(l:choice_raw))
+    let l:choice = str2nr(l:choice_raw)
+    if l:choice_raw =~# '^\d\+$' && l:choice >= 1 && l:choice <= len(l:provider_options)
       let l:raw = l:provider_options[l:choice - 1]
       echomsg '[Pingu] Opcao ' . l:choice . ' selecionada: ' . s:pingu_ai_provider_label(l:raw)
     else
-      call s:pingu_close_float(l:provider_overview_winid)
       echomsg '[Pingu] Selecao de provider cancelada'
       return
     endif
-    call s:pingu_close_float(l:provider_overview_winid)
   endif
 
   if !empty(l:provider_model_override)
