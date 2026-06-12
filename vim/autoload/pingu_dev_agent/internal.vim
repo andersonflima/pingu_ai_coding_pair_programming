@@ -5526,7 +5526,7 @@ function! s:pingu_action_history_lines() abort
 endfunction
 
 function! s:pingu_action_history_open() abort
-  call s:pingu_lsp_open_float('Pingu Action History', s:pingu_action_history_lines())
+  call s:pingu_lsp_open_float('Pingu Action History', s:pingu_action_history_lines(), {'enter': v:true})
 endfunction
 
 function! s:undo_last_pingu_fix(force) abort
