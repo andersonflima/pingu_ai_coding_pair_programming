@@ -35,6 +35,8 @@ let s:pingu_dev_agent_async_analysis_context = {}
 let s:pingu_prompt_job = -1
 let s:pingu_prompt_context = {}
 let s:pingu_prompt_chat_sessions = {}
+let s:pingu_prompt_terminal_winid = -1
+let s:pingu_prompt_terminal_bufnr = -1
 let s:pingu_diagnostic_hints_refresh_timers = []
 let s:pingu_dev_agent_daemon_job = -1
 let s:pingu_dev_agent_daemon_request_seq = 0
@@ -9657,6 +9659,42 @@ function! s:pingu_prompt_terminal_shell_command(argv) abort
   return join(map(copy(a:argv), {_, item -> shellescape(item)}), ' ')
 endfunction
 
+function! s:pingu_prompt_terminal_close() abort
+  let l:winid = str2nr(string(get(s:, 'pingu_prompt_terminal_winid', -1)))
+  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
+    silent! call nvim_win_close(l:winid, v:true)
+  endif
+  let l:bufnr = str2nr(string(get(s:, 'pingu_prompt_terminal_bufnr', -1)))
+  if l:bufnr > 0 && bufexists(l:bufnr)
+    silent! execute 'bwipeout! ' . l:bufnr
+  endif
+  let s:pingu_prompt_terminal_winid = -1
+  let s:pingu_prompt_terminal_bufnr = -1
+endfunction
+
+function! s:pingu_prompt_terminal_remember() abort
+  if has('nvim') && exists('*nvim_get_current_win')
+    let s:pingu_prompt_terminal_winid = nvim_get_current_win()
+  else
+    let s:pingu_prompt_terminal_winid = win_getid()
+  endif
+  let s:pingu_prompt_terminal_bufnr = bufnr('%')
+  call setbufvar(s:pingu_prompt_terminal_bufnr, 'pingu_prompt_terminal', 1)
+endfunction
+
+function! s:pingu_prompt_terminal_map_close(bufnr) abort
+  if a:bufnr <= 0 || !bufexists(a:bufnr)
+    return
+  endif
+  let l:rhs = s:script_call_rhs('pingu_prompt_terminal_close()')
+  if has('nvim') && exists('*nvim_buf_set_keymap')
+    call nvim_buf_set_keymap(a:bufnr, 'n', 'q', l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+    call nvim_buf_set_keymap(a:bufnr, 'n', '<Esc>', l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+    call nvim_buf_set_keymap(a:bufnr, 't', '<C-c>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+    call nvim_buf_set_keymap(a:bufnr, 't', '<Esc>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+  endif
+endfunction
+
 function! s:pingu_prompt_terminal_session_lines(file, root, line1, line2, range_count) abort
   let l:provider = s:pingu_ai_provider_env_value()
   let l:lines = [
@@ -9681,6 +9719,7 @@ function! s:pingu_prompt_terminal_session_lines(file, root, line1, line2, range_
   call add(l:lines, '  O Pingu envia primeiro o buffer aberto e o range/cursor atual como contexto.')
   call add(l:lines, '  Se o texto citar outro arquivo, o provider recebe tambem a raiz do projeto.')
   call add(l:lines, '  :PinguPromptClear limpa o historico deste arquivo.')
+  call add(l:lines, '  :PinguPromptClose, q, Esc ou Ctrl-C fecham esta sessao.')
   call add(l:lines, '')
   call add(l:lines, 'Historico recente')
   let l:history = s:pingu_prompt_history_for_file(a:file)
@@ -9714,7 +9753,7 @@ function! s:open_pingu_prompt_terminal_float(argv, cwd) abort
         \ 'cmd': a:argv,
         \ 'cwd': a:cwd,
         \ }
-  return luaeval(
+  let l:opened = luaeval(
         \ '(function(payload)'
         \ . ' local ok, lazy_util = pcall(require, "lazy.util")'
         \ . ' if not ok or not lazy_util or not lazy_util.float_term then return false end'
@@ -9724,6 +9763,11 @@ function! s:open_pingu_prompt_terminal_float(argv, cwd) abort
         \ . ' end)(_A)',
         \ l:payload
         \ )
+  if l:opened
+    call s:pingu_prompt_terminal_remember()
+    call s:pingu_prompt_terminal_map_close(bufnr('%'))
+  endif
+  return l:opened
 endfunction
 
 function! s:open_pingu_prompt_terminal_native(argv, cwd) abort
@@ -9735,6 +9779,8 @@ function! s:open_pingu_prompt_terminal_native(argv, cwd) abort
     execute 'botright ' . l:height . 'split'
     enew
     call termopen(a:argv, {'cwd': a:cwd})
+    call s:pingu_prompt_terminal_remember()
+    call s:pingu_prompt_terminal_map_close(bufnr('%'))
     startinsert
     return v:true
   endif
@@ -9742,6 +9788,8 @@ function! s:open_pingu_prompt_terminal_native(argv, cwd) abort
   if exists('*term_start')
     execute 'botright ' . l:height . 'split'
     call term_start(a:argv, {'cwd': a:cwd, 'curwin': 1})
+    call s:pingu_prompt_terminal_remember()
+    call s:pingu_prompt_terminal_map_close(bufnr('%'))
     return v:true
   endif
 
@@ -9754,7 +9802,7 @@ function! s:open_pingu_prompt_terminal_toggleterm(argv, cwd) abort
         \ 'cwd': a:cwd,
         \ 'height': s:issue_terminal_height(),
         \ }
-  return luaeval(
+  let l:opened = luaeval(
         \ '(function(payload)'
         \ . ' local ok, terminal_module = pcall(require, "toggleterm.terminal")'
         \ . ' if not ok or not terminal_module or not terminal_module.Terminal then return false end'
@@ -9772,6 +9820,11 @@ function! s:open_pingu_prompt_terminal_toggleterm(argv, cwd) abort
         \ . ' end)(_A)',
         \ l:payload
         \ )
+  if l:opened
+    call s:pingu_prompt_terminal_remember()
+    call s:pingu_prompt_terminal_map_close(bufnr('%'))
+  endif
+  return l:opened
 endfunction
 
 function! s:pingu_prompt_terminal(line1, line2, range_count) abort
@@ -10577,6 +10630,7 @@ function! s:pingu_help_lines() abort
         \ '  :PinguPrompt             abrir provider em terminal flutuante',
         \ '  :PinguPrompt <texto>     aplicar prompt como patch direto',
         \ '  :PinguPromptTerminal     abrir terminal flutuante',
+        \ '  :PinguPromptClose        fechar terminal/sessao de prompt',
         \ '  :PinguFixCurrent         aplicar sugestao da linha atual',
         \ '  :PinguFixCurrentAI       corrigir linha atual com provider',
         \ '  :PinguPreviewFix         mostrar diff antes de aplicar',
@@ -10667,6 +10721,7 @@ command! PinguWindowClose call s:window_close()
 command! PinguWindowToggle call s:window_toggle()
 command! -range -nargs=* PinguPrompt call s:pingu_prompt(<line1>, <line2>, <q-args>, <range>)
 command! -range PinguPromptTerminal call s:pingu_prompt_terminal(<line1>, <line2>, <range>)
+command! PinguPromptClose call s:pingu_prompt_terminal_close()
 command! PinguHintsRefresh call s:update_pingu_all_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()

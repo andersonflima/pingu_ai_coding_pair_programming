@@ -516,6 +516,10 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
 
 test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /function! s:pingu_prompt_terminal\(line1, line2, range_count\) abort/);
+  assert.match(internalRuntime, /let s:pingu_prompt_terminal_winid = -1/);
+  assert.match(internalRuntime, /let s:pingu_prompt_terminal_bufnr = -1/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_close\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_map_close\(bufnr\) abort/);
   assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_lines\(file, root, line1, line2, range_count\) abort/);
   assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_argv\(file, root, line1, line2, range_count\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_float\(argv, cwd\) abort/);
@@ -529,10 +533,13 @@ test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'\n    return ''\n  endif/);
   assert.match(internalRuntime, /Pingu Prompt Session/);
   assert.match(internalRuntime, /Contexto primario/);
+  assert.match(internalRuntime, /:PinguPromptClose, q, Esc ou Ctrl-C fecham esta sessao/);
+  assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 't', '<C-c>'/);
   assert.match(internalRuntime, /Sessao de prompt aberta no terminal/);
   assert.doesNotMatch(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
   assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);
+  assert.match(internalRuntime, /command! PinguPromptClose call s:pingu_prompt_terminal_close\(\)/);
   assert.match(internalRuntime, /termopen\(a:argv, \{'cwd': a:cwd\}\)/);
   assert.match(internalRuntime, /call term_start\(a:argv, \{'cwd': a:cwd, 'curwin': 1\}\)/);
   assert.match(internalRuntime, /':PinguPrompt<CR>'/);
