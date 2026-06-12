@@ -2807,25 +2807,158 @@ function! s:pingu_function_flow_signals(lines) abort
   return l:signals
 endfunction
 
+function! s:pingu_function_signature_line(context) abort
+  let l:lines = get(a:context, 'lines', [])
+  return empty(l:lines) ? '' : trim('' . l:lines[0])
+endfunction
+
+function! s:pingu_function_parameter_names(signature) abort
+  let l:signature = '' . a:signature
+  let l:match = matchlist(l:signature, '(\(.*\))')
+  if empty(l:match)
+    return []
+  endif
+  let l:raw_params = split(get(l:match, 1, ''), ',')
+  let l:params = []
+  for l:param in l:raw_params
+    let l:param = trim(substitute(l:param, '=.*$', '', ''))
+    let l:param = trim(substitute(l:param, '[:{].*$', '', ''))
+    let l:param = substitute(l:param, '^\s*\%(\.\.\.\|[*&]\)\?', '', '')
+    let l:param = substitute(l:param, '^\%(const\|let\|var\|readonly\)\s\+', '', '')
+    if !empty(l:param)
+      call add(l:params, l:param)
+    endif
+  endfor
+  return s:pingu_function_unique_values(l:params, 8)
+endfunction
+
+function! s:pingu_function_parameter_lines(params) abort
+  if empty(a:params)
+    return ['  Nao foi possivel inferir parametros pela assinatura analisada.']
+  endif
+  let l:lines = []
+  for l:param in a:params
+    call add(l:lines, '  - ' . l:param . ': entrada usada pela funcao; valide tipo/contrato no corpo e nas chamadas.')
+  endfor
+  return l:lines
+endfunction
+
+function! s:pingu_function_role_line(context, signature, flow, effects) abort
+  let l:name = get(a:context, 'name', 'funcao')
+  let l:role = '  A funcao ' . l:name . ' encapsula o bloco iniciado em `' . a:signature . '` e deve ser lida como a unidade responsavel por esse fluxo local.'
+  if index(a:flow, 'decide por ramificacoes condicionais') != -1
+    let l:role .= ' Ela possui decisoes internas, entao o resultado depende das condicoes avaliadas no corpo.'
+  endif
+  if index(a:flow, 'itera ou transforma colecoes') != -1
+    let l:role .= ' Tambem percorre ou transforma dados, entao preserve a ordem e o escopo das variaveis ao alterar.'
+  endif
+  if index(a:effects, 'sem efeito externo obvio no trecho analisado') == -1
+    let l:role .= ' Ha efeitos observaveis, portanto a ordem das chamadas importa para evitar regressao.'
+  endif
+  return l:role
+endfunction
+
+function! s:pingu_function_decision_lines(context) abort
+  let l:result = []
+  let l:start = get(a:context, 'start', 0)
+  let l:lines = get(a:context, 'lines', [])
+  for l:index in range(0, len(l:lines) - 1)
+    let l:text = trim('' . l:lines[l:index])
+    if l:text =~# '^\%(if\|elseif\|else\|case\|when\|switch\|cond\|try\|catch\|finally\)\>'
+          \ || l:text =~# '^\s*\%(if\|elseif\|else\|case\|when\|switch\|cond\|try\|catch\|finally\)\>'
+      call add(l:result, '  - linha ' . (l:start + l:index) . ': `' . l:text . '` controla um caminho alternativo ou tratamento de falha.')
+    endif
+    if len(l:result) >= 6
+      break
+    endif
+  endfor
+  return empty(l:result) ? ['  Nao ha ramificacoes evidentes; o fluxo principal parece linear.'] : l:result
+endfunction
+
+function! s:pingu_function_step_lines(context) abort
+  let l:result = []
+  let l:start = get(a:context, 'start', 0)
+  let l:lines = get(a:context, 'lines', [])
+  for l:index in range(1, len(l:lines) - 1)
+    let l:text = trim('' . l:lines[l:index])
+    if empty(l:text) || l:text =~# '^\%(end\|}\)\s*$'
+      continue
+    endif
+    if l:text =~# '^\%(let\|const\|var\)\>' || l:text =~# '^\s*let '
+      call add(l:result, '  - linha ' . (l:start + l:index) . ': prepara estado local em `' . l:text . '` para uso posterior.')
+    elseif l:text =~# '^\%(return\)\>'
+      call add(l:result, '  - linha ' . (l:start + l:index) . ': encerra o fluxo retornando `' . l:text . '`.')
+    elseif l:text =~# '\v(call |\.|[A-Za-z_][A-Za-z0-9_]*\()'
+      call add(l:result, '  - linha ' . (l:start + l:index) . ': executa `' . l:text . '`, impactando o proximo passo do fluxo.')
+    elseif l:text =~# '^\%(if\|elseif\|else\|for\|while\|try\|catch\)\>'
+      call add(l:result, '  - linha ' . (l:start + l:index) . ': abre bloco de controle `' . l:text . '`.')
+    endif
+    if len(l:result) >= 8
+      break
+    endif
+  endfor
+  return empty(l:result) ? ['  Nao foram identificados passos internos relevantes alem da declaracao.'] : l:result
+endfunction
+
+function! s:pingu_function_return_lines(context) abort
+  let l:result = []
+  let l:start = get(a:context, 'start', 0)
+  let l:lines = get(a:context, 'lines', [])
+  for l:index in range(0, len(l:lines) - 1)
+    let l:text = trim('' . l:lines[l:index])
+    if l:text =~# '\<return\>'
+      call add(l:result, '  - linha ' . (l:start + l:index) . ': `' . l:text . '` define a saida ou encerra antecipadamente o fluxo.')
+    endif
+    if len(l:result) >= 5
+      break
+    endif
+  endfor
+  return empty(l:result) ? ['  Nao ha retorno explicito; a funcao provavelmente depende de efeitos colaterais ou retorno implicito da linguagem.'] : l:result
+endfunction
+
+function! s:pingu_function_call_lines(calls) abort
+  if empty(a:calls)
+    return ['  Nao foram detectadas chamadas internas relevantes.']
+  endif
+  return map(copy(a:calls), {_, call -> '  - ' . call . ': dependencia/chamada executada pelo corpo da funcao.'})
+endfunction
+
+function! s:pingu_function_effect_lines(effects) abort
+  return map(copy(a:effects), {_, effect -> '  - ' . effect . '.'})
+endfunction
+
 function! s:pingu_function_analysis_lines(context) abort
   if type(a:context) != v:t_dict || empty(a:context)
     return []
   endif
   let l:lines = get(a:context, 'lines', [])
+  let l:signature = s:pingu_function_signature_line(a:context)
+  let l:params = s:pingu_function_parameter_names(l:signature)
   let l:flow = s:pingu_function_flow_signals(l:lines)
   let l:effects = s:pingu_function_effects(l:lines)
   let l:calls = s:pingu_function_internal_calls(l:lines)
-  let l:call_summary = empty(l:calls) ? 'sem chamadas internas evidentes' : join(l:calls, ', ')
   let l:sample = map(copy(get(a:context, 'lines', [])[:8]), {_, line -> '  ' . line})
   return [
         \ 'Funcao no cursor',
         \ '  ' . get(a:context, 'name', 'funcao') . ' · linhas ' . get(a:context, 'start', 0) . '-' . get(a:context, 'end', 0),
+        \ 'Assinatura',
+        \ '  ' . (empty(l:signature) ? 'assinatura nao identificada' : l:signature),
+        \ 'Leitura tecnica',
+        \ s:pingu_function_role_line(a:context, l:signature, l:flow, l:effects),
+        \ 'Parametros inferidos',
+        \ ] + s:pingu_function_parameter_lines(l:params) + [
         \ 'Comportamento',
         \ '  ' . join(l:flow, '; '),
+        \ 'Fluxo detalhado',
+        \ ] + s:pingu_function_step_lines(a:context) + [
+        \ 'Decisoes e guard clauses',
+        \ ] + s:pingu_function_decision_lines(a:context) + [
         \ 'Chamadas internas',
-        \ '  ' . l:call_summary,
+        \ ] + s:pingu_function_call_lines(l:calls) + [
         \ 'Efeitos observaveis',
-        \ '  ' . join(l:effects, '; '),
+        \ ] + s:pingu_function_effect_lines(l:effects) + [
+        \ 'Retorno',
+        \ ] + s:pingu_function_return_lines(a:context) + [
         \ 'Trecho',
         \ ] + l:sample
 endfunction
