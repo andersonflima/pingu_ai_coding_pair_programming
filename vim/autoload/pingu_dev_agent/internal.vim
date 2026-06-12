@@ -9838,6 +9838,7 @@ function! s:pingu_prompt_terminal_map_close(bufnr) abort
   if has('nvim') && exists('*nvim_buf_set_keymap')
     call nvim_buf_set_keymap(a:bufnr, 'n', 'q', l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
     call nvim_buf_set_keymap(a:bufnr, 'n', '<Esc>', l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
+    call nvim_buf_set_keymap(a:bufnr, 't', '<C-q>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
     call nvim_buf_set_keymap(a:bufnr, 't', '<C-c>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
     call nvim_buf_set_keymap(a:bufnr, 't', '<Esc>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
   endif
@@ -9867,7 +9868,7 @@ function! s:pingu_prompt_terminal_session_lines(file, root, line1, line2, range_
   call add(l:lines, '  O Pingu envia primeiro o buffer aberto e o range/cursor atual como contexto.')
   call add(l:lines, '  Se o texto citar outro arquivo, o provider recebe tambem a raiz do projeto.')
   call add(l:lines, '  :PinguPromptClear limpa o historico deste arquivo.')
-  call add(l:lines, '  :PinguPromptClose, q, Esc ou Ctrl-C fecham esta sessao.')
+  call add(l:lines, '  :PinguPromptClose, q no modo normal, Esc, Ctrl-C ou Ctrl-Q fecham esta sessao.')
   call add(l:lines, '')
   call add(l:lines, 'Historico recente')
   let l:history = s:pingu_prompt_history_for_file(a:file)
@@ -9893,29 +9894,31 @@ function! s:pingu_prompt_terminal_session_argv(file, root, line1, line2, range_c
 endfunction
 
 function! s:open_pingu_prompt_terminal_float(argv, cwd) abort
-  if !has('nvim')
+  if !has('nvim') || !exists('*nvim_create_buf') || !exists('*nvim_open_win') || !exists('*termopen')
     return v:false
   endif
 
-  let l:payload = {
-        \ 'cmd': a:argv,
-        \ 'cwd': a:cwd,
-        \ }
-  let l:opened = luaeval(
-        \ '(function(payload)'
-        \ . ' local ok, lazy_util = pcall(require, "lazy.util")'
-        \ . ' if not ok or not lazy_util or not lazy_util.float_term then return false end'
-        \ . ' lazy_util.float_term(payload.cmd, { cwd = payload.cwd ~= "" and payload.cwd or nil })'
-        \ . ' vim.defer_fn(function() pcall(vim.cmd, "startinsert") end, 20)'
-        \ . ' return true'
-        \ . ' end)(_A)',
-        \ l:payload
-        \ )
-  if l:opened
-    call s:pingu_prompt_terminal_remember()
-    call s:pingu_prompt_terminal_map_close(bufnr('%'))
-  endif
-  return l:opened
+  let l:screen_lines = &lines > 0 ? &lines : 24
+  let l:columns = &columns > 0 ? &columns : 80
+  let l:width = min([max([72, float2nr(l:columns * 0.88)]), max([40, l:columns - 4])])
+  let l:height = min([max([14, float2nr(l:screen_lines * 0.72)]), max([8, l:screen_lines - 4])])
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call setbufvar(l:bufnr, '&bufhidden', 'wipe')
+  call setbufvar(l:bufnr, '&swapfile', 0)
+  call nvim_open_win(l:bufnr, v:true, {
+        \ 'relative': 'editor',
+        \ 'row': max([1, float2nr((l:screen_lines - l:height) / 2) - 1]),
+        \ 'col': max([0, float2nr((l:columns - l:width) / 2)]),
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ })
+  call termopen(a:argv, {'cwd': a:cwd})
+  call s:pingu_prompt_terminal_remember()
+  call s:pingu_prompt_terminal_map_close(l:bufnr)
+  startinsert
+  return v:true
 endfunction
 
 function! s:open_pingu_prompt_terminal_native(argv, cwd) abort

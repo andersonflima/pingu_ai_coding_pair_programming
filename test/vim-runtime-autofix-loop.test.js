@@ -542,7 +542,9 @@ test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_float\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_native\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_toggleterm\(argv, cwd\) abort/);
-  assert.match(internalRuntime, /lazy_util\.float_term\(payload\.cmd, \{ cwd = payload\.cwd ~= "" and payload\.cwd or nil \}\)/);
+  assert.match(internalRuntime, /nvim_open_win\(l:bufnr, v:true, \{/);
+  assert.match(internalRuntime, /call termopen\(a:argv, \{'cwd': a:cwd\}\)/);
+  assert.doesNotMatch(internalRuntime, /lazy_util\.float_term/);
   assert.match(internalRuntime, /'   direction = "float",'/);
   assert.match(internalRuntime, /let l:argv = s:pingu_prompt_terminal_session_argv\(l:file, l:root, a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /let l:argv = \[l:command\] \+ s:pingu_prompt_terminal_model_args\(l:command\)/);
@@ -550,7 +552,8 @@ test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'\n    return ''\n  endif/);
   assert.match(internalRuntime, /Pingu Prompt Session/);
   assert.match(internalRuntime, /Contexto primario/);
-  assert.match(internalRuntime, /:PinguPromptClose, q, Esc ou Ctrl-C fecham esta sessao/);
+  assert.match(internalRuntime, /:PinguPromptClose, q no modo normal, Esc, Ctrl-C ou Ctrl-Q fecham esta sessao/);
+  assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 't', '<C-q>'/);
   assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 't', '<C-c>'/);
   assert.match(internalRuntime, /Sessao de prompt aberta no terminal/);
   assert.doesNotMatch(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
