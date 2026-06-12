@@ -933,7 +933,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguPrompt <texto>` continua executando o prompt como patch direto no buffer: sem selecao visual usa a linha do cursor e contexto ao redor; com selecao visual envia o texto selecionado e aplica a substituicao somente naquele range.
 - o prompt manual sempre usa o buffer aberto como contexto primario; quando o texto citar outro arquivo ou contexto de diretorio, o provider tambem recebe a raiz do projeto para responder com mais precisao.
 - `:PinguPromptTerminal` abre explicitamente o mesmo terminal flutuante interativo.
-- `:PinguPromptClose` fecha o terminal/sessao de prompt aberto pelo Pingu; dentro do terminal tambem funcionam `q`, `Esc` e `Ctrl-C`.
+- `:PinguPromptClose` fecha o terminal/sessao de prompt aberto pelo Pingu; dentro do terminal tambem funcionam `q` no modo normal, `Esc`, `Ctrl-C` e `Ctrl-Q`.
 - `:PinguPromptClear [all]` limpa o histórico de conversa do `:PinguPrompt` do buffer atual; use `:PinguPromptClear all` para limpar em todos os arquivos
 - `:PinguModel` alterna entre Copilot, OpenAI, Codex, Claude e Auto sem reiniciar o editor; o modelo passa a vir da configuração do provider selecionado.
 - ao abrir `:PinguModel` sem argumentos, o Pingu mostra um painel centralizado com provider atual, comandos e disponibilidade antes de abrir o seletor nativo
