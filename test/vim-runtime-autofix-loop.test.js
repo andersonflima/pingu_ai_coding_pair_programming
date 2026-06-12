@@ -285,6 +285,12 @@ test('runtime permite escolher provider assistido do Pingu', () => {
   assert.match(internalRuntime, /for l:provider in s:pingu_supported_ai_provider_overview\(\)/);
   assert.match(internalRuntime, /Providers disponiveis/);
   assert.match(internalRuntime, /s:pingu_provider_status_line\(l:provider\)/);
+  assert.match(internalRuntime, /function! s:pingu_provider_confirm_label\(provider\) abort/);
+  assert.match(internalRuntime, /return '&Copilot'/);
+  assert.match(internalRuntime, /return '&OpenAI'/);
+  assert.match(internalRuntime, /return 'Co&dex'/);
+  assert.match(internalRuntime, /return 'C&laude'/);
+  assert.match(internalRuntime, /let l:labels = \['Ca&ncelar'\]/);
   assert.match(internalRuntime, /function! s:pingu_select_provider_choice\(provider_options\) abort/);
   assert.match(internalRuntime, /return confirm\('Pingu provider', join\(l:labels, "\\n"\), 0\)/);
   assert.match(internalRuntime, /function! s:pingu_select_ai_provider\(\.\.\.\) abort/);
@@ -510,17 +516,30 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
 
 test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
   assert.match(internalRuntime, /function! s:pingu_prompt_terminal\(line1, line2, range_count\) abort/);
+  assert.match(internalRuntime, /let s:pingu_prompt_terminal_winid = -1/);
+  assert.match(internalRuntime, /let s:pingu_prompt_terminal_bufnr = -1/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_close\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_map_close\(bufnr\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_lines\(file, root, line1, line2, range_count\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_argv\(file, root, line1, line2, range_count\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_float\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_native\(argv, cwd\) abort/);
   assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_toggleterm\(argv, cwd\) abort/);
   assert.match(internalRuntime, /lazy_util\.float_term\(payload\.cmd, \{ cwd = payload\.cwd ~= "" and payload\.cwd or nil \}\)/);
   assert.match(internalRuntime, /'   direction = "float",'/);
+  assert.match(internalRuntime, /let l:argv = s:pingu_prompt_terminal_session_argv\(l:file, l:root, a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /let l:argv = \[l:command\] \+ s:pingu_prompt_terminal_model_args\(l:command\)/);
   assert.match(internalRuntime, /if !empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\)\n    return \$PINGU_PROMPT_TERMINAL_COMMAND\n  endif/);
   assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'\n    return ''\n  endif/);
-  assert.match(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
+  assert.match(internalRuntime, /Pingu Prompt Session/);
+  assert.match(internalRuntime, /Contexto primario/);
+  assert.match(internalRuntime, /:PinguPromptClose, q, Esc ou Ctrl-C fecham esta sessao/);
+  assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 't', '<C-c>'/);
+  assert.match(internalRuntime, /Sessao de prompt aberta no terminal/);
+  assert.doesNotMatch(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
   assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
   assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);
+  assert.match(internalRuntime, /command! PinguPromptClose call s:pingu_prompt_terminal_close\(\)/);
   assert.match(internalRuntime, /termopen\(a:argv, \{'cwd': a:cwd\}\)/);
   assert.match(internalRuntime, /call term_start\(a:argv, \{'cwd': a:cwd, 'curwin': 1\}\)/);
   assert.match(internalRuntime, /':PinguPrompt<CR>'/);
