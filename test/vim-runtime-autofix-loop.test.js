@@ -179,6 +179,9 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_explain_issue_lines\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_explain_in_hover\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_context_at_cursor\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_internal_calls\(lines\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_effects\(lines\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_flow_signals\(lines\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_analysis_lines\(context\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_diff_lines\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_open_function_hover_menu\(context\) abort/);
@@ -203,12 +206,18 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.doesNotMatch(internalRuntime, /:PinguIssueActions abre o modo interativo/);
   assert.match(internalRuntime, /Explicacao do problema/);
   assert.match(internalRuntime, /Funcao no cursor/);
+  assert.match(internalRuntime, /Comportamento/);
+  assert.match(internalRuntime, /Chamadas internas/);
+  assert.match(internalRuntime, /Efeitos observaveis/);
   assert.match(internalRuntime, /Diff disponivel/);
   assert.match(internalRuntime, /function! s:pingu_issue_has_hover_diff\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_post_fix_diff_lines\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_post_fix_diff_lines\(lines\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_post_fix_diff\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_highlight_issue_hover_buffer\(bufnr\) abort/);
+  assert.match(internalRuntime, /sem chamadas internas evidentes/);
+  assert.match(internalRuntime, /cria ou atualiza UI\/buffer flutuante/);
+  assert.match(internalRuntime, /orquestra processo, canal ou timer/);
   assert.match(internalRuntime, /Trecho/);
   assert.match(internalRuntime, /Importar .* de outro arquivo ou implementar .* localmente/);
   assert.match(internalRuntime, /Corrigir import, modulo ou dependencia faltante com a menor declaracao segura/);

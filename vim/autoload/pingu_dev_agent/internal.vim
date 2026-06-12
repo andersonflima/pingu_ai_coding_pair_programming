@@ -2721,33 +2721,103 @@ function! s:pingu_function_context_at_cursor() abort
   return {'name': get(l:start, 'name', 'funcao'), 'start': l:start.start, 'end': l:end, 'lines': l:lines}
 endfunction
 
-function! s:pingu_function_analysis_lines(context) abort
-  if type(a:context) != v:t_dict || empty(a:context)
-    return []
+function! s:pingu_function_unique_values(values, limit) abort
+  let l:result = []
+  for l:value in a:values
+    let l:value = trim('' . l:value)
+    if empty(l:value) || index(l:result, l:value) != -1
+      continue
+    endif
+    call add(l:result, l:value)
+    if len(l:result) >= a:limit
+      break
+    endif
+  endfor
+  return l:result
+endfunction
+
+function! s:pingu_function_internal_calls(lines) abort
+  let l:calls = []
+  for l:line in a:lines
+    let l:text = substitute(l:line, '".*$', '', '')
+    let l:offset = 0
+    while l:offset >= 0
+      let l:match = matchstrpos(l:text, '\v([A-Za-z_:#][A-Za-z0-9_:#]*|s:[A-Za-z_][A-Za-z0-9_]*|self\.[A-Za-z_][A-Za-z0-9_]*|this\.[A-Za-z_$][A-Za-z0-9_$]*|[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$][A-Za-z0-9_$]*)\s*\(', l:offset)
+      if l:match[1] < 0
+        break
+      endif
+      let l:name = substitute(trim(l:match[0]), '\s*($', '', '')
+      let l:base = tolower(matchstr(l:name, '[A-Za-z_$][A-Za-z0-9_$]*$'))
+      if index(['if', 'for', 'while', 'switch', 'catch', 'return', 'function', 'def', 'call', 'execute'], l:base) == -1
+        call add(l:calls, l:name)
+      endif
+      let l:offset = l:match[2]
+    endwhile
+  endfor
+  return s:pingu_function_unique_values(l:calls, 8)
+endfunction
+
+function! s:pingu_function_effects(lines) abort
+  let l:body = join(a:lines, "\n")
+  let l:effects = []
+  if l:body =~# '\v(setbufline|appendbufline|deletebufline|nvim_buf_set_lines|writefile|delete\()'
+    call add(l:effects, 'altera buffer ou arquivo')
   endif
-  let l:body = join(get(a:context, 'lines', []), "\n")
+  if l:body =~# '\v(jobstart|system\(|chansend|chanclose|timer_start)'
+    call add(l:effects, 'orquestra processo, canal ou timer')
+  endif
+  if l:body =~# '\v(nvim_open_win|nvim_create_buf|nvim_win_set_config|setbufvar|highlight)'
+    call add(l:effects, 'cria ou atualiza UI/buffer flutuante')
+  endif
+  if l:body =~# '\v(echomsg|echohl|echo |confirm\()'
+    call add(l:effects, 'emite mensagem para o usuario')
+  endif
+  if empty(l:effects)
+    call add(l:effects, 'sem efeito externo obvio no trecho analisado')
+  endif
+  return l:effects
+endfunction
+
+function! s:pingu_function_flow_signals(lines) abort
+  let l:body = join(a:lines, "\n")
   let l:signals = []
   if l:body =~# '\<return\>'
     call add(l:signals, 'retorna valor explicitamente')
   endif
   if l:body =~# '\v(if|elseif|else|case|switch|cond)\>'
-    call add(l:signals, 'possui ramificacao condicional')
+    call add(l:signals, 'decide por ramificacoes condicionais')
   endif
   if l:body =~# '\v(for|while|map|filter|reduce|each)\>'
     call add(l:signals, 'itera ou transforma colecoes')
   endif
-  if l:body =~# '\v(call |execute |system\(|jobstart\(|append|setbufline|writefile)'
-    call add(l:signals, 'executa efeito colateral')
+  if l:body =~# '\v(try|catch|finally)'
+    call add(l:signals, 'isola falhas com tratamento de excecao')
   endif
   if empty(l:signals)
-    call add(l:signals, 'fluxo direto sem sinais fortes de efeito externo')
+    call add(l:signals, 'fluxo linear com baixa ramificacao aparente')
   endif
+  return l:signals
+endfunction
+
+function! s:pingu_function_analysis_lines(context) abort
+  if type(a:context) != v:t_dict || empty(a:context)
+    return []
+  endif
+  let l:lines = get(a:context, 'lines', [])
+  let l:flow = s:pingu_function_flow_signals(l:lines)
+  let l:effects = s:pingu_function_effects(l:lines)
+  let l:calls = s:pingu_function_internal_calls(l:lines)
+  let l:call_summary = empty(l:calls) ? 'sem chamadas internas evidentes' : join(l:calls, ', ')
   let l:sample = map(copy(get(a:context, 'lines', [])[:8]), {_, line -> '  ' . line})
   return [
         \ 'Funcao no cursor',
         \ '  ' . get(a:context, 'name', 'funcao') . ' · linhas ' . get(a:context, 'start', 0) . '-' . get(a:context, 'end', 0),
-        \ 'Analise',
-        \ '  ' . join(l:signals, '; '),
+        \ 'Comportamento',
+        \ '  ' . join(l:flow, '; '),
+        \ 'Chamadas internas',
+        \ '  ' . l:call_summary,
+        \ 'Efeitos observaveis',
+        \ '  ' . join(l:effects, '; '),
         \ 'Trecho',
         \ ] + l:sample
 endfunction
