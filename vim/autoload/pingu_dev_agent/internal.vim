@@ -10644,12 +10644,35 @@ function! s:pingu_issue_severity_rank(issue) abort
   return 3
 endfunction
 
+function! s:pingu_issue_hint_message(issue, fallback) abort
+  let l:kind = get(a:issue, 'kind', '')
+  if l:kind ==# 'function_doc'
+    return 'documentacao da funcao ausente ou desatualizada'
+  endif
+  if l:kind ==# 'function_spec'
+    return 'especificacao da funcao desatualizada'
+  endif
+  if l:kind ==# 'unit_test_signature'
+    return 'teste desalinhado com a assinatura da funcao'
+  endif
+  if l:kind ==# 'class_doc'
+    return 'documentacao da classe ausente ou desatualizada'
+  endif
+  if l:kind ==# 'variable_doc'
+    return 'documentacao da variavel ausente ou desatualizada'
+  endif
+  if l:kind ==# 'flow_comment'
+    return 'comentario de fluxo ausente para trecho relevante'
+  endif
+  return a:fallback
+endfunction
+
 function! s:pingu_issue_hint_text(issue, ...) abort
   let l:extra_count = a:0 > 0 ? max([0, str2nr(string(a:1))]) : 0
   let l:parts = s:issue_parse_parts(get(a:issue, 'text', ''))
   let l:severity = empty(l:parts[0]) ? 'error' : l:parts[0]
-  let l:message = empty(l:parts[1]) ? get(a:issue, 'kind', 'issue') : l:parts[1]
-  let l:suggestion = l:parts[2]
+  let l:message = s:pingu_issue_hint_message(a:issue, empty(l:parts[1]) ? get(a:issue, 'kind', 'issue') : l:parts[1])
+  let l:suggestion = index(['function_doc', 'function_spec', 'unit_test_signature', 'class_doc', 'variable_doc', 'flow_comment'], get(a:issue, 'kind', '')) != -1 ? '' : l:parts[2]
   let l:prefix = trim('' . get(g:, 'pingu_issue_hints_prefix', ''))
   let l:action = s:issue_effective_action(a:issue)
   let l:fixable = !empty(get(a:issue, 'snippet', ''))
