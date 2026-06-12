@@ -348,7 +348,7 @@ test('runtime permite corrigir somente a issue da linha atual', () => {
 
 test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(pluginRuntime, /let g:pingu_issue_hover_hint = 1/);
-  assert.match(pluginRuntime, /let g:pingu_issue_hover_delay_ms = 30/);
+  assert.match(pluginRuntime, /let g:pingu_issue_hover_delay_ms = 5000/);
   assert.match(internalRuntime, /function! s:issue_covers_line\(issue, line\) abort/);
   assert.match(internalRuntime, /get\(a:issue, 'end_lnum', l:start\)/);
   assert.match(internalRuntime, /function! s:get_buffer_issue_at_cursor_exact\(\) abort/);
@@ -412,7 +412,8 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /if s:pingu_current_buffer_is_issue_hover_menu\(\)\n    return\n  endif\n  call s:close_pingu_issue_hover_menu\(\)/);
   assert.match(internalRuntime, /get\(g:, 'pingu_issue_hover_hint', 1\)/);
   assert.match(internalRuntime, /let s:pingu_cursor_hover_issue_signature = ''/);
-  assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 30\)/);
+  assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 5000\)/);
+  assert.match(internalRuntime, /CursorHold \* if has\('nvim'\) && exists\('\*nvim_get_mode'\) \| call s:schedule_pingu_issue_hover_menu\(\) \| endif/);
   assert.match(internalRuntime, /return max\(\[10, l:delay\]\)/);
 });
 

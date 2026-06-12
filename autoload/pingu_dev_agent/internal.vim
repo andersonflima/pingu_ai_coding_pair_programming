@@ -3687,7 +3687,7 @@ function! s:pingu_show_issue_hover_action_hint_if_current(bufnr) abort
 endfunction
 
 function! s:pingu_issue_hover_delay_ms() abort
-  let l:delay = get(g:, 'pingu_issue_hover_delay_ms', 30)
+  let l:delay = get(g:, 'pingu_issue_hover_delay_ms', 5000)
   if type(l:delay) != v:t_number
     let l:delay = str2nr(string(l:delay))
   endif
@@ -11276,7 +11276,7 @@ endif
 
 augroup pingu_issue_hover
   autocmd!
-  autocmd CursorHold * if has('nvim') && exists('*nvim_get_mode') | call s:pingu_show_issue_hover_action_hint() | endif
+  autocmd CursorHold * if has('nvim') && exists('*nvim_get_mode') | call s:schedule_pingu_issue_hover_menu() | endif
   autocmd CursorMoved * if has('nvim') | call s:schedule_pingu_issue_hover_menu() | endif
   autocmd InsertEnter,BufLeave * if has('nvim') | call s:close_pingu_issue_hover_menu() | endif
 augroup END
