@@ -176,6 +176,10 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
 
 test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue, \.\.\.\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_hover_float_width\(lines, max_default, min_default\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_hover_float_height\(lines, max_default\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_wrap_hover_text_line\(line, width\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_wrap_hover_lines\(lines, width\) abort/);
   assert.match(internalRuntime, /function! s:pingu_explain_issue_lines\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_explain_in_hover\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_context_at_cursor\(\) abort/);
@@ -385,6 +389,11 @@ test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(internalRuntime, /s:pingu_qf_items_for_current_buffer\(\)/);
   assert.match(internalRuntime, /nvim_open_win/);
   assert.match(internalRuntime, /nvim_open_win\(l:bufnr, v:false, \{/);
+  assert.match(internalRuntime, /let l:width = s:pingu_hover_float_width\(l:lines, 120, 48\)/);
+  assert.match(internalRuntime, /let l:lines = s:pingu_wrap_hover_lines\(l:lines, l:width\)/);
+  assert.match(internalRuntime, /let l:height = s:pingu_hover_float_height\(l:lines, 32\)/);
+  assert.match(internalRuntime, /nvim_win_set_option\(l:winid, 'wrap', v:true\)/);
+  assert.match(internalRuntime, /nvim_win_set_option\(l:winid, 'linebreak', v:true\)/);
   assert.match(internalRuntime, /'focusable': v:true,/);
   assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_menu', 1\)/);
   assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_focus_menu', l:focus_menu \? 1 : 0\)/);
