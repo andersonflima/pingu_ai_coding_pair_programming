@@ -184,6 +184,7 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_function_flow_signals\(lines\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_analysis_lines\(context\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_diff_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_problem_message\(issue, fallback\) abort/);
   assert.match(internalRuntime, /function! s:pingu_open_function_hover_menu\(context\) abort/);
   assert.match(internalRuntime, /index\(\['if', 'for', 'while', 'switch', 'catch', 'with', 'else', 'elseif'\], tolower\(l:name\)\) != -1/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_summary\(issue\) abort/);
@@ -205,6 +206,8 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.doesNotMatch(internalRuntime, /e  Explicar problema/);
   assert.doesNotMatch(internalRuntime, /:PinguIssueActions abre o modo interativo/);
   assert.match(internalRuntime, /Explicacao do problema/);
+  assert.match(internalRuntime, /A documentacao da funcao esta ausente ou desatualizada em relacao a assinatura atual/);
+  assert.doesNotMatch(internalRuntime, /Docstring Google adicionada com base no fechamento retornado/);
   assert.match(internalRuntime, /Funcao no cursor/);
   assert.match(internalRuntime, /Comportamento/);
   assert.match(internalRuntime, /Chamadas internas/);
