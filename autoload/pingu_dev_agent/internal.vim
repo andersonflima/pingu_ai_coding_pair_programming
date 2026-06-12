@@ -2239,9 +2239,7 @@ endfunction
 function! s:pingu_issue_hover_source_actions() abort
   return [
         \ ['a', s:script_call_rhs('pingu_issue_hover_action("apply")')],
-        \ ['d', s:script_call_rhs('pingu_issue_hover_action("preview")')],
         \ ['i', s:script_call_rhs('pingu_issue_hover_action("ai")')],
-        \ ['e', s:script_call_rhs('pingu_issue_hover_action("explain")')],
         \ ['t', s:script_call_rhs('pingu_issue_hover_action("test")')],
         \ ['u', s:script_call_rhs('pingu_issue_hover_action("undo")')],
         \ ['h', s:script_call_rhs('pingu_issue_hover_action("history")')],
@@ -2426,13 +2424,16 @@ function! s:pingu_apply_issue_with_ai(issue) abort
   let l:previous = get(g:, 'pingu_lsp_ai_fix_enabled', 0)
   let s:pingu_lsp_ai_fix_last_error = ''
   let g:pingu_lsp_ai_fix_enabled = 1
+  let l:ai_issue = s:pingu_issue_ai_fix_candidate(a:issue)
+  let l:ai_diff_lines = s:pingu_post_fix_diff_lines(l:ai_issue)
   try
-    let l:applied = s:apply_issue_snippet(s:pingu_issue_ai_fix_candidate(a:issue), v:false)
+    let l:applied = s:apply_issue_snippet(l:ai_issue, v:false)
   finally
     let g:pingu_lsp_ai_fix_enabled = l:previous
   endtry
   if l:applied
     echo '[Pingu] Correcao com IA aplicada na linha atual'
+    call s:pingu_show_post_fix_diff_lines(l:ai_diff_lines)
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
     call s:pingu_post_fix_check(fnamemodify(bufname('%'), ':p'))
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
@@ -2441,8 +2442,10 @@ function! s:pingu_apply_issue_with_ai(issue) abort
   endif
 
   let l:local_fix = s:pingu_lsp_local_fix_candidate(a:issue)
+  let l:local_diff_lines = empty(l:local_fix) ? [] : s:pingu_post_fix_diff_lines(l:local_fix)
   if !empty(l:local_fix) && s:apply_issue_snippet(l:local_fix, v:false)
     echo '[Pingu] Correcao local aplicada na linha atual'
+    call s:pingu_show_post_fix_diff_lines(l:local_diff_lines)
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
     call s:pingu_post_fix_check(fnamemodify(bufname('%'), ':p'))
     let l:analysis_mode = s:analysis_mode_for_request(v:false)
@@ -2464,16 +2467,6 @@ function! s:pingu_fix_current_issue_with_ai() abort
 endfunction
 
 function! s:pingu_issue_hover_action(action) abort
-  if a:action ==# 'explain'
-    call s:restore_pingu_issue_hover_source()
-    call s:clear_pingu_issue_hover_source_maps()
-    let l:issue = s:get_buffer_issue_at_cursor_exact()
-    if empty(l:issue)
-      let l:issue = s:pingu_issue_at_cursor_for_action()
-    endif
-    call s:pingu_explain_issue(l:issue)
-    return
-  endif
   call s:close_pingu_issue_hover_menu()
   call s:restore_pingu_issue_hover_source()
   let l:issue = s:get_buffer_issue_at_cursor_exact()
@@ -2516,16 +2509,8 @@ function! s:pingu_issue_hover_action_for_cursor() abort
     call s:pingu_issue_hover_action('apply')
     return
   endif
-  if l:text =~# '^d\s'
-    call s:pingu_issue_hover_action('preview')
-    return
-  endif
   if l:text =~# '^i\s'
     call s:pingu_issue_hover_action('ai')
-    return
-  endif
-  if l:text =~# '^e\s'
-    call s:pingu_issue_hover_action('explain')
     return
   endif
   if l:text =~# '^t\s'
@@ -2974,7 +2959,10 @@ function! s:pingu_issue_hover_update_suggestion(signature, suggestion) abort
   endif
   try
     call nvim_buf_set_option(l:bufnr, 'modifiable', v:true)
-    call nvim_buf_set_lines(l:bufnr, 5, 6, v:false, ['  ' . l:suggestion])
+    let l:line_index = index(getbufline(l:bufnr, 1, '$'), 'Sugestao')
+    if l:line_index >= 0
+      call nvim_buf_set_lines(l:bufnr, l:line_index + 1, l:line_index + 2, v:false, ['  ' . l:suggestion])
+    endif
     call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
   catch
     silent! call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
@@ -3186,6 +3174,68 @@ function! s:pingu_issue_hover_diff_lines(issue) abort
   return map(copy(l:diff[:7]), {_, line -> '  ' . line})
 endfunction
 
+function! s:pingu_issue_has_hover_diff(issue) abort
+  let l:diff = s:pingu_issue_hover_diff_lines(a:issue)
+  return !empty(l:diff) && index(l:diff, '  Sem diff local disponivel') == -1
+endfunction
+
+function! s:pingu_post_fix_diff_lines(issue) abort
+  let l:diff = s:pingu_issue_hover_diff_lines(a:issue)
+  if empty(l:diff) || index(l:diff, '  Sem diff local disponivel') != -1
+    return []
+  endif
+  return [
+        \ ' Pingu',
+        \ 'Correcao aplicada',
+        \ '',
+        \ 'Diff aplicado',
+        \ ] + l:diff + [
+        \ '',
+        \ 'u  Desfazer ultima correcao',
+        \ 'h  Historico de acoes',
+        \ 'q  Fechar',
+        \ ]
+endfunction
+
+function! s:pingu_show_post_fix_diff_lines(lines) abort
+  if empty(a:lines)
+    return
+  endif
+  if !has('nvim') || !exists('*nvim_create_buf') || !exists('*nvim_open_win')
+    echo join(a:lines, "\n")
+    return
+  endif
+  call s:define_pingu_lsp_ui_highlights()
+  let l:width = min([96, max([42] + map(copy(a:lines), {_, line -> strdisplaywidth(line)})) + 2])
+  let l:height = min([18, len(a:lines)])
+  let l:bufnr = nvim_create_buf(v:false, v:true)
+  call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, a:lines)
+  call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
+  call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
+  call nvim_buf_add_highlight(l:bufnr, -1, 'PinguLspFloatTitle', 0, 0, -1)
+  let l:winid = nvim_open_win(l:bufnr, v:false, {
+        \ 'relative': 'cursor',
+        \ 'row': 1,
+        \ 'col': 0,
+        \ 'width': l:width,
+        \ 'height': l:height,
+        \ 'style': 'minimal',
+        \ 'border': 'rounded',
+        \ 'focusable': v:false,
+        \ 'zindex': 60,
+        \ })
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'u', s:script_call_rhs('undo_last_pingu_fix(0)'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'h', s:script_call_rhs('pingu_action_history_open()'), {'noremap': v:true, 'silent': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'noremap': v:true, 'silent': v:true, 'nowait': v:true})
+  call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'noremap': v:true, 'silent': v:true, 'nowait': v:true})
+  let s:pingu_issue_hover_menu_bufnr = l:bufnr
+  let s:pingu_issue_hover_menu_winid = l:winid
+endfunction
+
+function! s:pingu_show_post_fix_diff(issue) abort
+  call s:pingu_show_post_fix_diff_lines(s:pingu_post_fix_diff_lines(a:issue))
+endfunction
+
 function! s:pingu_apply_preview_issue() abort
   let l:issue = deepcopy(get(s:, 'pingu_action_preview_issue', {}))
   let s:pingu_action_preview_issue = {}
@@ -3284,19 +3334,19 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
   endif
   let l:meta = empty(l:source) ? l:severity_label : l:severity_label . ' · ' . l:source
   let l:function_context = s:pingu_function_context_at_cursor()
-  let l:explain_lines = empty(l:function_context)
-        \ ? ['Explicacao', '  ' . l:message]
-        \ : s:pingu_function_analysis_lines(l:function_context)
-  let l:diff_lines = ['Diff padrao'] + s:pingu_issue_hover_diff_lines(a:issue)
+  let l:suggestion = s:pingu_issue_hover_action_summary(a:issue)
+  let l:explain_lines = ['Explicacao do problema', '  ' . l:message]
+  let l:function_lines = empty(l:function_context) ? [] : [''] + s:pingu_function_analysis_lines(l:function_context)
+  let l:diff_lines = s:pingu_issue_has_hover_diff(a:issue)
+        \ ? ['Diff disponivel'] + s:pingu_issue_hover_diff_lines(a:issue)
+        \ : []
   let l:action_lines = [
-        \ 'Acoes',
-        \ 'a  Aplicar resolucao assistida',
-        \ 'd  Preview diff da correcao',
-        \ 'i  Forcar correcao com IA',
-        \ 'e  Explicar problema',
-        \ 't  Rodar check/testes',
+        \ 'Acoes manuais',
+        \ 'a  Aplicar resolucao',
+        \ 'i  Corrigir com provider',
+        \ 't  Rodar checks',
         \ 'u  Desfazer ultima correcao',
-        \ 'h  Historico de acoes',
+        \ 'h  Abrir historico',
         \ 'p  Abrir painel',
         \ 'q  Fechar',
         \ ]
@@ -3306,11 +3356,16 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ '',
         \ 'Problema',
         \ '  ' . l:message,
+        \ '',
+        \ 'Sugestao',
+        \ '  ' . l:suggestion,
+        \ '',
         \ ] + l:explain_lines + [
         \ '',
-        \ ] + l:diff_lines + [
-        \ '',
-        \ ]
+        \ ] + l:function_lines
+  if !empty(l:diff_lines)
+    let l:detail_lines += [''] + l:diff_lines + ['']
+  endif
   if !l:focus_menu
     return l:detail_lines
   endif
@@ -3320,8 +3375,31 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ ] + l:action_lines + [
         \ '',
         \ ] + l:detail_lines[3:] + [
-        \ 'Enter/clique executa a action selecionada',
+        \ 'Enter/clique executa apenas actions manuais',
         \ ]
+endfunction
+
+function! s:pingu_highlight_issue_hover_buffer(bufnr) abort
+  if a:bufnr <= 0 || !bufloaded(a:bufnr) || !exists('*nvim_buf_add_highlight')
+    return
+  endif
+  call s:define_pingu_lsp_ui_highlights()
+  let l:lines = getbufline(a:bufnr, 1, '$')
+  let l:index = 0
+  for l:line in l:lines
+    if l:index == 0
+      call nvim_buf_add_highlight(a:bufnr, -1, 'PinguLspFloatTitle', l:index, 0, -1)
+    elseif l:line =~# '^\(Problema\|Sugestao\|Explicacao do problema\|Funcao no cursor\|Analise\|Trecho\|Diff disponivel\|Acoes manuais\)$'
+      call nvim_buf_add_highlight(a:bufnr, -1, 'PinguLspFloatKind', l:index, 0, -1)
+    elseif l:line =~# '^[aituhpq]\s'
+      call nvim_buf_add_highlight(a:bufnr, -1, 'PinguLspFloatIndex', l:index, 0, 1)
+    elseif l:line =~# '^  [+-] '
+      call nvim_buf_add_highlight(a:bufnr, -1, l:line =~# '^  +' ? 'DiffAdd' : 'DiffDelete', l:index, 0, -1)
+    elseif l:index == len(l:lines) - 1
+      call nvim_buf_add_highlight(a:bufnr, -1, 'PinguLspFloatFooter', l:index, 0, -1)
+    endif
+    let l:index += 1
+  endfor
 endfunction
 
 function! s:pingu_open_function_hover_menu(context) abort
@@ -3337,6 +3415,7 @@ function! s:pingu_open_function_hover_menu(context) abort
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
   call nvim_buf_set_option(l:bufnr, 'bufhidden', 'wipe')
+  call s:pingu_highlight_issue_hover_buffer(l:bufnr)
   call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
   let l:winid = nvim_open_win(l:bufnr, v:false, {
         \ 'relative': 'cursor',
@@ -3392,13 +3471,12 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
   call nvim_buf_set_option(l:bufnr, 'bufhidden', l:focus_menu ? 'hide' : 'wipe')
+  call s:pingu_highlight_issue_hover_buffer(l:bufnr)
   call setbufvar(l:bufnr, 'pingu_issue_hover_menu', 1)
   call setbufvar(l:bufnr, 'pingu_issue_hover_focus_menu', l:focus_menu ? 1 : 0)
   call setbufvar(l:bufnr, 'pingu_issue_hover_issue', deepcopy(a:issue))
   call nvim_buf_set_keymap(l:bufnr, 'n', 'a', s:script_call_rhs('pingu_issue_hover_action("apply")'), {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'd', s:script_call_rhs('pingu_issue_hover_action("preview")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'i', s:script_call_rhs('pingu_issue_hover_action("ai")'), {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'e', s:script_call_rhs('pingu_issue_hover_action("explain")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 't', s:script_call_rhs('pingu_issue_hover_action("test")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'u', s:script_call_rhs('pingu_issue_hover_action("undo")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'h', s:script_call_rhs('pingu_issue_hover_action("history")'), {'noremap': v:true, 'silent': v:true})
@@ -3430,7 +3508,7 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
       let s:pingu_issue_hover_keep_open = 0
     endif
   endif
-  if l:focus_menu && (!exists('*nvim_win_is_valid') || nvim_win_is_valid(l:winid))
+  if !exists('*nvim_win_is_valid') || nvim_win_is_valid(l:winid)
     call s:start_pingu_issue_hover_ai_suggestion(a:issue, l:signature)
   endif
 endfunction
@@ -10585,8 +10663,10 @@ function! s:pingu_fix_current_issue() abort
     return v:false
   endif
   let l:file = fnamemodify(get(l:issue, 'filename', empty(bufname('%')) ? '' : bufname('%')), ':p')
+  let l:post_fix_diff_lines = s:pingu_post_fix_diff_lines(l:issue)
   if s:apply_issue_snippet(l:issue, v:false)
     echo '[Pingu] Correcao aplicada na linha atual'
+    call s:pingu_show_post_fix_diff_lines(l:post_fix_diff_lines)
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
     call s:pingu_post_fix_check(l:file)
     let l:analysis_mode = s:analysis_mode_for_request(v:false)

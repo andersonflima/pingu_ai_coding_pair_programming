@@ -916,14 +916,14 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `let g:pingu_prompt_chat_history_max = 12` limita quantas trocas de mensagem por arquivo entram no histórico de :PinguPrompt
 - `let g:pingu_prompt_chat_entry_max_chars = 320` limita caracteres armazenados por entrada no histórico de prompt
 - `let g:pingu_fix_current_key = '<leader>pif'` aplica a correcao disponivel na linha atual
-- `let g:pingu_issue_hover_hint = 1` mostra um hover automatico informativo ao passar por uma linha com hint do Pingu; o popup passivo nao muda foco, nao lista actions e nao instala mappings de uma letra no buffer atual
+- `let g:pingu_issue_hover_hint = 1` mostra um hover automatico informativo ao passar por uma linha com hint do Pingu; o popup passivo nao muda foco, explica o problema, explica a funcao no cursor quando houver contexto, mostra diff somente quando existir diff local e nao instala mappings de uma letra no buffer atual
 - `let g:pingu_issue_hover_hint = 0` desliga esse hover passivo; use `<leader>pia` ou `:PinguIssueActions` para abrir o menu sob demanda
 - `let g:pingu_issue_hover_delay_ms = 30` controla o tempo para abrir o hover passivo automatico
 - `let g:pingu_stop_key = '<leader>pis'` interrompe jobs assincronos, daemon e timers ativos
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
 - `:PinguDoctor` mostra provider ativo, modelo, comando local, runtime, contexto do projeto, ultimo evento e checks do CLI
 - `:PinguProjectContext` abre o contexto do projeto; `:PinguProjectContext!` cria `.pingu/context.md` quando ainda nao existir
-- `<leader>pia`/`:PinguIssueActions` abre explicitamente o menu de acoes da issue na linha atual; `:PinguIssueApply`, `:PinguIssuePreview`, `:PinguIssueAI`, `:PinguIssueExplain`, `:PinguIssueCheck`, `:PinguIssueUndo`, `:PinguIssueHistory` e `:PinguIssuePanel` executam a mesma action diretamente
+- `<leader>pia`/`:PinguIssueActions` abre explicitamente o menu de acoes manuais da issue na linha atual; diff e explicacao ficam no hover automatico, enquanto aplicar, corrigir com provider, rodar checks, desfazer, historico e painel continuam no menu; `:PinguIssueApply`, `:PinguIssuePreview`, `:PinguIssueAI`, `:PinguIssueExplain`, `:PinguIssueCheck`, `:PinguIssueUndo`, `:PinguIssueHistory` e `:PinguIssuePanel` seguem disponiveis como comandos diretos
 - `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao da issue atual
 - `:PinguIssueQueue` mostra a fila de issues agrupada por severidade e origem, com `Enter` para navegar e `a` para abrir acoes
 - `:PinguActionHistory` mostra as acoes recentes da sessao e lembra `:PinguUndoFix`
@@ -961,7 +961,8 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguFixCurrent` aplica somente a sugestao encontrada na linha do cursor
 - `:PinguFixCurrentAI` pede uma correcao assistida para a sugestao da linha atual e aplica apenas uma edicao local retornada pelo provider configurado
 - `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao resolvida para a linha atual; no preview, use `a` ou `Enter` para aplicar
-- `<leader>pia`/`:PinguIssueActions` abre o menu flutuante da issue atual com actions no topo, diff/explicacao no corpo, atalhos de action no buffer de origem, preview, undo e historico
+- `<leader>pia`/`:PinguIssueActions` abre o menu flutuante da issue atual com actions manuais no topo; diff e explicacao aparecem automaticamente no hover, e o menu mantem aplicar, corrigir com provider, checks, undo, historico e painel
+- apos aplicar uma correcao manual, o Pingu exibe automaticamente um popup com o diff aplicado quando houver diff local disponivel
 - `:PinguIssueQueue` mostra uma fila flutuante das issues do arquivo atual agrupada por severidade e origem; `Enter` pula para a issue e `a` abre as acoes
 - `:PinguActionHistory` mostra as acoes recentes da sessao
 - apos correcoes manuais, `g:pingu_post_fix_check_command` permite rodar um check em background quando configurado
