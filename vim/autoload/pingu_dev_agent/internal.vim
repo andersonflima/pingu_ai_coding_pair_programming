@@ -3244,6 +3244,30 @@ function! s:pingu_issue_hover_diff_lines(issue) abort
   return map(copy(l:diff[:7]), {_, line -> '  ' . line})
 endfunction
 
+function! s:pingu_issue_hover_problem_message(issue, fallback) abort
+  let l:kind = trim('' . get(a:issue, 'kind', ''))
+  let l:fallback = substitute(trim('' . a:fallback), '\s\+', ' ', 'g')
+  if l:kind ==# 'function_doc'
+    return 'A documentacao da funcao esta ausente ou desatualizada em relacao a assinatura atual; o contrato publico precisa refletir parametros, retorno e comportamento.'
+  endif
+  if l:kind ==# 'function_spec'
+    return 'A especificacao da funcao nao acompanha a assinatura atual; tipos, aridade ou contrato precisam ser sincronizados.'
+  endif
+  if l:kind ==# 'unit_test_signature'
+    return 'Existe chamada de teste desalinhada com a assinatura atual da funcao; os argumentos usados no teste precisam ser atualizados.'
+  endif
+  if l:kind ==# 'class_doc'
+    return 'A documentacao da classe esta ausente ou desatualizada em relacao ao contrato atual.'
+  endif
+  if l:kind ==# 'variable_doc'
+    return 'A documentacao da variavel esta ausente ou nao descreve claramente o valor atual.'
+  endif
+  if l:kind ==# 'flow_comment'
+    return 'O fluxo atual precisa de explicacao tecnica para deixar a intencao da transformacao clara.'
+  endif
+  return empty(l:fallback) ? substitute(l:kind, '_', ' ', 'g') : l:fallback
+endfunction
+
 function! s:pingu_issue_has_hover_diff(issue) abort
   let l:diff = s:pingu_issue_hover_diff_lines(a:issue)
   return !empty(l:diff) && index(l:diff, '  Sem diff local disponivel') == -1
@@ -3398,7 +3422,7 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
   let l:severity = str2nr(string(get(a:issue, 'lsp_severity', 0)))
   let l:severity_label = l:severity > 0 ? s:lsp_severity_label(l:severity) : toupper(empty(l:parts[0]) ? 'INFO' : l:parts[0])
   let l:source = trim('' . get(a:issue, 'lsp_source', ''))
-  let l:message = substitute(l:message, '\s\+', ' ', 'g')
+  let l:message = s:pingu_issue_hover_problem_message(a:issue, l:message)
   if strlen(l:message) > 78
     let l:message = strpart(l:message, 0, 75) . '...'
   endif
