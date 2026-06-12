@@ -3657,7 +3657,7 @@ function! s:pingu_highlight_issue_hover_buffer(bufnr) abort
   for l:line in l:lines
     if l:index == 0
       call nvim_buf_add_highlight(a:bufnr, -1, 'PinguLspFloatTitle', l:index, 0, -1)
-    elseif l:line =~# '^\(Problema\|Sugestao\|Explicacao do problema\|Funcao no cursor\|Analise\|Trecho\|Diff disponivel\|Acoes manuais\)$'
+    elseif l:line =~# '^\(Problema\|Sugestao\|Explicacao do problema\|Funcao no cursor\|Assinatura\|Leitura tecnica\|Parametros inferidos\|Comportamento\|Fluxo detalhado\|Decisoes e guard clauses\|Chamadas internas\|Efeitos observaveis\|Retorno\|Analise\|Trecho\|Diff disponivel\|Acoes manuais\)$'
       call nvim_buf_add_highlight(a:bufnr, -1, 'PinguLspFloatKind', l:index, 0, -1)
     elseif l:line =~# '^[aituhpq]\s'
       call nvim_buf_add_highlight(a:bufnr, -1, 'PinguLspFloatIndex', l:index, 0, 1)
@@ -3670,6 +3670,61 @@ function! s:pingu_highlight_issue_hover_buffer(bufnr) abort
   endfor
 endfunction
 
+function! s:pingu_hover_float_width(lines, max_default, min_default) abort
+  let l:columns = exists('&columns') ? &columns : a:max_default
+  let l:max_width = min([a:max_default, max([a:min_default, l:columns - 4])])
+  let l:content_width = max([a:min_default] + map(copy(a:lines), {_, line -> strdisplaywidth(line)})) + 2
+  return min([l:max_width, l:content_width])
+endfunction
+
+function! s:pingu_hover_float_height(lines, max_default) abort
+  let l:screen_lines = exists('&lines') ? &lines : 40
+  let l:max_height = min([a:max_default, max([8, float2nr(l:screen_lines * 0.72)])])
+  return min([l:max_height, max([1, len(a:lines)])])
+endfunction
+
+function! s:pingu_wrap_hover_text_line(line, width) abort
+  let l:line = '' . a:line
+  let l:width = max([30, str2nr(string(a:width))])
+  if strdisplaywidth(l:line) <= l:width
+    return [l:line]
+  endif
+  if l:line =~# '^\s*$' || l:line =~# '^  [+-] ' || l:line =~# '^\s*\%(def\|function\|if\|elseif\|else\|for\|while\|return\|let\|const\|var\|call\)\>'
+    return [l:line]
+  endif
+
+  let l:indent = matchstr(l:line, '^\s*')
+  let l:continuation = l:indent . '  '
+  let l:available = max([24, l:width - strdisplaywidth(l:continuation)])
+  let l:words = split(trim(l:line), '\s\+')
+  let l:result = []
+  let l:current = ''
+  let l:current_indent = l:indent
+  for l:word in l:words
+    let l:candidate = empty(l:current) ? l:word : l:current . ' ' . l:word
+    if strdisplaywidth(l:candidate) > l:available && !empty(l:current)
+      call add(l:result, l:current_indent . l:current)
+      let l:current = l:word
+      let l:current_indent = l:continuation
+    else
+      let l:current = l:candidate
+    endif
+  endfor
+  if !empty(l:current)
+    call add(l:result, l:current_indent . l:current)
+  endif
+  return empty(l:result) ? [l:line] : l:result
+endfunction
+
+function! s:pingu_wrap_hover_lines(lines, width) abort
+  let l:wrapped = []
+  let l:limit = max([34, str2nr(string(a:width)) - 2])
+  for l:line in a:lines
+    call extend(l:wrapped, s:pingu_wrap_hover_text_line(l:line, l:limit))
+  endfor
+  return l:wrapped
+endfunction
+
 function! s:pingu_open_function_hover_menu(context) abort
   if !has('nvim') || !exists('*nvim_open_win') || !exists('*nvim_create_buf')
     echo join(s:pingu_function_analysis_lines(a:context), "\n")
@@ -3677,8 +3732,9 @@ function! s:pingu_open_function_hover_menu(context) abort
   endif
   call s:close_pingu_issue_hover_menu()
   let l:lines = [' Pingu', 'Explicacao de funcao', ''] + s:pingu_function_analysis_lines(a:context)
-  let l:width = min([96, max([42] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
-  let l:height = min([24, len(l:lines)])
+  let l:width = s:pingu_hover_float_width(l:lines, 120, 52)
+  let l:lines = s:pingu_wrap_hover_lines(l:lines, l:width)
+  let l:height = s:pingu_hover_float_height(l:lines, 32)
   let l:bufnr = nvim_create_buf(v:false, v:true)
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
@@ -3698,6 +3754,8 @@ function! s:pingu_open_function_hover_menu(context) abort
         \ })
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', ':close<CR>', {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<Esc>', ':close<CR>', {'noremap': v:true, 'silent': v:true})
+  silent! call nvim_win_set_option(l:winid, 'wrap', v:true)
+  silent! call nvim_win_set_option(l:winid, 'linebreak', v:true)
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = 'function|' . get(a:context, 'name', '') . '|' . get(a:context, 'start', 0) . '|' . get(a:context, 'end', 0)
@@ -3733,8 +3791,9 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
     call s:install_pingu_issue_hover_source_maps(bufnr('%'))
   endif
   let l:lines = s:pingu_issue_hover_menu_lines(a:issue, l:focus_menu)
-  let l:width = min([84, max([34] + map(copy(l:lines), {_, line -> strdisplaywidth(line)})) + 2])
-  let l:height = min([24, len(l:lines)])
+  let l:width = s:pingu_hover_float_width(l:lines, 120, 48)
+  let l:lines = s:pingu_wrap_hover_lines(l:lines, l:width)
+  let l:height = s:pingu_hover_float_height(l:lines, 32)
   let l:bufnr = nvim_create_buf(v:false, v:true)
   call nvim_buf_set_lines(l:bufnr, 0, -1, v:false, l:lines)
   call nvim_buf_set_option(l:bufnr, 'modifiable', v:false)
@@ -3769,6 +3828,8 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   let s:pingu_issue_hover_menu_bufnr = l:bufnr
   let s:pingu_issue_hover_menu_winid = l:winid
   let s:pingu_cursor_hover_issue_signature = l:signature
+  silent! call nvim_win_set_option(l:winid, 'wrap', v:true)
+  silent! call nvim_win_set_option(l:winid, 'linebreak', v:true)
   if l:focus_menu
     if exists('*timer_start')
       call timer_start(120, function('s:release_pingu_issue_hover_keep_open'))
