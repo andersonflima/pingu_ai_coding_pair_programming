@@ -52,6 +52,8 @@ let s:pingu_action_preview_issue = {}
 let s:pingu_issue_queue_state = {}
 let s:pingu_logs = []
 let s:pingu_lsp_ai_fix_last_error = ''
+let s:pingu_lsp_ai_fix_job = -1
+let s:pingu_lsp_ai_fix_context = {}
 let s:pingu_status = {
       \ 'running': v:false,
       \ 'phase': 'idle',
@@ -2427,11 +2429,17 @@ function! s:pingu_apply_issue_with_ai(issue) abort
   let l:ai_issue = s:pingu_issue_ai_fix_candidate(a:issue)
   let l:ai_diff_lines = s:pingu_post_fix_diff_lines(l:ai_issue)
   try
-    let l:applied = s:apply_issue_snippet(l:ai_issue, v:false)
+    let l:applied = s:start_async_lsp_ai_fix(l:ai_issue)
+    if !l:applied
+      let l:applied = s:apply_issue_snippet(l:ai_issue, v:false)
+    endif
   finally
     let g:pingu_lsp_ai_fix_enabled = l:previous
   endtry
   if l:applied
+    if get(s:, 'pingu_lsp_ai_fix_job', -1) > 0
+      return v:true
+    endif
     echo '[Pingu] Correcao com IA aplicada na linha atual'
     call s:pingu_show_post_fix_diff_lines(l:ai_diff_lines)
     call s:refresh_pingu_hints_after_issue_apply(bufnr('%'))
@@ -2990,6 +2998,39 @@ function! s:pingu_issue_hover_lsp_payload(issue) abort
         \ 'code': trim('' . get(a:issue, 'lsp_code', '')),
         \ }
   return {
+        \ 'argv': [l:runner, l:script, '--lsp-ai-fix'],
+        \ 'root': s:project_root(l:filename),
+        \ 'payload': json_encode({
+        \   'file': l:filename,
+        \   'lines': getbufline(l:target_buf, 1, '$'),
+        \   'diagnostic': l:diagnostic,
+        \ }),
+        \ }
+endfunction
+
+function! s:pingu_lsp_ai_fix_request(issue) abort
+  let l:filename = fnamemodify(get(a:issue, 'filename', ''), ':p')
+  let l:target_buf = s:issue_target_buffer(l:filename)
+  if l:target_buf <= 0 || !bufloaded(l:target_buf)
+    return {'ok': v:false, 'error': 'buffer alvo indisponivel'}
+  endif
+  let l:runner = s:pingu_dev_agent_script_runner()
+  let l:script = s:pingu_dev_agent_script_path()
+  if empty(l:runner) || empty(l:script)
+    return {'ok': v:false, 'error': 'runtime indisponivel para fallback assistido'}
+  endif
+  let l:diagnostic = {
+        \ 'line': max([1, str2nr(string(get(a:issue, 'lnum', 1)))]),
+        \ 'col': max([1, str2nr(string(get(a:issue, 'col', 1)))]),
+        \ 'severity': tolower(s:lsp_severity_label(str2nr(string(get(a:issue, 'lsp_severity', 2))))),
+        \ 'message': trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', ''))),
+        \ 'source': trim('' . get(a:issue, 'lsp_source', '')),
+        \ 'code': trim('' . get(a:issue, 'lsp_code', '')),
+        \ }
+  return {
+        \ 'ok': v:true,
+        \ 'filename': l:filename,
+        \ 'bufnr': l:target_buf,
         \ 'argv': [l:runner, l:script, '--lsp-ai-fix'],
         \ 'root': s:project_root(l:filename),
         \ 'payload': json_encode({
@@ -4788,10 +4829,187 @@ function! s:apply_issue_lsp_ai_fix_explicit(issue) abort
   let l:previous = get(g:, 'pingu_lsp_ai_fix_enabled', 0)
   let g:pingu_lsp_ai_fix_enabled = 1
   try
-    return s:apply_issue_lsp_ai_fix(s:pingu_issue_ai_fix_candidate(a:issue))
+    let l:ai_issue = s:pingu_issue_ai_fix_candidate(a:issue)
+    if s:start_async_lsp_ai_fix(l:ai_issue)
+      return v:true
+    endif
+    return s:apply_issue_lsp_ai_fix(l:ai_issue)
   finally
     let g:pingu_lsp_ai_fix_enabled = l:previous
   endtry
+endfunction
+
+function! s:stop_lsp_ai_fix_job() abort
+  let l:job = get(s:, 'pingu_lsp_ai_fix_job', -1)
+  let s:pingu_lsp_ai_fix_job = -1
+  let s:pingu_lsp_ai_fix_context = {}
+  if l:job > 0
+    silent! call jobstop(l:job)
+  endif
+endfunction
+
+function! s:lsp_ai_fix_on_stdout(job_id, data, event) abort
+  if a:job_id !=# get(s:, 'pingu_lsp_ai_fix_job', -1) || type(a:data) != v:t_list
+    return
+  endif
+  let s:pingu_lsp_ai_fix_context.stdout = get(s:pingu_lsp_ai_fix_context, 'stdout', []) + copy(a:data)
+endfunction
+
+function! s:lsp_ai_fix_on_stderr(job_id, data, event) abort
+  if a:job_id !=# get(s:, 'pingu_lsp_ai_fix_job', -1) || type(a:data) != v:t_list
+    return
+  endif
+  let s:pingu_lsp_ai_fix_context.stderr = get(s:pingu_lsp_ai_fix_context, 'stderr', []) + copy(a:data)
+endfunction
+
+function! s:normalize_lsp_ai_fix_response_issue(decoded, fallback_issue) abort
+  if type(a:decoded) != v:t_dict || !get(a:decoded, 'ok', v:false)
+    return {}
+  endif
+  let l:resolved = get(a:decoded, 'issue', {})
+  if type(l:resolved) != v:t_dict || empty(trim('' . get(l:resolved, 'snippet', '')))
+    return {}
+  endif
+  let l:filename = fnamemodify(get(a:fallback_issue, 'filename', ''), ':p')
+  let l:resolved.filename = get(l:resolved, 'filename', get(l:resolved, 'file', l:filename))
+  let l:resolved.lnum = max([1, str2nr(string(get(l:resolved, 'lnum', get(l:resolved, 'line', get(a:fallback_issue, 'lnum', 1)))))])
+  let l:resolved.col = max([1, str2nr(string(get(l:resolved, 'col', get(a:fallback_issue, 'col', 1))))])
+  let l:resolved.kind = get(l:resolved, 'kind', 'lsp_ai_fix')
+  if !has_key(l:resolved, 'action') || type(get(l:resolved, 'action', {})) != v:t_dict
+    let l:resolved.action = {'op': 'replace_line'}
+  endif
+  return l:resolved
+endfunction
+
+function! s:lsp_ai_fix_finish(context, stdout, stderr, exit_code) abort
+  let l:issue = get(a:context, 'issue', {})
+  let l:bufnr = get(a:context, 'bufnr', -1)
+  let l:filename = get(a:context, 'filename', '')
+  if l:bufnr <= 0 || !bufloaded(l:bufnr)
+    call s:pingu_lsp_ai_fix_fail('buffer alvo indisponivel', l:issue)
+    return
+  endif
+  if getbufvar(l:bufnr, 'changedtick', -1) !=# get(a:context, 'changedtick', -1)
+    call s:pingu_lsp_ai_fix_fail('buffer mudou durante a correcao assistida', l:issue)
+    echomsg '[Pingu] Correcao com provider descartada: buffer mudou durante o processamento'
+    return
+  endif
+
+  let l:stdout = filter(copy(a:stdout), {_, val -> type(val) == v:t_string && !empty(val)})
+  let l:stderr = filter(copy(a:stderr), {_, val -> type(val) == v:t_string && !empty(val)})
+  if a:exit_code != 0
+    let l:reason = empty(l:stdout + l:stderr) ? 'provider assistido falhou' : join(l:stdout + l:stderr, "\n")
+    call s:pingu_lsp_ai_fix_fail(l:reason, l:issue)
+    echomsg '[Pingu] Correcao com provider falhou: ' . l:reason
+    return
+  endif
+
+  let l:raw = join(l:stdout, "\n")
+  if empty(trim(l:raw))
+    call s:pingu_lsp_ai_fix_fail('provider assistido sem resposta', l:issue)
+    echomsg '[Pingu] Correcao com provider sem resposta'
+    return
+  endif
+
+  try
+    let l:decoded = json_decode(l:raw)
+  catch
+    call s:pingu_lsp_ai_fix_fail('resposta invalida do provider assistido', l:issue)
+    echomsg '[Pingu] Resposta invalida do provider assistido'
+    return
+  endtry
+
+  if type(l:decoded) != v:t_dict || !get(l:decoded, 'ok', v:false)
+    let l:reason = type(l:decoded) == v:t_dict ? get(l:decoded, 'reason', 'resposta sem ok') : 'resposta sem ok'
+    call s:pingu_lsp_ai_fix_fail('provider assistido nao aplicou: ' . l:reason, l:issue)
+    echomsg '[Pingu] Correcao com provider nao aplicada: ' . l:reason
+    return
+  endif
+
+  let l:resolved = s:normalize_lsp_ai_fix_response_issue(l:decoded, l:issue)
+  if empty(l:resolved)
+    call s:pingu_lsp_ai_fix_fail('provider assistido nao retornou snippet aplicavel', l:issue)
+    echomsg '[Pingu] Provider nao retornou snippet aplicavel'
+    return
+  endif
+
+  let l:diff_lines = s:pingu_post_fix_diff_lines(l:resolved)
+  if s:apply_issue_snippet(l:resolved, v:false)
+    let s:pingu_lsp_ai_fix_last_error = ''
+    echo '[Pingu] Correcao com provider aplicada na linha atual'
+    call s:pingu_show_post_fix_diff_lines(l:diff_lines)
+    call s:refresh_pingu_hints_after_issue_apply(l:bufnr)
+    call s:pingu_post_fix_check(l:filename)
+    let l:analysis_mode = s:analysis_mode_for_request(v:false)
+    call s:start_async_realtime_check_with_fallback(l:bufnr, g:pingu_open_qf, 0, l:analysis_mode, v:false)
+    return
+  endif
+
+  call s:pingu_lsp_ai_fix_fail('snippet assistido nao alterou o buffer', l:issue)
+  call s:restore_issue_cursor_and_hints(l:issue)
+  call s:refresh_pingu_hints_after_issue_apply(l:bufnr)
+  echomsg '[Pingu] Correcao com provider nao alterou o buffer'
+endfunction
+
+function! s:lsp_ai_fix_on_exit(job_id, code, event) abort
+  if a:job_id !=# get(s:, 'pingu_lsp_ai_fix_job', -1)
+    return
+  endif
+  let l:context = get(s:, 'pingu_lsp_ai_fix_context', {})
+  let s:pingu_lsp_ai_fix_job = -1
+  let s:pingu_lsp_ai_fix_context = {}
+  call s:lsp_ai_fix_finish(
+        \ l:context,
+        \ get(l:context, 'stdout', []),
+        \ get(l:context, 'stderr', []),
+        \ a:code,
+        \ )
+endfunction
+
+function! s:start_async_lsp_ai_fix(issue) abort
+  if !has('nvim') || !exists('*jobstart')
+    return v:false
+  endif
+  if !s:lsp_ai_fix_enabled()
+    call s:pingu_lsp_ai_fix_fail('fallback assistido desabilitado', a:issue)
+    return v:false
+  endif
+  let l:request = s:pingu_lsp_ai_fix_request(a:issue)
+  if !get(l:request, 'ok', v:false)
+    call s:pingu_lsp_ai_fix_fail(get(l:request, 'error', 'falha ao preparar fallback assistido'), a:issue)
+    return v:false
+  endif
+  call s:stop_lsp_ai_fix_job()
+  let l:command = s:project_command_argv(get(l:request, 'argv', []), get(l:request, 'root', ''))
+  let s:pingu_lsp_ai_fix_context = {
+        \ 'issue': deepcopy(a:issue),
+        \ 'bufnr': get(l:request, 'bufnr', -1),
+        \ 'filename': get(l:request, 'filename', ''),
+        \ 'changedtick': getbufvar(get(l:request, 'bufnr', -1), 'changedtick', -1),
+        \ 'stdout': [],
+        \ 'stderr': [],
+        \ }
+  let l:job = jobstart(l:command, {
+        \ 'stdout_buffered': v:true,
+        \ 'stderr_buffered': v:true,
+        \ 'on_stdout': function('s:lsp_ai_fix_on_stdout'),
+        \ 'on_stderr': function('s:lsp_ai_fix_on_stderr'),
+        \ 'on_exit': function('s:lsp_ai_fix_on_exit'),
+        \ })
+  if l:job <= 0
+    let s:pingu_lsp_ai_fix_context = {}
+    return v:false
+  endif
+  let s:pingu_lsp_ai_fix_job = l:job
+  try
+    call chansend(l:job, get(l:request, 'payload', '{}'))
+    call chanclose(l:job, 'stdin')
+  catch
+    call s:stop_lsp_ai_fix_job()
+    return v:false
+  endtry
+  echo '[Pingu] Correcao com provider em background...'
+  return v:true
 endfunction
 
 function! s:string_edit_distance(left, right) abort
@@ -4939,33 +5157,12 @@ function! s:apply_issue_lsp_ai_fix(issue) abort
     return s:pingu_lsp_ai_fix_fail('fallback assistido desabilitado', a:issue)
   endif
 
-  let l:filename = fnamemodify(get(a:issue, 'filename', ''), ':p')
-  let l:target_buf = s:issue_target_buffer(l:filename)
-  if l:target_buf <= 0 || !bufloaded(l:target_buf)
-    return s:pingu_lsp_ai_fix_fail('buffer alvo indisponivel', a:issue)
+  let l:request = s:pingu_lsp_ai_fix_request(a:issue)
+  if !get(l:request, 'ok', v:false)
+    return s:pingu_lsp_ai_fix_fail(get(l:request, 'error', 'falha ao preparar fallback assistido'), a:issue)
   endif
-
-  let l:runner = s:pingu_dev_agent_script_runner()
-  let l:script = s:pingu_dev_agent_script_path()
-  if empty(l:runner) || empty(l:script)
-    return s:pingu_lsp_ai_fix_fail('runtime indisponivel para fallback assistido', a:issue)
-  endif
-
-  let l:diagnostic = {
-        \ 'line': max([1, str2nr(string(get(a:issue, 'lnum', 1)))]),
-        \ 'col': max([1, str2nr(string(get(a:issue, 'col', 1)))]),
-        \ 'severity': tolower(s:lsp_severity_label(str2nr(string(get(a:issue, 'lsp_severity', 2))))),
-        \ 'message': trim('' . get(a:issue, 'lsp_message', get(a:issue, 'text', ''))),
-        \ 'source': trim('' . get(a:issue, 'lsp_source', '')),
-        \ 'code': trim('' . get(a:issue, 'lsp_code', '')),
-        \ }
-  let l:payload = {
-        \ 'file': l:filename,
-        \ 'lines': getbufline(l:target_buf, 1, '$'),
-        \ 'diagnostic': l:diagnostic,
-        \ }
-  let l:argv = [l:runner, l:script, '--lsp-ai-fix']
-  let l:output = s:run_systemlist(l:argv, s:project_root(l:filename), json_encode(l:payload))
+  let l:filename = get(l:request, 'filename', '')
+  let l:output = s:run_systemlist(get(l:request, 'argv', []), get(l:request, 'root', ''), get(l:request, 'payload', '{}'))
   if v:shell_error != 0
     return s:pingu_lsp_ai_fix_fail(empty(l:output) ? 'provider assistido falhou' : join(l:output, "\n"), a:issue)
   endif
@@ -4984,16 +5181,9 @@ function! s:apply_issue_lsp_ai_fix(issue) abort
     return s:pingu_lsp_ai_fix_fail('provider assistido nao aplicou: ' . get(l:decoded, 'reason', 'resposta sem ok'), a:issue)
   endif
 
-  let l:resolved = get(l:decoded, 'issue', {})
-  if type(l:resolved) != v:t_dict || empty(trim('' . get(l:resolved, 'snippet', '')))
+  let l:resolved = s:normalize_lsp_ai_fix_response_issue(l:decoded, a:issue)
+  if empty(l:resolved)
     return s:pingu_lsp_ai_fix_fail('provider assistido nao retornou snippet aplicavel', a:issue)
-  endif
-  let l:resolved.filename = get(l:resolved, 'filename', get(l:resolved, 'file', l:filename))
-  let l:resolved.lnum = max([1, str2nr(string(get(l:resolved, 'lnum', get(l:resolved, 'line', get(a:issue, 'lnum', 1)))))])
-  let l:resolved.col = max([1, str2nr(string(get(l:resolved, 'col', get(a:issue, 'col', 1))))])
-  let l:resolved.kind = get(l:resolved, 'kind', 'lsp_ai_fix')
-  if !has_key(l:resolved, 'action') || type(get(l:resolved, 'action', {})) != v:t_dict
-    let l:resolved.action = {'op': 'replace_line'}
   endif
 
   if s:apply_issue_snippet(l:resolved, v:false)

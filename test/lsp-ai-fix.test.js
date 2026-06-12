@@ -71,6 +71,46 @@ test('resolveLspDiagnosticFix usa provider e limita action a edicao local', () =
   assert.equal(calls[0].lspDiagnostic.source, 'pyright');
 });
 
+test('resolveLspDiagnosticFix reposiciona funcao Python indefinida no escopo local', () => {
+  const provider = {
+    hasOpenAiConfiguration: () => true,
+    resolveAiIssueFix: () => ({
+      snippet: [
+        'def use_item(item):',
+        '    return item',
+      ].join('\n'),
+      action: { op: 'insert_before', line: 1, indent: '' },
+    }),
+  };
+
+  const result = resolveLspDiagnosticFix({
+    file: '/tmp/example.py',
+    lines: [
+      'def helper(planta, fert):',
+      '    def interna():',
+      '        use_item(fert)',
+      '        plant(planta)',
+      '',
+      '    return interna',
+    ],
+    diagnostic: {
+      line: 3,
+      col: 9,
+      message: 'Undefined name use_item',
+      code: 'F821',
+      source: 'ruff',
+    },
+  }, { provider });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.issue.line, 2);
+  assert.deepEqual(result.issue.action, {
+    op: 'insert_before',
+    line: 2,
+    indent: '    ',
+  });
+});
+
 test('buildLspDiagnosticFixRequest orienta Pyright undefined variable a importar simbolo existente', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-lsp-ai-'));
   const helpersFile = path.join(root, 'inventory.py');
@@ -196,7 +236,7 @@ test('resolveLspDiagnosticFix cria stub minimo quando Ruff F821 nao tem candidat
   assert.equal(result.ok, true);
   assert.equal(result.issue.line, 1);
   assert.equal(result.issue.snippet, 'def plant(seed):\n    pass\n');
-  assert.deepEqual(result.issue.action, { op: 'insert_before', line: 1 });
+  assert.deepEqual(result.issue.action, { op: 'insert_before', line: 1, indent: '' });
 });
 
 test('resolveLspDiagnosticFix rejeita action ampla do provider', () => {

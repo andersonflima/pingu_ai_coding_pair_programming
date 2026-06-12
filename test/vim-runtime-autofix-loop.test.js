@@ -883,7 +883,10 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /call s:pingu_log_event\('error', 'fix-current-ai'/);
   assert.match(internalRuntime, /call s:restore_issue_cursor_and_hints\(l:issue\)/);
   assert.match(internalRuntime, /silent! call s:update_pingu_all_hints_current_buffer\(\)/);
-  assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix\(s:pingu_issue_ai_fix_candidate\(a:issue\)\)/);
+  assert.match(internalRuntime, /function! s:start_async_lsp_ai_fix\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:lsp_ai_fix_on_exit\(job_id, code, event\) abort/);
+  assert.match(internalRuntime, /let l:applied = s:start_async_lsp_ai_fix\(l:ai_issue\)/);
+  assert.match(internalRuntime, /Correcao com provider em background/);
   assert.match(internalRuntime, /function! s:pingu_lsp_issue_requires_ai_decision\(issue\) abort/);
   assert.match(internalRuntime, /reportundefined/);
   assert.match(internalRuntime, /let l:previous_changedticks = \{\}/);
