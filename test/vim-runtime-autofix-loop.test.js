@@ -480,6 +480,7 @@ test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {
   assert.match(internalRuntime, /function! s:pingu_preview_fix\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_queue_open\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_action_history_open\(\) abort/);
+  assert.match(internalRuntime, /call s:pingu_lsp_open_float\('Pingu Action History', s:pingu_action_history_lines\(\), \{'enter': v:true\}\)/);
   assert.match(internalRuntime, /function! s:pingu_explain_current\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_run_project_check\(\.\.\.\) abort/);
   assert.match(internalRuntime, /function! s:pingu_post_fix_check\(file\) abort/);
