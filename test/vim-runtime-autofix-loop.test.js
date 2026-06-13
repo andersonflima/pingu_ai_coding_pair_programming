@@ -183,6 +183,12 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /function! s:pingu_explain_issue_lines\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_explain_in_hover\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_context_at_cursor\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_from_start\(start\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_decl_context_at_line\(lnum\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_cursor_symbol\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_line_has_function_call\(line, symbol\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_for_symbol\(symbol, cursor_lnum\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_containing_cursor\(cursor_lnum\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_internal_calls\(lines\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_effects\(lines\) abort/);
   assert.match(internalRuntime, /function! s:pingu_function_flow_signals\(lines\) abort/);
@@ -218,6 +224,8 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Explicacao do problema/);
   assert.match(internalRuntime, /A documentacao da funcao esta ausente ou desatualizada em relacao a assinatura atual/);
   assert.match(internalRuntime, /documentacao da funcao ausente ou desatualizada/);
+  assert.match(internalRuntime, /let l:decl_context = s:pingu_function_decl_context_at_line\(l:cursor_lnum\)/);
+  assert.match(internalRuntime, /let l:symbol_context = s:pingu_function_context_for_symbol\(l:symbol, l:cursor_lnum\)/);
   assert.doesNotMatch(internalRuntime, /Docstring Google adicionada com base no fechamento retornado/);
   assert.doesNotMatch(internalRuntime, /Docstring adicionada em formato Google/);
   assert.match(internalRuntime, /Funcao no cursor/);
@@ -494,6 +502,70 @@ test('runtime nao rouba foco do arquivo durante check com hover de issue ligado'
   const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
   assert.equal(payload.currentFile, payload.sourceFile);
   assert.equal(payload.line, 1);
+});
+
+test('runtime resolve hover da funcao focada em declaracao e chamada aninhada', { skip: !commandExists('nvim') }, () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-vim-function-hover-'));
+  const sourceFile = path.join(tempDir, 'sample.py');
+  const scriptFile = path.join(tempDir, 'function-hover.vim');
+  const outputFile = path.join(tempDir, 'function-hover.json');
+  fs.writeFileSync(sourceFile, [
+    'def outer(value):',
+    '    def inner(item):',
+    '        return item + value',
+    '',
+    '    result = inner(value)',
+    '    return result',
+    '',
+  ].join('\n'), 'utf8');
+  fs.writeFileSync(scriptFile, [
+    'set nomore',
+    'let g:pingu_start_on_editor_enter = 0',
+    'let g:pingu_open_window_on_start = 0',
+    'let g:pingu_show_window = 0',
+    'let g:pingu_review_on_open = 0',
+    'let g:pingu_realtime_on_change = 0',
+    'let g:pingu_realtime_on_buffer_load = 0',
+    `execute 'set runtimepath^=' . fnameescape(${vimString(root)})`,
+    'runtime plugin/pingu_dev_agent.vim',
+    `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
+    "let g:pingu_test_functions = split(execute('function'), \"\\n\")",
+    "let g:pingu_test_context_fn = ''",
+    'for g:pingu_test_item in g:pingu_test_functions',
+    "  let g:pingu_test_match = matchstr(g:pingu_test_item, '<SNR>\\d\\+_pingu_function_context_at_cursor')",
+    '  if !empty(g:pingu_test_match)',
+    '    let g:pingu_test_context_fn = g:pingu_test_match',
+    '    break',
+    '  endif',
+    'endfor',
+    'if empty(g:pingu_test_context_fn)',
+    `  call writefile([json_encode({'error': 'missing context function'})], ${vimString(outputFile)})`,
+    '  qa!',
+    'endif',
+    'call cursor(2, 10)',
+    'let g:pingu_test_decl_context = call(g:pingu_test_context_fn, [])',
+    'call cursor(5, 15)',
+    'let g:pingu_test_call_context = call(g:pingu_test_context_fn, [])',
+    'call cursor(6, 10)',
+    'let g:pingu_test_outer_context = call(g:pingu_test_context_fn, [])',
+    `call writefile([json_encode({'decl': get(g:pingu_test_decl_context, 'name', ''), 'call': get(g:pingu_test_call_context, 'name', ''), 'outer': get(g:pingu_test_outer_context, 'name', ''), 'callStart': get(g:pingu_test_call_context, 'start', 0), 'callEnd': get(g:pingu_test_call_context, 'end', 0)})], ${vimString(outputFile)})`,
+    'qa!',
+    '',
+  ].join('\n'), 'utf8');
+
+  const result = spawnSync('nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-S', scriptFile], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 10000,
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+  assert.equal(payload.decl, 'inner');
+  assert.equal(payload.call, 'inner');
+  assert.equal(payload.outer, 'outer');
+  assert.equal(payload.callStart, 2);
+  assert.equal(payload.callEnd, 4);
 });
 
 test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {

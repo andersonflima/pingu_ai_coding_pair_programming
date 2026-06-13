@@ -2716,17 +2716,116 @@ function! s:pingu_find_function_end(start_lnum, base_indent) abort
   return min([l:last, l:start + 120])
 endfunction
 
+function! s:pingu_function_context_from_start(start) abort
+  if type(a:start) != v:t_dict || empty(a:start) || !has_key(a:start, 'start')
+    return {}
+  endif
+  let l:end = s:pingu_find_function_end(a:start.start, get(a:start, 'indent', 0))
+  let l:lines = getline(a:start.start, l:end)
+  return {'name': get(a:start, 'name', 'funcao'), 'start': a:start.start, 'end': l:end, 'lines': l:lines}
+endfunction
+
+function! s:pingu_function_decl_context_at_line(lnum) abort
+  let l:match = s:pingu_function_decl_match(getline(a:lnum))
+  if empty(l:match)
+    return {}
+  endif
+  let l:match.start = a:lnum
+  return s:pingu_function_context_from_start(l:match)
+endfunction
+
+function! s:pingu_cursor_symbol() abort
+  let l:line = getline('.')
+  let l:cursor_col = col('.') - 1
+  let l:offset = 0
+  while l:offset >= 0
+    let l:match = matchstrpos(l:line, '\v[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)?', l:offset)
+    if l:match[1] < 0
+      break
+    endif
+    if l:cursor_col >= l:match[1] && l:cursor_col < l:match[2]
+      return l:match[0]
+    endif
+    let l:offset = l:match[2]
+  endwhile
+  return expand('<cword>')
+endfunction
+
+function! s:pingu_line_has_function_call(line, symbol) abort
+  let l:symbol = '' . a:symbol
+  if empty(l:symbol)
+    return v:false
+  endif
+  return a:line =~# '\V' . escape(l:symbol, '\') . '\v\s*\('
+endfunction
+
+function! s:pingu_function_context_for_symbol(symbol, cursor_lnum) abort
+  let l:symbol = substitute('' . a:symbol, '^.*\.', '', '')
+  if empty(l:symbol) || index(['if', 'for', 'while', 'switch', 'catch', 'with', 'else', 'elseif', 'return'], tolower(l:symbol)) != -1
+    return {}
+  endif
+  let l:matches = []
+  for l:lnum in range(1, line('$'))
+    let l:match = s:pingu_function_decl_match(getline(l:lnum))
+    if empty(l:match) || get(l:match, 'name', '') !=# l:symbol
+      continue
+    endif
+    let l:match.start = l:lnum
+    let l:context = s:pingu_function_context_from_start(l:match)
+    if !empty(l:context)
+      call add(l:matches, l:context)
+    endif
+  endfor
+  if empty(l:matches)
+    return {}
+  endif
+  let l:containing = filter(copy(l:matches), {_, item -> a:cursor_lnum >= get(item, 'start', 0) && a:cursor_lnum <= get(item, 'end', 0)})
+  if !empty(l:containing)
+    call sort(l:containing, {left, right -> get(right, 'start', 0) - get(left, 'start', 0)})
+    return l:containing[0]
+  endif
+  let l:previous = filter(copy(l:matches), {_, item -> get(item, 'start', 0) <= a:cursor_lnum})
+  if !empty(l:previous)
+    call sort(l:previous, {left, right -> get(right, 'start', 0) - get(left, 'start', 0)})
+    return l:previous[0]
+  endif
+  call sort(l:matches, {left, right -> get(left, 'start', 0) - get(right, 'start', 0)})
+  return l:matches[0]
+endfunction
+
+function! s:pingu_function_context_containing_cursor(cursor_lnum) abort
+  let l:line = max([1, str2nr(string(a:cursor_lnum))])
+  let l:limit = max([1, l:line - 160])
+  while l:line >= l:limit
+    let l:start = s:pingu_find_function_start(l:line)
+    if empty(l:start)
+      return {}
+    endif
+    let l:context = s:pingu_function_context_from_start(l:start)
+    if !empty(l:context) && a:cursor_lnum >= get(l:context, 'start', 0) && a:cursor_lnum <= get(l:context, 'end', 0)
+      return l:context
+    endif
+    let l:line = get(l:start, 'start', l:line) - 1
+  endwhile
+  return {}
+endfunction
+
 function! s:pingu_function_context_at_cursor() abort
-  let l:start = s:pingu_find_function_start(line('.'))
-  if empty(l:start)
-    return {}
+  let l:cursor_lnum = line('.')
+  let l:decl_context = s:pingu_function_decl_context_at_line(l:cursor_lnum)
+  if !empty(l:decl_context)
+    return l:decl_context
   endif
-  let l:end = s:pingu_find_function_end(l:start.start, get(l:start, 'indent', 0))
-  if line('.') < l:start.start || line('.') > l:end
-    return {}
+
+  let l:symbol = s:pingu_cursor_symbol()
+  if s:pingu_line_has_function_call(getline(l:cursor_lnum), l:symbol)
+    let l:symbol_context = s:pingu_function_context_for_symbol(l:symbol, l:cursor_lnum)
+    if !empty(l:symbol_context)
+      return l:symbol_context
+    endif
   endif
-  let l:lines = getline(l:start.start, l:end)
-  return {'name': get(l:start, 'name', 'funcao'), 'start': l:start.start, 'end': l:end, 'lines': l:lines}
+
+  return s:pingu_function_context_containing_cursor(l:cursor_lnum)
 endfunction
 
 function! s:pingu_function_unique_values(values, limit) abort
