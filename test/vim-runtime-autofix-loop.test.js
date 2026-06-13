@@ -260,7 +260,8 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /Corrigir com provider/);
   assert.match(internalRuntime, /Desfazer ultima correcao/);
   assert.match(internalRuntime, /Abrir historico/);
-  assert.match(internalRuntime, /Abrir painel/);
+  assert.doesNotMatch(internalRuntime, /p  Abrir painel/);
+  assert.doesNotMatch(internalRuntime, /nvim_buf_set_keymap\(l:bufnr, 'n', 'p', s:script_call_rhs\('pingu_issue_hover_action\("panel"\)'\)/);
   assert.doesNotMatch(internalRuntime, /Pingu: ' \. l:message/);
   assert.doesNotMatch(internalRuntime, /lsp_code_action: %s/);
   assert.match(internalRuntime, /call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
