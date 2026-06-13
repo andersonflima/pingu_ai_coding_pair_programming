@@ -2245,7 +2245,6 @@ function! s:pingu_issue_hover_source_actions() abort
         \ ['t', s:script_call_rhs('pingu_issue_hover_action("test")')],
         \ ['u', s:script_call_rhs('pingu_issue_hover_action("undo")')],
         \ ['h', s:script_call_rhs('pingu_issue_hover_action("history")')],
-        \ ['p', s:script_call_rhs('pingu_issue_hover_action("panel")')],
         \ ['q', s:script_call_rhs('pingu_issue_hover_close_and_restore()')],
         \ ]
 endfunction
@@ -2531,10 +2530,6 @@ function! s:pingu_issue_hover_action_for_cursor() abort
   endif
   if l:text =~# '^h\s'
     call s:pingu_issue_hover_action('history')
-    return
-  endif
-  if l:text =~# '^p\s'
-    call s:pingu_issue_hover_action('panel')
     return
   endif
   if l:text =~# '^q\s'
@@ -3714,7 +3709,6 @@ function! s:pingu_issue_hover_menu_lines(issue, ...) abort
         \ 't  Rodar checks',
         \ 'u  Desfazer ultima correcao',
         \ 'h  Abrir historico',
-        \ 'p  Abrir painel',
         \ 'q  Fechar',
         \ ]
   let l:detail_lines = [
@@ -3906,7 +3900,6 @@ function! s:pingu_open_issue_hover_menu(issue, ...) abort
   call nvim_buf_set_keymap(l:bufnr, 'n', 't', s:script_call_rhs('pingu_issue_hover_action("test")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'u', s:script_call_rhs('pingu_issue_hover_action("undo")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'h', s:script_call_rhs('pingu_issue_hover_action("history")'), {'noremap': v:true, 'silent': v:true})
-  call nvim_buf_set_keymap(l:bufnr, 'n', 'p', s:script_call_rhs('pingu_issue_hover_action("panel")'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', 'q', s:script_call_rhs('pingu_issue_hover_close_and_restore()'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<CR>', s:script_call_rhs('pingu_issue_hover_action_for_cursor()'), {'noremap': v:true, 'silent': v:true})
   call nvim_buf_set_keymap(l:bufnr, 'n', '<LeftMouse>', '<LeftMouse>' . s:script_call_rhs('pingu_issue_hover_action_for_cursor()'), {'noremap': v:true, 'silent': v:true})

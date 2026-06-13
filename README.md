@@ -923,7 +923,7 @@ Plug 'andersonflima/pingu_ai_coding_pair_programming'
 - `:PinguHelp` mostra um resumo rapido dos atalhos, comandos e comentarios acionaveis do Pingu
 - `:PinguDoctor` mostra provider ativo, modelo, comando local, runtime, contexto do projeto, ultimo evento e checks do CLI
 - `:PinguProjectContext` abre o contexto do projeto; `:PinguProjectContext!` cria `.pingu/context.md` quando ainda nao existir
-- `<leader>pia`/`:PinguIssueActions` abre explicitamente o menu de acoes manuais da issue na linha atual; diff e explicacao ficam no hover automatico, enquanto aplicar, corrigir com provider, rodar checks, desfazer, historico e painel continuam no menu; `:PinguIssueApply`, `:PinguIssuePreview`, `:PinguIssueAI`, `:PinguIssueExplain`, `:PinguIssueCheck`, `:PinguIssueUndo`, `:PinguIssueHistory` e `:PinguIssuePanel` seguem disponiveis como comandos diretos
+- `<leader>pia`/`:PinguIssueActions` abre explicitamente o menu de acoes manuais da issue na linha atual; diff e explicacao ficam no hover automatico, enquanto aplicar, corrigir com provider, rodar checks, desfazer e historico continuam no menu; `:PinguIssueApply`, `:PinguIssuePreview`, `:PinguIssueAI`, `:PinguIssueExplain`, `:PinguIssueCheck`, `:PinguIssueUndo`, `:PinguIssueHistory` e `:PinguIssuePanel` seguem disponiveis como comandos diretos
 - `:PinguPreviewFix` mostra um diff flutuante antes de aplicar a correcao da issue atual
 - `:PinguIssueQueue` mostra a fila de issues agrupada por severidade e origem, com `Enter` para navegar e `a` para abrir acoes
 - `:PinguActionHistory` mostra as acoes recentes da sessao e lembra `:PinguUndoFix`
