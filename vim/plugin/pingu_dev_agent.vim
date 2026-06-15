@@ -369,52 +369,6 @@ if !exists('g:pingu_action_menu_key')
   let g:pingu_action_menu_key = '<leader>pia'
 endif
 
-if !exists('g:pingu_prompt_key')
-  " Atalho para prompt manual assistido no cursor ou selecao visual.
-  let g:pingu_prompt_key = '<leader>pip'
-endif
-
-if !exists('g:pingu_prompt_terminal_command')
-  " Comando interativo aberto por :PinguPrompt sem argumento.
-  let g:pingu_prompt_terminal_command = empty($PINGU_PROMPT_TERMINAL_COMMAND) ? '' : $PINGU_PROMPT_TERMINAL_COMMAND
-endif
-
-if !exists('g:pingu_model_key')
-  " Atalho para escolher o provider assistido da sessao.
-  let g:pingu_model_key = '<leader>pim'
-endif
-
-if !exists('g:pingu_model_key_alias')
-  " Alias opcional para o seletor de provider; vazio evita duplicar grupos no which-key.
-  let g:pingu_model_key_alias = ''
-endif
-
-if !exists('g:pingu_ai_provider')
-  " Provider assistido da sessao: copilot, codex, claude, openai ou auto.
-  let g:pingu_ai_provider = empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER
-endif
-
-if !exists('g:pingu_ai_model')
-  " Modelo assistido da sessao; vazio preserva o padrao do provider.
-  let g:pingu_ai_model = empty($PINGU_AI_MODEL) ? '' : $PINGU_AI_MODEL
-endif
-
-if !exists('g:pingu_codex_models')
-  let g:pingu_codex_models = ['gpt-5', 'gpt-5-codex', 'o3', 'o4-mini']
-endif
-
-if !exists('g:pingu_openai_models')
-  let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']
-endif
-
-if !exists('g:pingu_claude_models')
-  let g:pingu_claude_models = ['sonnet', 'opus']
-endif
-
-if !exists('g:pingu_copilot_models')
-  let g:pingu_copilot_models = []
-endif
-
 if !exists('g:pingu_prompt_context_radius')
   " Linhas de contexto em volta do cursor/selecao enviadas ao provider no prompt manual.
   let g:pingu_prompt_context_radius = 80
