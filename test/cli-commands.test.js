@@ -11,10 +11,7 @@ const cliPath = path.join(__dirname, '..', 'pingu_dev_agent.js');
 const cliEnv = {
   ...process.env,
   PINGU_AI_MODE: 'off',
-  PINGU_CODEX_DISABLED: '1',
-  PINGU_CLAUDE_DISABLED: '1',
   PINGU_COPILOT_DISABLED: '1',
-  PINGU_OPENAI_DISABLED: '1',
 };
 
 function runCli(args, input = '') {

@@ -42,7 +42,7 @@
     "smoke:vim": "node scripts/smoke-vim-runtime.js",
     "sync:vim-runtime": "node scripts/sync-vim-runtime.js --write",
     "lint": "node scripts/check-syntax.js",
-    "test": "PINGU_CODEX_DISABLED=1 PINGU_CLAUDE_DISABLED=1 PINGU_COPILOT_DISABLED=1 PINGU_OPENAI_DISABLED=1 node --test test/*.js test/**/*.js"
+    "test": "PINGU_COPILOT_DISABLED=1 node --test test/*.js test/**/*.js"
   },
   "files": [
     "CHANGELOG.md",
