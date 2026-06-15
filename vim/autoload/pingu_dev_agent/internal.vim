@@ -35,9 +35,6 @@ let s:pingu_dev_agent_async_analysis_context = {}
 let s:pingu_prompt_job = -1
 let s:pingu_prompt_context = {}
 let s:pingu_prompt_chat_sessions = {}
-let s:pingu_prompt_terminal_winid = -1
-let s:pingu_prompt_terminal_bufnr = -1
-let s:pingu_diagnostic_hints_refresh_timers = []
 let s:pingu_dev_agent_daemon_job = -1
 let s:pingu_dev_agent_daemon_request_seq = 0
 let s:pingu_dev_agent_daemon_pending = {}
@@ -148,146 +145,7 @@ function! s:shell_escape_list(argv) abort
   return join(map(copy(a:argv), {_, val -> shellescape('' . val)}), ' ')
 endfunction
 
-function! s:pingu_normalize_ai_provider(value) abort
-  let l:value = tolower(trim('' . a:value))
-  if index(s:pingu_supported_ai_provider_ids(), l:value) != -1
-    if l:value ==# 'anthropic'
-      return 'claude'
-    endif
-    return l:value
-  endif
-  return 'codex'
-endfunction
-
-function! s:pingu_supported_ai_provider_ids() abort
-  return ['copilot', 'openai', 'codex', 'claude', 'auto']
-endfunction
-
-function! s:pingu_supported_ai_provider_overview() abort
-  return s:pingu_supported_ai_provider_ids()
-endfunction
-
-function! s:pingu_ai_provider_env_value() abort
-  let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
-  return l:provider
-endfunction
-
-function! s:pingu_ai_provider_label(value) abort
-  let l:provider = s:pingu_normalize_ai_provider(a:value)
-  if l:provider ==# 'codex'
-    return 'Codex'
-  endif
-  if l:provider ==# 'openai'
-    return 'OpenAI'
-  endif
-  if l:provider ==# 'claude'
-    return 'Claude'
-  endif
-  if l:provider ==# 'auto'
-    return 'Auto'
-  endif
-  return 'Copilot'
-endfunction
-
-function! s:pingu_ai_model_env_key(provider) abort
-  let l:provider = s:pingu_normalize_ai_provider(a:provider)
-  if l:provider ==# 'openai'
-    return 'PINGU_OPENAI_MODEL'
-  endif
-  if l:provider ==# 'copilot'
-    return 'PINGU_COPILOT_MODEL'
-  endif
-  if l:provider ==# 'claude'
-    return 'PINGU_CLAUDE_MODEL'
-  endif
-  return 'PINGU_CODEX_MODEL'
-endfunction
-
-function! s:pingu_current_ai_model(provider) abort
-  let l:model = trim('' . get(g:, 'pingu_ai_model', ''))
-  if !empty(l:model)
-    return l:model
-  endif
-
-  let l:provider = s:pingu_normalize_ai_provider(a:provider)
-  if l:provider ==# 'openai'
-    return empty($PINGU_OPENAI_MODEL) ? $OPENAI_MODEL : $PINGU_OPENAI_MODEL
-  endif
-  if l:provider ==# 'copilot'
-    return $PINGU_COPILOT_MODEL
-  endif
-  if l:provider ==# 'claude'
-    return empty($PINGU_CLAUDE_MODEL) ? $PINGU_ANTHROPIC_MODEL : $PINGU_CLAUDE_MODEL
-  endif
-  return empty($PINGU_CODEX_MODEL) ? $PINGU_AI_MODEL : $PINGU_CODEX_MODEL
-endfunction
-
-function! s:pingu_provider_model_list(provider) abort
-  let l:provider = s:pingu_normalize_ai_provider(a:provider)
-  if l:provider ==# 'openai'
-    let l:models = get(g:, 'pingu_openai_models', [])
-  elseif l:provider ==# 'copilot'
-    let l:models = get(g:, 'pingu_copilot_models', [])
-  elseif l:provider ==# 'claude'
-    let l:models = get(g:, 'pingu_claude_models', [])
-  else
-    let l:models = get(g:, 'pingu_codex_models', [])
-  endif
-  return type(l:models) == v:t_list ? copy(l:models) : []
-endfunction
-
-function! s:pingu_apply_ai_provider_env() abort
-  let l:provider = s:pingu_ai_provider_env_value()
-  let $PINGU_AI_PROVIDER = l:provider
-  let l:model = s:pingu_current_ai_model(l:provider)
-  let $PINGU_AI_MODEL = l:model
-  if l:provider ==# 'openai'
-    let $PINGU_OPENAI_MODEL = l:model
-    let $OPENAI_MODEL = l:model
-  elseif l:provider ==# 'copilot'
-    let $PINGU_COPILOT_MODEL = l:model
-  elseif l:provider ==# 'codex'
-    let $PINGU_CODEX_MODEL = l:model
-  elseif l:provider ==# 'claude'
-    let $PINGU_CLAUDE_MODEL = l:model
-    let $PINGU_ANTHROPIC_MODEL = l:model
-  endif
-  return l:provider
-endfunction
-
-function! s:pingu_provider_command(provider) abort
-  let l:provider = s:pingu_normalize_ai_provider(a:provider)
-  if l:provider ==# 'codex' || l:provider ==# 'auto'
-    return empty($PINGU_CODEX_COMMAND) ? 'codex' : $PINGU_CODEX_COMMAND
-  endif
-  if l:provider ==# 'claude'
-    return empty($PINGU_CLAUDE_COMMAND) ? (empty($PINGU_ANTHROPIC_COMMAND) ? 'claude' : $PINGU_ANTHROPIC_COMMAND) : $PINGU_CLAUDE_COMMAND
-  endif
-  if l:provider ==# 'copilot'
-    return empty($PINGU_COPILOT_COMMAND) ? 'copilot' : $PINGU_COPILOT_COMMAND
-  endif
-  if l:provider ==# 'openai'
-    return empty($OPENAI_API_KEY) ? '' : 'OPENAI_API_KEY'
-  endif
-  return ''
-endfunction
-
-function! s:pingu_provider_status_line(provider) abort
-  let l:provider = s:pingu_normalize_ai_provider(a:provider)
-  let l:command = s:pingu_provider_command(l:provider)
-  if l:provider ==# 'openai'
-    let l:state = empty($OPENAI_API_KEY) ? 'indisponivel: OPENAI_API_KEY ausente' : 'configurado'
-    return printf('%s · %s', s:pingu_ai_provider_label(l:provider), l:state)
-  endif
-  if empty(l:command)
-    return printf('%s · comando ausente', s:pingu_ai_provider_label(l:provider))
-  endif
-  let l:state = executable(l:command) ? 'comando encontrado' : 'comando nao encontrado'
-  return printf('%s · %s · %s', s:pingu_ai_provider_label(l:provider), l:command, l:state)
-endfunction
-
 function! s:project_command_argv(argv, cwd) abort
-  call s:pingu_apply_ai_provider_env()
   let l:inner = s:shell_escape_list(a:argv)
   if !empty(a:cwd)
     let l:inner = 'cd ' . shellescape(a:cwd) . ' && ' . l:inner
@@ -748,8 +606,6 @@ endfunction
 function! s:pingu_doctor_lines() abort
   let l:file = empty(bufname('%')) ? getcwd() : fnamemodify(bufname('%'), ':p')
   let l:root = s:project_root(l:file)
-  let l:provider = s:pingu_ai_provider_env_value()
-  let l:model = s:pingu_current_ai_model(l:provider)
   let l:doctor = s:pingu_cli_json(['doctor'], l:root)
   let l:lines = [
         \ 'Pingu Doctor',
@@ -759,11 +615,6 @@ function! s:pingu_doctor_lines() abort
         \ '  root: ' . l:root,
         \ '  runtime: ' . (empty(s:pingu_dev_agent_script_path()) ? 'nao encontrado' : s:pingu_dev_agent_script_path()),
         \ '  node: ' . (empty(s:pingu_dev_agent_script_runner()) ? 'nao encontrado' : s:pingu_dev_agent_script_runner()),
-        \ '',
-        \ 'Provider',
-        \ '  ativo: ' . s:pingu_ai_provider_label(l:provider) . ' (' . l:provider . ')',
-        \ '  modelo: ' . (empty(l:model) ? 'padrao do provider' : l:model),
-        \ '  status: ' . s:pingu_provider_status_line(l:provider),
         \ ]
   if !empty(l:doctor)
     let l:checks = get(l:doctor, 'checks', [])
@@ -804,7 +655,6 @@ function! s:pingu_doctor_lines() abort
   endif
   call add(l:lines, '')
   call add(l:lines, 'Acoes')
-  call add(l:lines, '  :PinguModel          trocar provider assistido')
   call add(l:lines, '  :PinguProjectContext criar/abrir contexto do projeto')
   call add(l:lines, '  :PinguLogs           ver logs da sessao')
   return l:lines
@@ -10252,275 +10102,6 @@ function! s:start_async_pingu_prompt(argv, root, payload, context) abort
   return v:true
 endfunction
 
-function! s:pingu_prompt_terminal_command() abort
-  let l:command = trim('' . get(g:, 'pingu_prompt_terminal_command', ''))
-  if !empty(l:command)
-    return l:command
-  endif
-
-  if !empty($PINGU_PROMPT_TERMINAL_COMMAND)
-    return $PINGU_PROMPT_TERMINAL_COMMAND
-  endif
-
-  let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
-  if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'
-    return ''
-  endif
-
-  if l:provider ==# 'claude'
-    let l:claude_command = trim('' . get(g:, 'pingu_claude_command', ''))
-    if !empty(l:claude_command)
-      return l:claude_command
-    endif
-    return empty($PINGU_CLAUDE_COMMAND) ? 'claude' : $PINGU_CLAUDE_COMMAND
-  endif
-
-  let l:codex_command = trim('' . get(g:, 'pingu_codex_command', ''))
-  if !empty(l:codex_command)
-    return l:codex_command
-  endif
-
-  return empty($PINGU_CODEX_COMMAND) ? 'codex' : $PINGU_CODEX_COMMAND
-endfunction
-
-function! s:pingu_prompt_terminal_model_args(command) abort
-  let l:command_name = fnamemodify(a:command, ':t')
-  if l:command_name !=# 'codex' && l:command_name !=# 'claude'
-    return []
-  endif
-
-  let l:model = trim('' . get(g:, 'pingu_ai_model', ''))
-  if empty(l:model) && l:command_name ==# 'codex'
-    let l:model = trim('' . $PINGU_CODEX_MODEL)
-  endif
-  if empty(l:model) && l:command_name ==# 'claude'
-    let l:model = trim('' . $PINGU_CLAUDE_MODEL)
-  endif
-  if empty(l:model)
-    return []
-  endif
-
-  return l:command_name ==# 'claude' ? ['--model', l:model] : ['-m', l:model]
-endfunction
-
-function! s:pingu_prompt_terminal_shell_command(argv) abort
-  return join(map(copy(a:argv), {_, item -> shellescape(item)}), ' ')
-endfunction
-
-function! s:pingu_prompt_terminal_close() abort
-  let l:winid = str2nr(string(get(s:, 'pingu_prompt_terminal_winid', -1)))
-  if l:winid > 0 && exists('*nvim_win_is_valid') && nvim_win_is_valid(l:winid)
-    silent! call nvim_win_close(l:winid, v:true)
-  endif
-  let l:bufnr = str2nr(string(get(s:, 'pingu_prompt_terminal_bufnr', -1)))
-  if l:bufnr > 0 && bufexists(l:bufnr)
-    silent! execute 'bwipeout! ' . l:bufnr
-  endif
-  let s:pingu_prompt_terminal_winid = -1
-  let s:pingu_prompt_terminal_bufnr = -1
-endfunction
-
-function! s:pingu_prompt_terminal_remember() abort
-  if has('nvim') && exists('*nvim_get_current_win')
-    let s:pingu_prompt_terminal_winid = nvim_get_current_win()
-  else
-    let s:pingu_prompt_terminal_winid = win_getid()
-  endif
-  let s:pingu_prompt_terminal_bufnr = bufnr('%')
-  call setbufvar(s:pingu_prompt_terminal_bufnr, 'pingu_prompt_terminal', 1)
-endfunction
-
-function! s:pingu_prompt_terminal_map_close(bufnr) abort
-  if a:bufnr <= 0 || !bufexists(a:bufnr)
-    return
-  endif
-  let l:rhs = s:script_call_rhs('pingu_prompt_terminal_close()')
-  if has('nvim') && exists('*nvim_buf_set_keymap')
-    call nvim_buf_set_keymap(a:bufnr, 'n', 'q', l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-    call nvim_buf_set_keymap(a:bufnr, 'n', '<Esc>', l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-    call nvim_buf_set_keymap(a:bufnr, 't', '<C-q>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-    call nvim_buf_set_keymap(a:bufnr, 't', '<C-c>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-    call nvim_buf_set_keymap(a:bufnr, 't', '<Esc>', '<C-\\><C-n>' . l:rhs, {'nowait': v:true, 'noremap': v:true, 'silent': v:true})
-  endif
-endfunction
-
-function! s:pingu_prompt_terminal_session_lines(file, root, line1, line2, range_count) abort
-  let l:provider = s:pingu_ai_provider_env_value()
-  let l:lines = [
-        \ 'Pingu Prompt Session',
-        \ '====================',
-        \ '',
-        \ 'Provider',
-        \ '  ' . s:pingu_ai_provider_label(l:provider),
-        \ '',
-        \ 'Contexto primario',
-        \ '  arquivo: ' . fnamemodify(a:file, ':~:.'),
-        \ '  root: ' . fnamemodify(a:root, ':~:.'),
-        \ ]
-  if a:range_count > 0
-    call add(l:lines, '  range: ' . a:line1 . '-' . a:line2)
-  else
-    call add(l:lines, '  linha: ' . line('.'))
-  endif
-  call add(l:lines, '')
-  call add(l:lines, 'Uso')
-  call add(l:lines, '  :PinguPrompt <texto> envia o prompt ao provider ativo em background.')
-  call add(l:lines, '  O Pingu envia primeiro o buffer aberto e o range/cursor atual como contexto.')
-  call add(l:lines, '  Se o texto citar outro arquivo, o provider recebe tambem a raiz do projeto.')
-  call add(l:lines, '  :PinguPromptClear limpa o historico deste arquivo.')
-  call add(l:lines, '  :PinguPromptClose, q no modo normal, Esc, Ctrl-C ou Ctrl-Q fecham esta sessao.')
-  call add(l:lines, '')
-  call add(l:lines, 'Historico recente')
-  let l:history = s:pingu_prompt_history_for_file(a:file)
-  if empty(l:history)
-    call add(l:lines, '  sem solicitacoes registradas neste arquivo')
-  else
-    for l:entry in l:history
-      call add(l:lines, '  ' . get(l:entry, 'role', 'user') . ': ' . get(l:entry, 'text', ''))
-    endfor
-  endif
-  call add(l:lines, '')
-  call add(l:lines, 'Este terminal fica aberto para acompanhar o historico e executar comandos manuais.')
-  return l:lines
-endfunction
-
-function! s:pingu_prompt_terminal_session_argv(file, root, line1, line2, range_count) abort
-  let l:session_file = tempname()
-  call writefile(s:pingu_prompt_terminal_session_lines(a:file, a:root, a:line1, a:line2, a:range_count), l:session_file)
-  let l:script = 'cat ' . shellescape(l:session_file)
-        \ . '; rm -f ' . shellescape(l:session_file)
-        \ . '; printf "\n"; exec "${SHELL:-sh}"'
-  return [s:sh_binary(), '-lc', l:script]
-endfunction
-
-function! s:open_pingu_prompt_terminal_float(argv, cwd) abort
-  if !has('nvim') || !exists('*nvim_create_buf') || !exists('*nvim_open_win') || !exists('*termopen')
-    return v:false
-  endif
-
-  let l:screen_lines = &lines > 0 ? &lines : 24
-  let l:columns = &columns > 0 ? &columns : 80
-  let l:width = min([max([72, float2nr(l:columns * 0.88)]), max([40, l:columns - 4])])
-  let l:height = min([max([14, float2nr(l:screen_lines * 0.72)]), max([8, l:screen_lines - 4])])
-  let l:bufnr = nvim_create_buf(v:false, v:true)
-  call setbufvar(l:bufnr, '&bufhidden', 'wipe')
-  call setbufvar(l:bufnr, '&swapfile', 0)
-  call nvim_open_win(l:bufnr, v:true, {
-        \ 'relative': 'editor',
-        \ 'row': max([1, float2nr((l:screen_lines - l:height) / 2) - 1]),
-        \ 'col': max([0, float2nr((l:columns - l:width) / 2)]),
-        \ 'width': l:width,
-        \ 'height': l:height,
-        \ 'style': 'minimal',
-        \ 'border': 'rounded',
-        \ })
-  call termopen(a:argv, {'cwd': a:cwd})
-  call s:pingu_prompt_terminal_remember()
-  call s:pingu_prompt_terminal_map_close(l:bufnr)
-  startinsert
-  return v:true
-endfunction
-
-function! s:open_pingu_prompt_terminal_native(argv, cwd) abort
-  let l:height = s:issue_terminal_height()
-  let l:return_winid = win_getid()
-  call s:remember_code_window(l:return_winid)
-
-  if has('nvim')
-    execute 'botright ' . l:height . 'split'
-    enew
-    call termopen(a:argv, {'cwd': a:cwd})
-    call s:pingu_prompt_terminal_remember()
-    call s:pingu_prompt_terminal_map_close(bufnr('%'))
-    startinsert
-    return v:true
-  endif
-
-  if exists('*term_start')
-    execute 'botright ' . l:height . 'split'
-    call term_start(a:argv, {'cwd': a:cwd, 'curwin': 1})
-    call s:pingu_prompt_terminal_remember()
-    call s:pingu_prompt_terminal_map_close(bufnr('%'))
-    return v:true
-  endif
-
-  return v:false
-endfunction
-
-function! s:open_pingu_prompt_terminal_toggleterm(argv, cwd) abort
-  let l:payload = {
-        \ 'cmd': s:pingu_prompt_terminal_shell_command(a:argv),
-        \ 'cwd': a:cwd,
-        \ 'height': s:issue_terminal_height(),
-        \ }
-  let l:opened = luaeval(
-        \ '(function(payload)'
-        \ . ' local ok, terminal_module = pcall(require, "toggleterm.terminal")'
-        \ . ' if not ok or not terminal_module or not terminal_module.Terminal then return false end'
-        \ . ' local term = terminal_module.Terminal:new({'
-        \ . '   cmd = payload.cmd,'
-        \ . '   dir = payload.cwd ~= "" and payload.cwd or nil,'
-        \ . '   hidden = false,'
-        \ . '   close_on_exit = false,'
-        \ . '   direction = "float",'
-        \ . '   size = payload.height,'
-        \ . '   on_open = function(_) vim.defer_fn(function() pcall(vim.cmd, "startinsert") end, 20) end'
-        \ . ' })'
-        \ . ' term:toggle()'
-        \ . ' return true'
-        \ . ' end)(_A)',
-        \ l:payload
-        \ )
-  if l:opened
-    call s:pingu_prompt_terminal_remember()
-    call s:pingu_prompt_terminal_map_close(bufnr('%'))
-  endif
-  return l:opened
-endfunction
-
-function! s:pingu_prompt_terminal(line1, line2, range_count) abort
-  let l:bufnr = bufnr('%')
-  if l:bufnr <= 0 || !bufloaded(l:bufnr)
-    echomsg '[Pingu] Nenhum buffer ativo para prompt'
-    return
-  endif
-
-  let l:file = fnamemodify(bufname(l:bufnr), ':p')
-  if empty(l:file)
-    echomsg '[Pingu] Buffer sem arquivo associado'
-    return
-  endif
-  let l:root = s:project_root(l:file)
-  let l:command = s:pingu_prompt_terminal_command()
-  if empty(l:command)
-    let l:argv = s:pingu_prompt_terminal_session_argv(l:file, l:root, a:line1, a:line2, a:range_count)
-  else
-    let l:argv = [l:command] + s:pingu_prompt_terminal_model_args(l:command)
-  endif
-  let l:strategy = s:issue_terminal_strategy()
-
-  if s:open_pingu_prompt_terminal_float(l:argv, l:root)
-    echomsg empty(l:command) ? '[Pingu] Sessao de prompt aberta no terminal flutuante' : '[Pingu] Prompt aberto no terminal flutuante'
-    return
-  endif
-
-  if l:strategy ==# 'toggleterm' || l:strategy ==# 'auto'
-    if s:open_pingu_prompt_terminal_toggleterm(l:argv, l:root)
-      echomsg empty(l:command) ? '[Pingu] Sessao de prompt aberta no terminal flutuante' : '[Pingu] Prompt aberto no terminal flutuante'
-      return
-    endif
-  endif
-
-  if s:open_pingu_prompt_terminal_native(l:argv, l:root)
-    echomsg empty(l:command) ? '[Pingu] Sessao de prompt aberta no terminal' : '[Pingu] Prompt aberto no terminal'
-    return
-  endif
-
-  echohl ErrorMsg
-  echomsg '[Pingu] Terminal indisponivel para prompt'
-  echohl None
-endfunction
-
 function! s:pingu_prompt(line1, line2, args, range_count) abort
   let l:bufnr = bufnr('%')
   if l:bufnr <= 0 || !bufloaded(l:bufnr)
@@ -10536,7 +10117,7 @@ function! s:pingu_prompt(line1, line2, args, range_count) abort
 
   let l:prompt = trim('' . a:args)
   if empty(l:prompt)
-    call s:pingu_prompt_terminal(a:line1, a:line2, a:range_count)
+    echomsg '[Pingu] Use :PinguPrompt <texto> para aplicar prompt como patch direto'
     return
   endif
 
@@ -11085,146 +10666,6 @@ function! s:pingu_post_fix_check(file) abort
   call s:pingu_run_project_check(l:command)
 endfunction
 
-function! s:pingu_select_ai_model(provider, ...) abort
-  let l:provider = s:pingu_normalize_ai_provider(a:provider)
-  let l:raw = a:0 > 0 ? trim('' . a:1) : ''
-  if !empty(l:raw)
-    let g:pingu_ai_model = l:raw ==# '-' ? '' : l:raw
-    call s:pingu_apply_ai_provider_env()
-    return g:pingu_ai_model
-  endif
-
-  let l:current = s:pingu_current_ai_model(l:provider)
-  echo 'Pingu modelo atual: ' . (empty(l:current) ? 'padrao do provider' : l:current)
-  let l:models = s:pingu_provider_model_list(l:provider)
-  echo '0. Padrao do provider'
-  let l:index = 1
-  for l:model in l:models
-    echo l:index . '. ' . l:model
-    let l:index += 1
-  endfor
-  echo l:index . '. Digitar modelo manualmente'
-  call inputsave()
-  let l:choice = str2nr(input('Escolha modelo [0-' . l:index . ']: '))
-  call inputrestore()
-
-  if l:choice == 0
-    let g:pingu_ai_model = ''
-  elseif l:choice > 0 && l:choice <= len(l:models)
-    let g:pingu_ai_model = '' . l:models[l:choice - 1]
-  elseif l:choice == l:index
-    call inputsave()
-    let l:manual = trim(input('Modelo: '))
-    call inputrestore()
-    if empty(l:manual)
-      echomsg '[Pingu] Selecao de modelo cancelada'
-      return l:current
-    endif
-    let g:pingu_ai_model = l:manual
-  else
-    echomsg '[Pingu] Selecao de modelo cancelada'
-    return l:current
-  endif
-
-  call s:pingu_apply_ai_provider_env()
-  return g:pingu_ai_model
-endfunction
-
-function! s:pingu_model_overview_lines() abort
-  let l:current = s:pingu_ai_provider_env_value()
-  let l:lines = [
-        \ 'Atual',
-        \ '  ' . s:pingu_ai_provider_label(l:current),
-        \ '',
-        \ 'Providers disponiveis',
-        \ ]
-  let l:index = 1
-  for l:provider in s:pingu_supported_ai_provider_overview()
-    let l:marker = l:provider ==# l:current ? '*' : ' '
-    call add(l:lines, printf('  %s %d. %s', l:marker, l:index, s:pingu_provider_status_line(l:provider)))
-    let l:index += 1
-  endfor
-  call add(l:lines, '')
-  call add(l:lines, 'Como usar')
-  call add(l:lines, '  :PinguModel          abrir seletor')
-  call add(l:lines, '  :PinguModel copilot  usar Copilot')
-  call add(l:lines, '  :PinguModel openai   usar OpenAI')
-  call add(l:lines, '  :PinguModel codex    usar Codex')
-  call add(l:lines, '  :PinguModel claude   usar Claude')
-  call add(l:lines, '  :PinguModel auto     usar fallback automatico')
-  call add(l:lines, '  :PinguDoctor')
-  return l:lines
-endfunction
-
-function! s:pingu_model_overview_open() abort
-  return s:pingu_lsp_open_float('Pingu Provider', s:pingu_model_overview_lines(), {'enter': v:false, 'max_width': 104})
-endfunction
-
-function! s:pingu_provider_confirm_label(provider) abort
-  let l:provider = s:pingu_normalize_ai_provider(a:provider)
-  if l:provider ==# 'copilot'
-    return '&Copilot'
-  endif
-  if l:provider ==# 'openai'
-    return '&OpenAI'
-  endif
-  if l:provider ==# 'codex'
-    return 'Co&dex'
-  endif
-  if l:provider ==# 'claude'
-    return 'C&laude'
-  endif
-  return '&Auto'
-endfunction
-
-function! s:pingu_select_provider_choice(provider_options) abort
-  let l:labels = ['Ca&ncelar']
-  for l:provider in a:provider_options
-    call add(l:labels, s:pingu_provider_confirm_label(l:provider))
-  endfor
-  try
-    return confirm('Pingu provider', join(l:labels, "\n"), 0)
-  catch /^Vim\%((\a\+)\)\=:Interrupt$/
-    return 0
-  endtry
-endfunction
-
-function! s:pingu_select_ai_provider(...) abort
-  let l:args = a:0 > 0 ? split(trim('' . a:1)) : []
-  let l:raw = len(l:args) > 0 ? l:args[0] : ''
-  let l:provider_model_override = len(l:args) > 1 ? join(l:args[1:], ' ') : ''
-  let l:interactive = empty(trim('' . l:raw))
-  if l:interactive
-    let l:provider_overview_winid = s:pingu_model_overview_open()
-    let l:current = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))
-    echo 'Pingu provider atual: ' . s:pingu_ai_provider_label(l:current)
-    let l:provider_options = s:pingu_supported_ai_provider_overview()
-    let l:choice = s:pingu_select_provider_choice(l:provider_options)
-    call s:pingu_close_float(l:provider_overview_winid)
-    if l:choice > 1 && l:choice <= len(l:provider_options) + 1
-      let l:raw = l:provider_options[l:choice - 2]
-      echomsg '[Pingu] Provider selecionado: ' . s:pingu_ai_provider_label(l:raw)
-    else
-      echomsg '[Pingu] Selecao de provider cancelada'
-      return
-    endif
-  endif
-
-  if !empty(l:provider_model_override)
-    echomsg '[Pingu] :PinguModel agora usa apenas provider; ajuste o modelo via variaveis do provider.'
-  endif
-
-  let l:provider = s:pingu_normalize_ai_provider(l:raw)
-  let g:pingu_ai_provider = l:provider
-  let l:selected_model = s:pingu_current_ai_model(l:provider)
-  let l:env_provider = s:pingu_apply_ai_provider_env()
-  call s:stop_analysis_daemon()
-  call s:stop_pingu_prompt_job()
-  call s:status_set_idle(0, '')
-  echomsg '[Pingu] Provider assistido: ' . s:pingu_ai_provider_label(l:provider) . ' (' . l:env_provider . ')'
-        \ . ' | modelo: ' . (empty(l:selected_model) ? 'padrao do provider' : l:selected_model)
-endfunction
-
 function! s:issue_has_applicable_fix(issue) abort
   if empty(a:issue) || type(a:issue) != v:t_dict
     return v:false
@@ -11292,10 +10733,8 @@ function! s:pingu_help_lines() abort
         \ 'Atalhos',
         \ printf('  %s  analisar arquivo atual', get(g:, 'pingu_map_key', '<leader>pic')),
         \ printf('  %s  abrir/atualizar painel', get(g:, 'pingu_window_key', '<leader>piw')),
-        \ printf('  %s  abrir prompt em terminal flutuante', get(g:, 'pingu_prompt_key', '<leader>pip')),
         \ printf('  %s  corrigir sugestao da linha atual', get(g:, 'pingu_fix_current_key', '<leader>pif')),
         \ printf('  %s  abrir menu de acoes da issue atual', get(g:, 'pingu_action_menu_key', '<leader>pia')),
-        \ printf('  %s  escolher provider assistido', get(g:, 'pingu_model_key', '<leader>pim')),
         \ printf('  %s  interromper processamento', get(g:, 'pingu_stop_key', '<leader>pis')),
         \ printf('  %s  proximo diagnostico', get(g:, 'pingu_next_issue_key', '<C-j>')),
         \ printf('  %s  diagnostico anterior', get(g:, 'pingu_prev_issue_key', '<C-k>')),
@@ -11303,10 +10742,7 @@ function! s:pingu_help_lines() abort
         \ 'Comandos',
         \ '  :PinguCheck              analisar arquivo atual',
         \ '  :PinguWindowCheck        abrir painel e analisar',
-        \ '  :PinguPrompt             abrir provider em terminal flutuante',
-        \ '  :PinguPrompt <texto>     aplicar prompt como patch direto',
-        \ '  :PinguPromptTerminal     abrir terminal flutuante',
-        \ '  :PinguPromptClose        fechar terminal/sessao de prompt',
+        \ '  :PinguPrompt <texto>     aplicar prompt como patch direto via Copilot',
         \ '  :PinguFixCurrent         aplicar sugestao da linha atual',
         \ '  :PinguFixCurrentAI       corrigir linha atual com provider',
         \ '  :PinguPreviewFix         mostrar diff antes de aplicar',
@@ -11318,8 +10754,7 @@ function! s:pingu_help_lines() abort
         \ '  :PinguRunProjectCheck    rodar check/testes do projeto',
         \ '  :PinguProjectContext     abrir contexto do projeto',
         \ '  :PinguProjectContext!    criar contexto do projeto',
-        \ '  :PinguDoctor             diagnosticar provider/runtime/contexto',
-        \ '  :PinguModel              escolher provider assistido',
+        \ '  :PinguDoctor             diagnosticar Copilot/runtime/contexto',
         \ '  :PinguLogs               abrir logs da sessao',
         \ '  :PinguStop               interromper jobs ativos',
         \ '',
@@ -11396,8 +10831,6 @@ command! PinguWindowCheck call s:pingu_dev_agent_window_check()
 command! PinguWindowClose call s:window_close()
 command! PinguWindowToggle call s:window_toggle()
 command! -range -nargs=* PinguPrompt call s:pingu_prompt(<line1>, <line2>, <q-args>, <range>)
-command! -range PinguPromptTerminal call s:pingu_prompt_terminal(<line1>, <line2>, <range>)
-command! PinguPromptClose call s:pingu_prompt_terminal_close()
 command! PinguHintsRefresh call s:update_pingu_all_hints_current_buffer()
 command! PinguAutoFixNow call s:pingu_auto_fix_now()
 command! PinguFixCurrent call s:pingu_fix_current_issue()
@@ -11439,7 +10872,6 @@ command! PinguLogs call s:pingu_logs_open()
 command! PinguLogsClear call s:pingu_logs_clear()
 command! PinguAutoFixEnable let g:pingu_auto_fix_enabled = 1 | echomsg '[Pingu] Auto-fix ligado'
 command! PinguAutoFixDisable let g:pingu_auto_fix_enabled = 0 | echomsg '[Pingu] Auto-fix desligado'
-command! -nargs=* PinguModel call s:pingu_select_ai_provider(<q-args>)
 
 call s:install_neovim_lualine_global()
 call s:install_statusline_component()
@@ -11495,37 +10927,6 @@ if !empty(g:pingu_stop_key)
         \ g:pingu_stop_key,
         \ ':PinguStop<CR>',
         \ 'Pingu: interromper processamento ativo',
-        \ )
-endif
-
-if !empty(g:pingu_prompt_key)
-  " Atalho para prompt manual no cursor ou no range visual selecionado.
-  call s:set_global_normal_map(
-        \ g:pingu_prompt_key,
-        \ ':PinguPrompt<CR>',
-        \ 'Pingu: prompt manual no cursor',
-        \ )
-  call s:set_global_visual_map(
-        \ g:pingu_prompt_key,
-        \ ':<C-U>''<,''>PinguPrompt<CR>',
-        \ 'Pingu: prompt manual na selecao',
-        \ )
-endif
-
-if !empty(g:pingu_model_key)
-  " Atalho para escolher o provider assistido da sessao.
-  call s:set_global_normal_map(
-        \ g:pingu_model_key,
-        \ ':PinguModel<CR>',
-        \ 'Pingu: escolher provider assistido',
-        \ )
-endif
-
-if exists('g:pingu_model_key_alias') && !empty(g:pingu_model_key_alias) && g:pingu_model_key_alias !=# g:pingu_model_key
-  call s:set_global_normal_map(
-        \ g:pingu_model_key_alias,
-        \ ':PinguModel<CR>',
-        \ 'Pingu: escolher provider assistido',
         \ )
 endif
 

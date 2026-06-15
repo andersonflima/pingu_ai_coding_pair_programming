@@ -293,14 +293,6 @@ test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>piw'/);
   assert.match(pluginRuntime, /let g:pingu_help_key = '<leader>pi\?'/);
   assert.match(pluginRuntime, /let g:pingu_action_menu_key = '<leader>pia'/);
-  assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
-  assert.match(pluginRuntime, /let g:pingu_prompt_terminal_command = empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\) \? '' : \$PINGU_PROMPT_TERMINAL_COMMAND/);
-  assert.match(pluginRuntime, /let g:pingu_model_key = '<leader>pim'/);
-  assert.match(pluginRuntime, /let g:pingu_model_key_alias = ''/);
-  assert.match(pluginRuntime, /let g:pingu_ai_provider = empty\(\$PINGU_AI_PROVIDER\) \? 'codex' : \$PINGU_AI_PROVIDER/);
-  assert.match(pluginRuntime, /let g:pingu_ai_model = empty\(\$PINGU_AI_MODEL\) \? '' : \$PINGU_AI_MODEL/);
-  assert.match(pluginRuntime, /let g:pingu_codex_models = \[/);
-  assert.match(pluginRuntime, /let g:pingu_openai_models = \[/);
   assert.match(pluginRuntime, /let g:pingu_prompt_context_radius = 80/);
   assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(pluginRuntime, /let g:pingu_stop_key = '<leader>pis'/);
@@ -328,35 +320,17 @@ test('runtime expoe ajuda rapida do Pingu no namespace leader pi', () => {
   assert.match(internalRuntime, /Pingu: ajuda rapida/);
 });
 
-test('runtime permite escolher provider assistido do Pingu', () => {
-  assert.ok(internalRuntime.includes("function! s:pingu_ai_provider_env_value() abort\n  let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))\n  return l:provider"));
-  assert.match(internalRuntime, /return \['copilot', 'openai', 'codex', 'claude', 'auto'\]/);
-  assert.match(internalRuntime, /for l:provider in s:pingu_supported_ai_provider_overview\(\)/);
-  assert.match(internalRuntime, /Providers disponiveis/);
-  assert.match(internalRuntime, /s:pingu_provider_status_line\(l:provider\)/);
-  assert.match(internalRuntime, /function! s:pingu_provider_confirm_label\(provider\) abort/);
-  assert.match(internalRuntime, /return '&Copilot'/);
-  assert.match(internalRuntime, /return '&OpenAI'/);
-  assert.match(internalRuntime, /return 'Co&dex'/);
-  assert.match(internalRuntime, /return 'C&laude'/);
-  assert.match(internalRuntime, /let l:labels = \['Ca&ncelar'\]/);
-  assert.match(internalRuntime, /function! s:pingu_select_provider_choice\(provider_options\) abort/);
-  assert.match(internalRuntime, /return confirm\('Pingu provider', join\(l:labels, "\\n"\), 0\)/);
-  assert.match(internalRuntime, /function! s:pingu_select_ai_provider\(\.\.\.\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_select_ai_model\(provider, \.\.\.\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_provider_model_list\(provider\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_apply_ai_provider_env\(\) abort/);
-  assert.match(internalRuntime, /let \$PINGU_AI_PROVIDER = l:provider/);
-  assert.match(internalRuntime, /let \$PINGU_AI_MODEL = l:model/);
-  assert.match(internalRuntime, /let \$PINGU_CODEX_MODEL = l:model/);
-  assert.match(internalRuntime, /let \$PINGU_CLAUDE_MODEL = l:model/);
-  assert.match(internalRuntime, /let \$PINGU_OPENAI_MODEL = l:model/);
-  assert.match(internalRuntime, /command! -nargs=\* PinguModel call s:pingu_select_ai_provider\(<q-args>\)/);
-  assert.match(internalRuntime, /call s:stop_analysis_daemon\(\)/);
-  assert.doesNotMatch(internalRuntime, /input\('Escolha provider \[1-' \. len\(l:provider_options\) \. '\]: '\)/);
-  assert.match(internalRuntime, /Provider selecionado: ' \. s:pingu_ai_provider_label\(l:raw\)/);
-  assert.match(internalRuntime, /':PinguModel<CR>'/);
-  assert.match(internalRuntime, /g:pingu_model_key_alias/);
+test('runtime nao expoe selector multi-provider', () => {
+  assert.doesNotMatch(internalRuntime, /s:pingu_select_ai_provider/);
+  assert.doesNotMatch(internalRuntime, /s:pingu_normalize_ai_provider/);
+  assert.doesNotMatch(internalRuntime, /s:pingu_apply_ai_provider_env/);
+  assert.doesNotMatch(internalRuntime, /PinguModel/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_AI_PROVIDER/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_CODEX_MODEL/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_CLAUDE_MODEL/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_OPENAI_MODEL/);
+  assert.doesNotMatch(pluginRuntime, /g:pingu_ai_provider/);
+  assert.doesNotMatch(pluginRuntime, /g:pingu_model_key/);
 });
 
 test('runtime permite corrigir somente a issue da linha atual', () => {
@@ -586,8 +560,6 @@ test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {
   assert.match(internalRuntime, /function! s:pingu_explain_current\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_run_project_check\(\.\.\.\) abort/);
   assert.match(internalRuntime, /function! s:pingu_post_fix_check\(file\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_model_overview_lines\(\) abort/);
-  assert.match(internalRuntime, /s:pingu_model_overview_open\(\)/);
   assert.match(internalRuntime, /command! PinguDoctor call s:pingu_doctor_open\(\)/);
   assert.match(internalRuntime, /command! -bang PinguProjectContext call s:pingu_project_context_command\(<bang>0\)/);
   assert.match(internalRuntime, /command! PinguIssueActions call s:pingu_issue_actions_open\(\)/);
@@ -633,43 +605,14 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
   assert.match(pluginRuntime, /let g:pingu_prompt_chat_entry_max_chars = 320/);
 });
 
-test('runtime abre PinguPrompt sem argumento em terminal interativo', () => {
-  assert.match(internalRuntime, /function! s:pingu_prompt_terminal\(line1, line2, range_count\) abort/);
-  assert.match(internalRuntime, /let s:pingu_prompt_terminal_winid = -1/);
-  assert.match(internalRuntime, /let s:pingu_prompt_terminal_bufnr = -1/);
-  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_close\(\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_map_close\(bufnr\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_lines\(file, root, line1, line2, range_count\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_prompt_terminal_session_argv\(file, root, line1, line2, range_count\) abort/);
-  assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_float\(argv, cwd\) abort/);
-  assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_native\(argv, cwd\) abort/);
-  assert.match(internalRuntime, /function! s:open_pingu_prompt_terminal_toggleterm\(argv, cwd\) abort/);
-  assert.match(internalRuntime, /nvim_open_win\(l:bufnr, v:true, \{/);
-  assert.match(internalRuntime, /call termopen\(a:argv, \{'cwd': a:cwd\}\)/);
-  assert.doesNotMatch(internalRuntime, /lazy_util\.float_term/);
-  assert.match(internalRuntime, /'   direction = "float",'/);
-  assert.match(internalRuntime, /let l:argv = s:pingu_prompt_terminal_session_argv\(l:file, l:root, a:line1, a:line2, a:range_count\)/);
-  assert.match(internalRuntime, /let l:argv = \[l:command\] \+ s:pingu_prompt_terminal_model_args\(l:command\)/);
-  assert.match(internalRuntime, /if !empty\(\$PINGU_PROMPT_TERMINAL_COMMAND\)\n    return \$PINGU_PROMPT_TERMINAL_COMMAND\n  endif/);
-  assert.match(internalRuntime, /if l:provider !=# 'codex' && l:provider !=# 'claude' && l:provider !=# 'auto'\n    return ''\n  endif/);
-  assert.match(internalRuntime, /Pingu Prompt Session/);
-  assert.match(internalRuntime, /Contexto primario/);
-  assert.match(internalRuntime, /:PinguPromptClose, q no modo normal, Esc, Ctrl-C ou Ctrl-Q fecham esta sessao/);
-  assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 't', '<C-q>'/);
-  assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 't', '<C-c>'/);
-  assert.match(internalRuntime, /Sessao de prompt aberta no terminal/);
-  assert.doesNotMatch(internalRuntime, /Provider atual nao possui terminal interativo configurado/);
-  assert.match(internalRuntime, /call s:pingu_prompt_terminal\(a:line1, a:line2, a:range_count\)/);
-  assert.match(internalRuntime, /command! -range PinguPromptTerminal call s:pingu_prompt_terminal\(<line1>, <line2>, <range>\)/);
-  assert.match(internalRuntime, /command! PinguPromptClose call s:pingu_prompt_terminal_close\(\)/);
-  assert.match(internalRuntime, /termopen\(a:argv, \{'cwd': a:cwd\}\)/);
-  assert.match(internalRuntime, /call term_start\(a:argv, \{'cwd': a:cwd, 'curwin': 1\}\)/);
-  assert.match(internalRuntime, /':PinguPrompt<CR>'/);
-  assert.match(internalRuntime, /':<C-U>''<,''>PinguPrompt<CR>'/);
-  assert.doesNotMatch(internalRuntime, /input\('\[Pingu\] Prompt: '\)/);
-  assert.doesNotMatch(internalRuntime, /':PinguPrompt '/);
-  assert.doesNotMatch(internalRuntime, /Pingu prompt no editor/);
-  assert.doesNotMatch(internalRuntime, /Use o arquivo e o range acima como contexto principal/);
+test('runtime nao expoe prompt terminal TUI', () => {
+  assert.doesNotMatch(internalRuntime, /s:pingu_prompt_terminal\b/);
+  assert.doesNotMatch(internalRuntime, /s:open_pingu_prompt_terminal/);
+  assert.doesNotMatch(internalRuntime, /PinguPromptTerminal/);
+  assert.doesNotMatch(internalRuntime, /PinguPromptClose/);
+  assert.doesNotMatch(internalRuntime, /g:pingu_prompt_terminal_command/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_PROMPT_TERMINAL_COMMAND/);
+  assert.match(internalRuntime, /command! -range -nargs=\* PinguPrompt call s:pingu_prompt\(<line1>, <line2>, <q-args>, <range>\)/);
 });
 
 test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
