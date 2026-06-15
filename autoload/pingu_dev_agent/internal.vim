@@ -2084,6 +2084,24 @@ function! s:pingu_current_buffer_is_issue_hover_menu() abort
   return getbufvar(bufnr('%'), 'pingu_issue_hover_menu', 0) ? v:true : v:false
 endfunction
 
+function! s:pingu_focused_issue_hover_menu_visible() abort
+  let l:bufnr = get(s:, 'pingu_issue_hover_menu_bufnr', -1)
+  if l:bufnr <= 0
+    return v:false
+  endif
+  if !getbufvar(l:bufnr, 'pingu_issue_hover_focus_menu', 0)
+    return v:false
+  endif
+  let l:winid = get(s:, 'pingu_issue_hover_menu_winid', -1)
+  if l:winid <= 0
+    return v:false
+  endif
+  if !exists('*nvim_win_is_valid')
+    return v:true
+  endif
+  return nvim_win_is_valid(l:winid) ? v:true : v:false
+endfunction
+
 function! s:script_call_rhs(call_expr) abort
   return ':<C-U>call ' . expand('<SID>') . a:call_expr . '<CR>'
 endfunction
@@ -3832,6 +3850,9 @@ endfunction
 
 function! s:schedule_pingu_issue_hover_menu() abort
   if s:pingu_current_buffer_is_issue_hover_menu()
+    return
+  endif
+  if s:pingu_focused_issue_hover_menu_visible()
     return
   endif
   call s:close_pingu_issue_hover_menu()
