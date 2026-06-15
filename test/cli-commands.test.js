@@ -11,6 +11,7 @@ const cliPath = path.join(__dirname, '..', 'pingu_dev_agent.js');
 const cliEnv = {
   ...process.env,
   PINGU_AI_MODE: 'off',
+  PINGU_COPILOT_DISABLED: '1',
 };
 
 function runCli(args, input = '') {
@@ -74,8 +75,30 @@ test('CLI doctor reports runtime status without requiring OpenAI configuration',
 
   assert.equal(payload.ok, true);
   assert.ok(payload.checks.some((check) => check.name === 'node'));
+  assert.ok(payload.context);
+  assert.ok(payload.context.file.endsWith(path.join('.pingu', 'context.md')));
   assert.equal(payload.offlineCoverage.percent, 100);
   assert.ok(payload.activeLanguages.includes('javascript'));
+});
+
+test('CLI context creates project context document', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-cli-context-'));
+  fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({
+    name: 'sample-app',
+    scripts: {
+      check: 'node --check index.js',
+      test: 'node --test',
+    },
+  }));
+
+  const output = runCliInCwd(['context', '--write', '--json'], tempDir);
+  const payload = JSON.parse(output);
+  const contextFile = path.join(fs.realpathSync(tempDir), '.pingu', 'context.md');
+
+  assert.equal(payload.created, true);
+  assert.equal(payload.file, contextFile);
+  assert.equal(payload.suggestions.checkCommand, 'npm run check');
+  assert.match(fs.readFileSync(contextFile, 'utf8'), /check_command: npm run check/);
 });
 
 test('CLI offline reports full offline coverage for active languages', () => {

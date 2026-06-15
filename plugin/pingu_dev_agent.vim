@@ -313,6 +313,16 @@ if !exists('g:pingu_logs_max_entries')
   let g:pingu_logs_max_entries = 200
 endif
 
+if !exists('g:pingu_post_fix_check_command')
+  " Comando opcional executado apos correcao aplicada. Vazio evita efeitos colaterais automaticos.
+  let g:pingu_post_fix_check_command = empty($PINGU_POST_FIX_CHECK_COMMAND) ? '' : $PINGU_POST_FIX_CHECK_COMMAND
+endif
+
+if !exists('g:pingu_project_check_command')
+  " Comando manual usado por :PinguRunProjectCheck; vazio usa sugestao do contexto do projeto.
+  let g:pingu_project_check_command = empty($PINGU_PROJECT_CHECK_COMMAND) ? '' : $PINGU_PROJECT_CHECK_COMMAND
+endif
+
 if !exists('g:pingu_statusline_enabled')
   let g:pingu_statusline_enabled = 1
 endif
@@ -346,44 +356,17 @@ endif
 
 if !exists('g:pingu_window_key')
   " Mapeamento para abrir e fechar a janela de interacao em tempo real.
-  let g:pingu_window_key = '<leader>pia'
+  let g:pingu_window_key = '<leader>piw'
 endif
 
-if !exists('g:pingu_prompt_key')
-  " Atalho para prompt manual assistido no cursor ou selecao visual.
-  let g:pingu_prompt_key = '<leader>pip'
+if !exists('g:pingu_help_key')
+  " Atalho para abrir ajuda rapida dos comandos e comentarios acionaveis.
+  let g:pingu_help_key = '<leader>pi?'
 endif
 
-if !exists('g:pingu_model_key')
-  " Atalho para escolher provider/modelo assistido da sessao.
-  let g:pingu_model_key = '<leader>pim'
-endif
-
-if !exists('g:pingu_model_key_alias')
-  " Alias opcional para o seletor provider/modelo quando nao houver conflito local.
-  let g:pingu_model_key_alias = '<leader>pmi'
-endif
-
-if !exists('g:pingu_ai_provider')
-  " Provider assistido da sessao: copilot, codex, openai ou auto.
-  let g:pingu_ai_provider = empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER
-endif
-
-if !exists('g:pingu_ai_model')
-  " Modelo assistido da sessao; vazio preserva o padrao do provider.
-  let g:pingu_ai_model = empty($PINGU_AI_MODEL) ? '' : $PINGU_AI_MODEL
-endif
-
-if !exists('g:pingu_codex_models')
-  let g:pingu_codex_models = ['gpt-5', 'gpt-5-codex', 'o3', 'o4-mini']
-endif
-
-if !exists('g:pingu_openai_models')
-  let g:pingu_openai_models = ['gpt-4o-mini', 'gpt-4o', 'o3', 'o4-mini']
-endif
-
-if !exists('g:pingu_copilot_models')
-  let g:pingu_copilot_models = []
+if !exists('g:pingu_action_menu_key')
+  " Atalho direto para abrir o menu focado de acoes da issue atual.
+  let g:pingu_action_menu_key = '<leader>pia'
 endif
 
 if !exists('g:pingu_prompt_context_radius')
@@ -462,13 +445,13 @@ if !exists('g:pingu_issue_hints_position')
 endif
 
 if !exists('g:pingu_issue_hover_hint')
-  " 1 mostra uma mensagem de acao do Pingu quando o cursor esta sobre linha com issue aplicavel.
+  " 1 mostra hover passivo ao passar por linhas com hint; use g:pingu_action_menu_key para acoes.
   let g:pingu_issue_hover_hint = 1
 endif
 
 if !exists('g:pingu_issue_hover_delay_ms')
   " Tempo para abrir o menu de acoes apos o cursor parar sobre uma linha com hint.
-  let g:pingu_issue_hover_delay_ms = 30
+  let g:pingu_issue_hover_delay_ms = 5000
 endif
 
 if !exists('g:pingu_diagnostic_takeover')
@@ -509,6 +492,11 @@ endif
 if !exists('g:pingu_undo_fix_history_max')
   " Quantidade maxima de snapshots de correcao mantidos por arquivo para rollback manual.
   let g:pingu_undo_fix_history_max = 30
+endif
+
+if !exists('g:pingu_action_history_max')
+  " Quantidade maxima de acoes recentes exibidas no historico da sessao.
+  let g:pingu_action_history_max = 50
 endif
 
 if !exists('g:pingu_lsp_auto_fix_enabled')

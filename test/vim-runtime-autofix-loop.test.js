@@ -107,7 +107,7 @@ test('runtime expõe comandos Pingu sem aliases legados', () => {
   assert.match(internalRuntime, /command! PinguAutoFixNow call s:pingu_auto_fix_now\(\)/);
   assert.match(internalRuntime, /command! PinguFixCurrent call s:pingu_fix_current_issue\(\)/);
   assert.match(internalRuntime, /command! PinguFixCurrentAI call s:pingu_fix_current_issue_with_ai\(\)/);
-  assert.match(internalRuntime, /command! PinguIssueHoverClose call s:close_pingu_issue_hover_menu\(\)/);
+  assert.match(internalRuntime, /command! PinguIssueHoverClose call s:pingu_issue_hover_close_and_restore\(\)/);
   assert.match(internalRuntime, /command! PinguQfNext call s:pingu_qf_next\(\)/);
   assert.match(internalRuntime, /command! PinguQfPrev call s:pingu_qf_prev\(\)/);
   assert.match(internalRuntime, /command! PinguDiagnosticNext call s:pingu_qf_next\(\)/);
@@ -175,7 +175,34 @@ test('runtime expõe substitutos Pingu para fluxos do lspsaga', () => {
 });
 
 test('runtime mostra hover de issue com layout limpo', () => {
-  assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_menu_lines\(issue, \.\.\.\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_hover_float_width\(lines, max_default, min_default\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_hover_float_height\(lines, max_default\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_wrap_hover_text_line\(line, width\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_wrap_hover_lines\(lines, width\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_explain_issue_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_show_issue_explain_in_hover\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_at_cursor\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_from_start\(start\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_decl_context_at_line\(lnum\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_cursor_symbol\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_line_has_function_call\(line, symbol\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_for_symbol\(symbol, cursor_lnum\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_context_containing_cursor\(cursor_lnum\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_internal_calls\(lines\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_effects\(lines\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_flow_signals\(lines\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_signature_line\(context\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_parameter_names\(signature\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_step_lines\(context\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_decision_lines\(context\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_return_lines\(context\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_function_analysis_lines\(context\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_diff_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hover_problem_message\(issue, fallback\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_hint_message\(issue, fallback\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_open_function_hover_menu\(context\) abort/);
+  assert.match(internalRuntime, /index\(\['if', 'for', 'while', 'switch', 'catch', 'with', 'else', 'elseif'\], tolower\(l:name\)\) != -1/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_summary\(issue\) abort/);
   assert.match(internalRuntime, /function! s:pingu_lsp_hover_assisted_suggestion\(issue\) abort/);
   assert.match(internalRuntime, /function! s:start_pingu_issue_hover_ai_suggestion\(issue, signature\) abort/);
@@ -185,22 +212,72 @@ test('runtime mostra hover de issue com layout limpo', () => {
   assert.match(internalRuntime, /' Pingu'/);
   assert.match(internalRuntime, /Code action/);
   assert.match(internalRuntime, /Correcao com IA/);
-  assert.match(internalRuntime, /Acao sugerida/);
+  assert.match(internalRuntime, /let l:focus_menu = a:0 > 0 \? !!a:1 : v:false/);
+  assert.match(internalRuntime, /if !l:focus_menu\n    return l:detail_lines\n  endif/);
+  assert.match(internalRuntime, /Acoes manuais/);
+  assert.match(internalRuntime, /a  Aplicar resolucao/);
+  assert.match(internalRuntime, /i  Corrigir com provider/);
+  assert.match(internalRuntime, /Enter\/clique executa apenas actions manuais/);
+  assert.doesNotMatch(internalRuntime, /d  Preview diff da correcao/);
+  assert.doesNotMatch(internalRuntime, /e  Explicar problema/);
+  assert.doesNotMatch(internalRuntime, /:PinguIssueActions abre o modo interativo/);
+  assert.match(internalRuntime, /Explicacao do problema/);
+  assert.match(internalRuntime, /A documentacao da funcao esta ausente ou desatualizada em relacao a assinatura atual/);
+  assert.match(internalRuntime, /documentacao da funcao ausente ou desatualizada/);
+  assert.match(internalRuntime, /let l:decl_context = s:pingu_function_decl_context_at_line\(l:cursor_lnum\)/);
+  assert.match(internalRuntime, /let l:symbol_context = s:pingu_function_context_for_symbol\(l:symbol, l:cursor_lnum\)/);
+  assert.doesNotMatch(internalRuntime, /Docstring Google adicionada com base no fechamento retornado/);
+  assert.doesNotMatch(internalRuntime, /Docstring adicionada em formato Google/);
+  assert.match(internalRuntime, /Funcao no cursor/);
+  assert.match(internalRuntime, /Assinatura/);
+  assert.match(internalRuntime, /Leitura tecnica/);
+  assert.match(internalRuntime, /Parametros inferidos/);
+  assert.match(internalRuntime, /Comportamento/);
+  assert.match(internalRuntime, /Fluxo detalhado/);
+  assert.match(internalRuntime, /Decisoes e guard clauses/);
+  assert.match(internalRuntime, /Chamadas internas/);
+  assert.match(internalRuntime, /Efeitos observaveis/);
+  assert.match(internalRuntime, /Retorno/);
+  assert.match(internalRuntime, /Diff disponivel/);
+  assert.match(internalRuntime, /function! s:pingu_issue_has_hover_diff\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_post_fix_diff_lines\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_show_post_fix_diff_lines\(lines\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_show_post_fix_diff\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_highlight_issue_hover_buffer\(bufnr\) abort/);
+  assert.match(internalRuntime, /Nao foram detectadas chamadas internas relevantes/);
+  assert.match(internalRuntime, /controla um caminho alternativo ou tratamento de falha/);
+  assert.match(internalRuntime, /define a saida ou encerra antecipadamente o fluxo/);
+  assert.match(internalRuntime, /cria ou atualiza UI\/buffer flutuante/);
+  assert.match(internalRuntime, /orquestra processo, canal ou timer/);
+  assert.match(internalRuntime, /Trecho/);
   assert.match(internalRuntime, /Importar .* de outro arquivo ou implementar .* localmente/);
   assert.match(internalRuntime, /Corrigir import, modulo ou dependencia faltante com a menor declaracao segura/);
   assert.match(internalRuntime, /Resolver simbolo ausente: importar, criar definicao ou ajustar o uso atual/);
   assert.match(internalRuntime, /Aplicar a menor edicao local para o diagnostico de /);
   assert.match(internalRuntime, /fixall\/organizeimports\/quickfix/);
   assert.match(internalRuntime, /Substituir a linha atual pelo snippet sugerido/);
-  assert.match(internalRuntime, /Aplicar resolucao assistida/);
-  assert.match(internalRuntime, /Forcar correcao com IA/);
-  assert.match(internalRuntime, /Abrir painel/);
+  assert.match(internalRuntime, /Aplicar resolucao/);
+  assert.match(internalRuntime, /Corrigir com provider/);
+  assert.match(internalRuntime, /Desfazer ultima correcao/);
+  assert.match(internalRuntime, /Abrir historico/);
+  assert.doesNotMatch(internalRuntime, /p  Abrir painel/);
+  assert.doesNotMatch(internalRuntime, /nvim_buf_set_keymap\(l:bufnr, 'n', 'p', s:script_call_rhs\('pingu_issue_hover_action\("panel"\)'\)/);
   assert.doesNotMatch(internalRuntime, /Pingu: ' \. l:message/);
   assert.doesNotMatch(internalRuntime, /lsp_code_action: %s/);
   assert.match(internalRuntime, /call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
   assert.match(internalRuntime, /'--lsp-ai-fix'/);
-  assert.match(internalRuntime, /nvim_buf_set_lines\(l:bufnr, 5, 6, v:false, \['  ' \. l:suggestion\]\)/);
-  assert.match(internalRuntime, /if l:line == 7\n    call s:pingu_issue_hover_action\('apply'\)/);
+  assert.match(internalRuntime, /let l:line_index = index\(getbufline\(l:bufnr, 1, '\$'\), 'Sugestao'\)/);
+  assert.match(internalRuntime, /call nvim_buf_set_lines\(l:bufnr, l:line_index \+ 1, l:line_index \+ 2, v:false, \['  ' \. l:suggestion\]\)/);
+  assert.match(internalRuntime, /let l:height = min\(\[24, len\(l:lines\)\]\)/);
+  assert.match(internalRuntime, /let l:text = trim\(getline\('\.'\)\)/);
+  assert.match(internalRuntime, /if l:text =~# '\^a\\s'\n    call s:pingu_issue_hover_action\('apply'\)/);
+  assert.doesNotMatch(internalRuntime, /if l:text =~# '\^d\\s'\n    call s:pingu_issue_hover_action\('preview'\)/);
+  assert.match(internalRuntime, /if l:text =~# '\^u\\s'\n    call s:pingu_issue_hover_action\('undo'\)/);
+  assert.doesNotMatch(internalRuntime, /if a:action ==# 'explain'\n    call s:restore_pingu_issue_hover_source\(\)\n    call s:clear_pingu_issue_hover_source_maps\(\)/);
+  assert.match(internalRuntime, /let l:post_fix_diff_lines = s:pingu_post_fix_diff_lines\(l:issue\)/);
+  assert.match(internalRuntime, /call s:pingu_show_post_fix_diff_lines\(l:post_fix_diff_lines\)/);
+  assert.match(internalRuntime, /let l:winid = get\(s:, 'pingu_issue_hover_menu_winid', -1\)/);
+  assert.match(internalRuntime, /call nvim_buf_set_lines\(l:bufnr, 0, -1, v:false, l:lines\)/);
   assert.match(internalRuntime, /if empty\(l:issue\)\n    let l:issue = s:pingu_issue_at_cursor_for_action\(\)\n  endif/);
 });
 
@@ -213,14 +290,9 @@ test('runtime mantem painel Pingu fechado apos fechamento manual', () => {
 
 test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(pluginRuntime, /let g:pingu_map_key = '<leader>pic'/);
-  assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>pia'/);
-  assert.match(pluginRuntime, /let g:pingu_prompt_key = '<leader>pip'/);
-  assert.match(pluginRuntime, /let g:pingu_model_key = '<leader>pim'/);
-  assert.match(pluginRuntime, /let g:pingu_model_key_alias = '<leader>pmi'/);
-  assert.match(pluginRuntime, /let g:pingu_ai_provider = empty\(\$PINGU_AI_PROVIDER\) \? 'codex' : \$PINGU_AI_PROVIDER/);
-  assert.match(pluginRuntime, /let g:pingu_ai_model = empty\(\$PINGU_AI_MODEL\) \? '' : \$PINGU_AI_MODEL/);
-  assert.match(pluginRuntime, /let g:pingu_codex_models = \[/);
-  assert.match(pluginRuntime, /let g:pingu_openai_models = \[/);
+  assert.match(pluginRuntime, /let g:pingu_window_key = '<leader>piw'/);
+  assert.match(pluginRuntime, /let g:pingu_help_key = '<leader>pi\?'/);
+  assert.match(pluginRuntime, /let g:pingu_action_menu_key = '<leader>pia'/);
   assert.match(pluginRuntime, /let g:pingu_prompt_context_radius = 80/);
   assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(pluginRuntime, /let g:pingu_stop_key = '<leader>pis'/);
@@ -231,56 +303,68 @@ test('runtime usa namespace semantico de atalhos pingu', () => {
   assert.match(internalRuntime, /nvim_buf_set_keymap\(0, 'n', a:lhs, a:rhs/);
   assert.match(internalRuntime, /call s:set_buffer_normal_map\(g:pingu_next_issue_key, ':PinguQfNext<CR>', 'Pingu: proximo diagnostico'\)/);
   assert.match(internalRuntime, /call s:set_buffer_normal_map\(g:pingu_prev_issue_key, ':PinguQfPrev<CR>', 'Pingu: diagnostico anterior'\)/);
+  assert.match(internalRuntime, /g:pingu_action_menu_key,\n        \\ ':PinguIssueActions<CR>',\n        \\ 'Pingu: menu de acoes da issue atual'/);
 });
 
-test('runtime permite escolher provider assistido do Pingu', () => {
-  assert.ok(internalRuntime.includes("function! s:pingu_ai_provider_env_value() abort\n  let l:provider = s:pingu_normalize_ai_provider(get(g:, 'pingu_ai_provider', empty($PINGU_AI_PROVIDER) ? 'codex' : $PINGU_AI_PROVIDER))\n  return l:provider"));
-  assert.match(internalRuntime, /echo '2\. Codex'/);
-  assert.match(internalRuntime, /function! s:pingu_select_ai_provider\(\.\.\.\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_select_ai_model\(provider, \.\.\.\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_provider_model_list\(provider\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_apply_ai_provider_env\(\) abort/);
-  assert.match(internalRuntime, /let \$PINGU_AI_PROVIDER = l:provider/);
-  assert.match(internalRuntime, /let \$PINGU_AI_MODEL = l:model/);
-  assert.match(internalRuntime, /let \$PINGU_CODEX_MODEL = l:model/);
-  assert.match(internalRuntime, /let \$PINGU_OPENAI_MODEL = l:model/);
-  assert.match(internalRuntime, /command! -nargs=\* PinguModel call s:pingu_select_ai_provider\(<q-args>\)/);
-  assert.match(internalRuntime, /call s:stop_analysis_daemon\(\)/);
-  assert.match(internalRuntime, /echo '1\. Copilot'/);
-  assert.match(internalRuntime, /input\('Escolha provider \[1-3\]: '\)/);
-  assert.match(internalRuntime, /input\('Escolha modelo \[0-' \. l:index \. '\]: '\)/);
-  assert.match(internalRuntime, /input\('Modelo: '\)/);
-  assert.match(internalRuntime, /Opcao ' \. l:choice \. ' selecionada/);
-  assert.match(internalRuntime, /':PinguModel<CR>'/);
-  assert.match(internalRuntime, /g:pingu_model_key_alias/);
+test('runtime expoe ajuda rapida do Pingu no namespace leader pi', () => {
+  assert.match(internalRuntime, /function! s:pingu_help_lines\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_help_open\(\) abort/);
+  assert.match(internalRuntime, /command! PinguHelp call s:pingu_help_open\(\)/);
+  assert.match(internalRuntime, /call s:pingu_lsp_open_float\('Pingu Help', s:pingu_help_lines\(\)\)/);
+  assert.match(internalRuntime, /printf\('  %s  analisar arquivo atual', get\(g:, 'pingu_map_key', '<leader>pic'\)\)/);
+  assert.match(internalRuntime, /printf\('  %s  abrir menu de acoes da issue atual', get\(g:, 'pingu_action_menu_key', '<leader>pia'\)\)/);
+  assert.match(internalRuntime, /\/\/ @pingu code cria funcao soma/);
+  assert.match(internalRuntime, /\/\/ @pingu terminal roda os testes unitarios/);
+  assert.match(internalRuntime, /\/\/\* executa comando de terminal/);
+  assert.match(internalRuntime, /':PinguHelp<CR>'/);
+  assert.match(internalRuntime, /Pingu: ajuda rapida/);
+});
+
+test('runtime nao expoe selector multi-provider', () => {
+  assert.doesNotMatch(internalRuntime, /s:pingu_select_ai_provider/);
+  assert.doesNotMatch(internalRuntime, /s:pingu_normalize_ai_provider/);
+  assert.doesNotMatch(internalRuntime, /s:pingu_apply_ai_provider_env/);
+  assert.doesNotMatch(internalRuntime, /PinguModel/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_AI_PROVIDER/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_CODEX_MODEL/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_CLAUDE_MODEL/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_OPENAI_MODEL/);
+  assert.doesNotMatch(pluginRuntime, /g:pingu_ai_provider/);
+  assert.doesNotMatch(pluginRuntime, /g:pingu_model_key/);
 });
 
 test('runtime permite corrigir somente a issue da linha atual', () => {
   assert.match(pluginRuntime, /let g:pingu_fix_current_key = '<leader>pif'/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_at_cursor_for_action\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_from_open_hover\(\) abort/);
   assert.match(internalRuntime, /function! s:refresh_pingu_hints_after_issue_apply\(bufnr\) abort/);
   assert.match(internalRuntime, /let l:issue = s:pingu_issue_at_cursor_for_action\(\)/);
   assert.match(internalRuntime, /s:get_buffer_issue_at_cursor\(\)/);
   assert.match(internalRuntime, /s:issue_has_applicable_fix\(l:issue\)/);
+  assert.match(internalRuntime, /let l:file = fnamemodify\(get\(l:issue, 'filename', empty\(bufname\('%'\)\) \? '' : bufname\('%'\)\), ':p'\)/);
   assert.match(internalRuntime, /call s:refresh_pingu_hints_after_issue_apply\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /call s:pingu_post_fix_check\(l:file\)/);
   assert.doesNotMatch(internalRuntime, /Correcao aplicada na linha atual'\\n\s*call s:clear_pingu_issue_hints_for_buffer/);
   assert.match(internalRuntime, /':PinguFixCurrent<CR>'/);
 });
 
-test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', () => {
+test('runtime mantem hover automatico de issue passivo por padrao', () => {
   assert.match(pluginRuntime, /let g:pingu_issue_hover_hint = 1/);
-  assert.match(pluginRuntime, /let g:pingu_issue_hover_delay_ms = 30/);
+  assert.match(pluginRuntime, /let g:pingu_issue_hover_delay_ms = 5000/);
   assert.match(internalRuntime, /function! s:issue_covers_line\(issue, line\) abort/);
   assert.match(internalRuntime, /get\(a:issue, 'end_lnum', l:start\)/);
   assert.match(internalRuntime, /function! s:get_buffer_issue_at_cursor_exact\(\) abort/);
-  assert.match(internalRuntime, /function! s:pingu_open_issue_hover_menu\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_open_issue_hover_menu\(issue, \.\.\.\) abort/);
   assert.match(internalRuntime, /let s:pingu_issue_hover_source_context = {}/);
   assert.match(internalRuntime, /function! s:restore_pingu_issue_hover_source\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_fix_current_issue_with_ai\(\) abort/);
   assert.match(internalRuntime, /function! s:pingu_issue_hover_action_for_cursor\(\) abort/);
   assert.match(internalRuntime, /function! s:install_pingu_issue_hover_source_maps\(bufnr\) abort/);
   assert.match(internalRuntime, /function! s:clear_pingu_issue_hover_source_maps\(\) abort/);
+  assert.match(internalRuntime, /let s:pingu_issue_hover_keep_open = 0/);
+  assert.match(internalRuntime, /function! s:release_pingu_issue_hover_keep_open\(timer\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_current_buffer_is_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:schedule_pingu_issue_hover_menu\(\) abort/);
   assert.match(internalRuntime, /function! s:fire_pingu_issue_hover_menu\(timer, bufnr, lnum, changedtick\) abort/);
   assert.match(internalRuntime, /function! s:pingu_show_issue_hover_action_hint\(\) abort/);
@@ -288,28 +372,207 @@ test('runtime exibe hint interativo de correcao ao cursor em issue aplicavel', (
   assert.match(internalRuntime, /s:pingu_qf_items_for_current_buffer\(\)/);
   assert.match(internalRuntime, /nvim_open_win/);
   assert.match(internalRuntime, /nvim_open_win\(l:bufnr, v:false, \{/);
-  assert.match(internalRuntime, /'focusable': v:true/);
+  assert.match(internalRuntime, /let l:width = s:pingu_hover_float_width\(l:lines, 120, 48\)/);
+  assert.match(internalRuntime, /let l:lines = s:pingu_wrap_hover_lines\(l:lines, l:width\)/);
+  assert.match(internalRuntime, /let l:height = s:pingu_hover_float_height\(l:lines, 32\)/);
+  assert.match(internalRuntime, /nvim_win_set_option\(l:winid, 'wrap', v:true\)/);
+  assert.match(internalRuntime, /nvim_win_set_option\(l:winid, 'linebreak', v:true\)/);
+  assert.match(internalRuntime, /'focusable': v:true,/);
   assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_menu', 1\)/);
+  assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_focus_menu', l:focus_menu \? 1 : 0\)/);
   assert.match(internalRuntime, /getbufvar\(l:hover_bufnr, 'pingu_issue_hover_menu', 0\)/);
   assert.match(internalRuntime, /l:first_line =~# '\^Pingu:'/);
   assert.match(internalRuntime, /PinguFixCurrentAI/);
   assert.match(internalRuntime, /corrigir com IA/);
   assert.match(internalRuntime, /call s:restore_pingu_issue_hover_source\(\)/);
-  assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("apply"\)/);
-  assert.match(internalRuntime, /call <SID>pingu_issue_hover_action\("ai"\)/);
-  assert.match(internalRuntime, /call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)/);
+  assert.match(internalRuntime, /function! s:script_call_rhs\(call_expr\) abort/);
+  assert.match(internalRuntime, /expand\('<SID>'\) \. a:call_expr/);
+  assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("apply"\)'\)/);
+  assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("ai"\)'\)/);
+  assert.doesNotMatch(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("preview"\)'\)/);
+  assert.doesNotMatch(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("explain"\)'\)/);
+  assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("test"\)'\)/);
+  assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("undo"\)'\)/);
+  assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action\("history"\)'\)/);
+  assert.match(internalRuntime, /t  Rodar checks/);
+  assert.match(internalRuntime, /if l:focus_menu\n    call s:install_pingu_issue_hover_source_maps\(bufnr\('%'\)\)\n  endif/);
+  assert.match(internalRuntime, /let l:lines = s:pingu_issue_hover_menu_lines\(a:issue, l:focus_menu\)/);
   assert.match(internalRuntime, /nvim_buf_set_keymap\(a:bufnr, 'n', l:lhs, l:rhs/);
   assert.match(internalRuntime, /nvim_buf_del_keymap\(l:bufnr, 'n', l:lhs\)/);
-  assert.match(internalRuntime, /<SID>pingu_issue_hover_action_for_cursor\(\)<CR>/);
-  assert.match(internalRuntime, /'<LeftMouse>', '<LeftMouse>:/);
+  assert.match(internalRuntime, /call nvim_buf_set_keymap\(l:bufnr, 'n', 'a'/);
+  assert.match(internalRuntime, /s:script_call_rhs\('pingu_issue_hover_action_for_cursor\(\)'\)/);
+  assert.match(internalRuntime, /'<LeftMouse>', '<LeftMouse>' \. s:script_call_rhs\('pingu_issue_hover_action_for_cursor\(\)'\)/);
+  assert.match(internalRuntime, /let l:focus_menu = a:0 > 0 \? !!a:1 : v:false/);
+  assert.match(internalRuntime, /let l:existing_focus_menu = getbufvar\(l:existing_bufnr, 'pingu_issue_hover_focus_menu', 0\)/);
+  assert.match(internalRuntime, /if l:existing_focus_menu \|\| !l:focus_menu\n      return\n    endif/);
+  assert.match(internalRuntime, /call nvim_buf_set_option\(l:bufnr, 'bufhidden', l:focus_menu \? 'hide' : 'wipe'\)/);
+  assert.match(internalRuntime, /if l:focus_menu\n    let s:pingu_issue_hover_keep_open = 1\n  endif\n  let l:winid = nvim_open_win\(l:bufnr, v:false, \{/);
+  assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:false\)/);
+  assert.match(internalRuntime, /call s:pingu_open_issue_hover_menu\(l:issue, v:true\)/);
+  assert.match(internalRuntime, /call timer_start\(120, function\('s:release_pingu_issue_hover_keep_open'\)\)/);
+  assert.match(internalRuntime, /if !exists\('\*nvim_win_is_valid'\) \|\| nvim_win_is_valid\(l:winid\)\n    call s:start_pingu_issue_hover_ai_suggestion\(a:issue, l:signature\)/);
+  assert.doesNotMatch(internalRuntime, /function! s:pingu_open_issue_hover_menu\(issue, \.\.\.\) abort[\s\S]*call nvim_set_current_win\(l:winid\)[\s\S]*function! s:pingu_show_issue_hover_action_hint\(\) abort/);
   assert.match(internalRuntime, /autocmd CursorHold \* if has\('nvim'\)/);
   assert.match(internalRuntime, /autocmd CursorMoved \* if has\('nvim'\)/);
   assert.doesNotMatch(internalRuntime, /autocmd CursorMoved,BufEnter \*/);
   assert.match(internalRuntime, /autocmd InsertEnter,BufLeave \* if has\('nvim'\)/);
   assert.match(internalRuntime, /s:pingu_show_issue_hover_action_hint\(\)/);
+  assert.match(internalRuntime, /if s:pingu_current_buffer_is_issue_hover_menu\(\)\n    return\n  endif\n  call s:close_pingu_issue_hover_menu\(\)/);
+  assert.match(internalRuntime, /get\(g:, 'pingu_issue_hover_hint', 1\)/);
   assert.match(internalRuntime, /let s:pingu_cursor_hover_issue_signature = ''/);
-  assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 30\)/);
+  assert.match(internalRuntime, /let l:delay = get\(g:, 'pingu_issue_hover_delay_ms', 5000\)/);
+  assert.match(internalRuntime, /CursorHold \* if has\('nvim'\) && exists\('\*nvim_get_mode'\) \| call s:schedule_pingu_issue_hover_menu\(\) \| endif/);
   assert.match(internalRuntime, /return max\(\[10, l:delay\]\)/);
+});
+
+test('runtime nao rouba foco do arquivo durante check com hover de issue ligado', { skip: !commandExists('nvim') }, () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-vim-hover-focus-'));
+  const sourceFile = path.join(tempDir, 'sample.js');
+  const scriptFile = path.join(tempDir, 'hover-focus.vim');
+  const outputFile = path.join(tempDir, 'result.json');
+  fs.writeFileSync(sourceFile, ['const value = 1   ', 'console.log(value)', ''].join('\n'), 'utf8');
+  fs.writeFileSync(scriptFile, [
+    'set nomore',
+    'set hidden',
+    'let g:pingu_start_on_editor_enter = 0',
+    'let g:pingu_open_window_on_start = 0',
+    'let g:pingu_show_window = 0',
+    'let g:pingu_review_on_open = 0',
+    'let g:pingu_realtime_on_change = 0',
+    'let g:pingu_realtime_on_buffer_load = 0',
+    'let g:pingu_realtime_async = 0',
+    'let g:pingu_non_blocking_mode = 0',
+    'let g:pingu_issue_hover_hint = 1',
+    'let g:pingu_issue_hover_delay_ms = 10',
+    'let $PINGU_COPILOT_DISABLED = 1',
+    "let g:pingu_auto_fix_kinds = ['trailing_whitespace']",
+    `execute 'set runtimepath^=' . fnameescape(${vimString(root)})`,
+    'runtime plugin/pingu_dev_agent.vim',
+    `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
+    'call cursor(1, 1)',
+    'silent PinguCheck',
+    'sleep 900m',
+    'let g:pingu_test_hover_open = 0',
+    'for g:pingu_test_winid in nvim_list_wins()',
+    '  let g:pingu_test_bufnr = nvim_win_get_buf(g:pingu_test_winid)',
+    "  if getbufvar(g:pingu_test_bufnr, 'pingu_issue_hover_menu', 0)",
+    '    let g:pingu_test_hover_open = 1',
+    '  endif',
+    'endfor',
+    `call writefile([json_encode({'currentFile': fnamemodify(bufname('%'), ':p'), 'sourceFile': fnamemodify(${vimString(sourceFile)}, ':p'), 'line': line('.'), 'hoverOpen': g:pingu_test_hover_open})], ${vimString(outputFile)})`,
+    'quitall!',
+    '',
+  ].join('\n'), 'utf8');
+
+  const result = spawnSync('nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-S', scriptFile], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 15000,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+  assert.equal(payload.currentFile, payload.sourceFile);
+  assert.equal(payload.line, 1);
+});
+
+test('runtime resolve hover da funcao focada em declaracao e chamada aninhada', { skip: !commandExists('nvim') }, () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-vim-function-hover-'));
+  const sourceFile = path.join(tempDir, 'sample.py');
+  const scriptFile = path.join(tempDir, 'function-hover.vim');
+  const outputFile = path.join(tempDir, 'function-hover.json');
+  fs.writeFileSync(sourceFile, [
+    'def outer(value):',
+    '    def inner(item):',
+    '        return item + value',
+    '',
+    '    result = inner(value)',
+    '    return result',
+    '',
+  ].join('\n'), 'utf8');
+  fs.writeFileSync(scriptFile, [
+    'set nomore',
+    'let g:pingu_start_on_editor_enter = 0',
+    'let g:pingu_open_window_on_start = 0',
+    'let g:pingu_show_window = 0',
+    'let g:pingu_review_on_open = 0',
+    'let g:pingu_realtime_on_change = 0',
+    'let g:pingu_realtime_on_buffer_load = 0',
+    `execute 'set runtimepath^=' . fnameescape(${vimString(root)})`,
+    'runtime plugin/pingu_dev_agent.vim',
+    `execute 'edit ' . fnameescape(${vimString(sourceFile)})`,
+    "let g:pingu_test_functions = split(execute('function'), \"\\n\")",
+    "let g:pingu_test_context_fn = ''",
+    'for g:pingu_test_item in g:pingu_test_functions',
+    "  let g:pingu_test_match = matchstr(g:pingu_test_item, '<SNR>\\d\\+_pingu_function_context_at_cursor')",
+    '  if !empty(g:pingu_test_match)',
+    '    let g:pingu_test_context_fn = g:pingu_test_match',
+    '    break',
+    '  endif',
+    'endfor',
+    'if empty(g:pingu_test_context_fn)',
+    `  call writefile([json_encode({'error': 'missing context function'})], ${vimString(outputFile)})`,
+    '  qa!',
+    'endif',
+    'call cursor(2, 10)',
+    'let g:pingu_test_decl_context = call(g:pingu_test_context_fn, [])',
+    'call cursor(5, 15)',
+    'let g:pingu_test_call_context = call(g:pingu_test_context_fn, [])',
+    'call cursor(6, 10)',
+    'let g:pingu_test_outer_context = call(g:pingu_test_context_fn, [])',
+    `call writefile([json_encode({'decl': get(g:pingu_test_decl_context, 'name', ''), 'call': get(g:pingu_test_call_context, 'name', ''), 'outer': get(g:pingu_test_outer_context, 'name', ''), 'callStart': get(g:pingu_test_call_context, 'start', 0), 'callEnd': get(g:pingu_test_call_context, 'end', 0)})], ${vimString(outputFile)})`,
+    'qa!',
+    '',
+  ].join('\n'), 'utf8');
+
+  const result = spawnSync('nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-S', scriptFile], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 10000,
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+  assert.equal(payload.decl, 'inner');
+  assert.equal(payload.call, 'inner');
+  assert.equal(payload.outer, 'outer');
+  assert.equal(payload.callStart, 2);
+  assert.equal(payload.callEnd, 4);
+});
+
+test('runtime expoe fluxos praticos de doctor contexto acoes e check', () => {
+  assert.match(pluginRuntime, /let g:pingu_post_fix_check_command = empty\(\$PINGU_POST_FIX_CHECK_COMMAND\) \? '' : \$PINGU_POST_FIX_CHECK_COMMAND/);
+  assert.match(pluginRuntime, /let g:pingu_project_check_command = empty\(\$PINGU_PROJECT_CHECK_COMMAND\) \? '' : \$PINGU_PROJECT_CHECK_COMMAND/);
+  assert.match(internalRuntime, /function! s:pingu_doctor_lines\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_doctor_open\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_project_context_command\(bang\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_actions_open\(\) abort/);
+  assert.match(internalRuntime, /let l:issue = s:pingu_issue_from_open_hover\(\)/);
+  assert.match(internalRuntime, /setbufvar\(l:bufnr, 'pingu_issue_hover_issue', deepcopy\(a:issue\)\)/);
+  assert.match(internalRuntime, /function! s:pingu_preview_current_fix\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_preview_fix\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_issue_queue_open\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_action_history_open\(\) abort/);
+  assert.match(internalRuntime, /call s:pingu_lsp_open_float\('Pingu Action History', s:pingu_action_history_lines\(\), \{'enter': v:true\}\)/);
+  assert.match(internalRuntime, /function! s:pingu_explain_current\(\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_run_project_check\(\.\.\.\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_post_fix_check\(file\) abort/);
+  assert.match(internalRuntime, /command! PinguDoctor call s:pingu_doctor_open\(\)/);
+  assert.match(internalRuntime, /command! -bang PinguProjectContext call s:pingu_project_context_command\(<bang>0\)/);
+  assert.match(internalRuntime, /command! PinguIssueActions call s:pingu_issue_actions_open\(\)/);
+  assert.match(internalRuntime, /command! PinguIssueApply call s:pingu_issue_hover_action\('apply'\)/);
+  assert.match(internalRuntime, /command! PinguIssuePreview call s:pingu_issue_hover_action\('preview'\)/);
+  assert.match(internalRuntime, /command! PinguIssueAI call s:pingu_issue_hover_action\('ai'\)/);
+  assert.match(internalRuntime, /command! PinguIssueExplain call s:pingu_issue_hover_action\('explain'\)/);
+  assert.match(internalRuntime, /command! PinguIssueCheck call s:pingu_issue_hover_action\('test'\)/);
+  assert.match(internalRuntime, /command! PinguIssueUndo call s:pingu_issue_hover_action\('undo'\)/);
+  assert.match(internalRuntime, /command! PinguIssueHistory call s:pingu_issue_hover_action\('history'\)/);
+  assert.match(internalRuntime, /command! PinguIssuePanel call s:pingu_issue_hover_action\('panel'\)/);
+  assert.match(internalRuntime, /command! PinguPreviewFix call s:pingu_preview_current_fix\(\)/);
+  assert.match(internalRuntime, /command! PinguIssueQueue call s:pingu_issue_queue_open\(\)/);
+  assert.match(internalRuntime, /command! PinguActionHistory call s:pingu_action_history_open\(\)/);
+  assert.match(internalRuntime, /command! PinguExplainCurrent call s:pingu_explain_current\(\)/);
+  assert.match(internalRuntime, /command! -nargs=\* PinguRunProjectCheck call s:pingu_run_project_check\(<q-args>\)/);
 });
 
 test('runtime permite interromper processamento ativo do Pingu', () => {
@@ -337,6 +600,16 @@ test('runtime executa PinguPrompt de forma assincrona no Neovim', () => {
   assert.match(internalRuntime, /command! -nargs=\? PinguPromptClear call s:pingu_prompt_clear_command\(<q-args>\)/);
   assert.match(pluginRuntime, /let g:pingu_prompt_chat_history_max = 12/);
   assert.match(pluginRuntime, /let g:pingu_prompt_chat_entry_max_chars = 320/);
+});
+
+test('runtime nao expoe prompt terminal TUI', () => {
+  assert.doesNotMatch(internalRuntime, /s:pingu_prompt_terminal\b/);
+  assert.doesNotMatch(internalRuntime, /s:open_pingu_prompt_terminal/);
+  assert.doesNotMatch(internalRuntime, /PinguPromptTerminal/);
+  assert.doesNotMatch(internalRuntime, /PinguPromptClose/);
+  assert.doesNotMatch(internalRuntime, /g:pingu_prompt_terminal_command/);
+  assert.doesNotMatch(internalRuntime, /\$PINGU_PROMPT_TERMINAL_COMMAND/);
+  assert.match(internalRuntime, /command! -range -nargs=\* PinguPrompt call s:pingu_prompt\(<line1>, <line2>, <q-args>, <range>\)/);
 });
 
 test('runtime mostra hints inline para prompts acionaveis do Pingu', () => {
@@ -465,8 +738,11 @@ test('runtime mostra hints inline para diagnosticos encontrados pelo Pingu', () 
 
 test('runtime registra historico para rollback manual de auto-fix', () => {
   assert.match(pluginRuntime, /let g:pingu_undo_fix_history_max = 30/);
+  assert.match(pluginRuntime, /let g:pingu_action_history_max = 50/);
   assert.match(internalRuntime, /let s:pingu_dev_agent_fix_history = \{\}/);
+  assert.match(internalRuntime, /let s:pingu_action_history = \[\]/);
   assert.match(internalRuntime, /function! s:capture_issue_fix_snapshot\(issue, source_file\) abort/);
+  assert.match(internalRuntime, /function! s:pingu_record_action_history\(action, issue, status\) abort/);
   assert.match(internalRuntime, /function! s:undo_last_pingu_fix\(force\) abort/);
   assert.match(internalRuntime, /:PinguUndoFix!/);
 });
@@ -503,9 +779,7 @@ test('runtime preserva o cursor semantico quando auto-fix insere linhas acima', 
     'let g:pingu_realtime_on_buffer_load = 0',
     'let g:pingu_realtime_async = 0',
     'let g:pingu_non_blocking_mode = 0',
-    'let $PINGU_CODEX_DISABLED = 1',
     'let $PINGU_COPILOT_DISABLED = 1',
-    'let $PINGU_OPENAI_DISABLED = 1',
     'let g:pingu_auto_fix_enabled = 1',
     'let g:pingu_auto_fix_max_per_check = 1',
     "let g:pingu_auto_fix_kinds = ['function_doc']",
@@ -560,9 +834,7 @@ test('runtime permite reverter a ultima correcao aplicada pelo Pingu', { skip: !
     'let g:pingu_realtime_on_buffer_load = 0',
     'let g:pingu_realtime_async = 0',
     'let g:pingu_non_blocking_mode = 0',
-    'let $PINGU_CODEX_DISABLED = 1',
     'let $PINGU_COPILOT_DISABLED = 1',
-    'let $PINGU_OPENAI_DISABLED = 1',
     'let g:pingu_auto_fix_enabled = 1',
     'let g:pingu_auto_fix_max_per_check = 1',
     "let g:pingu_auto_fix_kinds = ['trailing_whitespace']",
@@ -646,7 +918,10 @@ test('runtime cria fallback Copilot para warnings do LSP sem code action', () =>
   assert.match(internalRuntime, /call s:pingu_log_event\('error', 'fix-current-ai'/);
   assert.match(internalRuntime, /call s:restore_issue_cursor_and_hints\(l:issue\)/);
   assert.match(internalRuntime, /silent! call s:update_pingu_all_hints_current_buffer\(\)/);
-  assert.match(internalRuntime, /return s:apply_issue_lsp_ai_fix\(s:pingu_issue_ai_fix_candidate\(a:issue\)\)/);
+  assert.match(internalRuntime, /function! s:start_async_lsp_ai_fix\(issue\) abort/);
+  assert.match(internalRuntime, /function! s:lsp_ai_fix_on_exit\(job_id, code, event\) abort/);
+  assert.match(internalRuntime, /let l:applied = s:start_async_lsp_ai_fix\(l:ai_issue\)/);
+  assert.match(internalRuntime, /Correcao com provider em background/);
   assert.match(internalRuntime, /function! s:pingu_lsp_issue_requires_ai_decision\(issue\) abort/);
   assert.match(internalRuntime, /reportundefined/);
   assert.match(internalRuntime, /let l:previous_changedticks = \{\}/);
