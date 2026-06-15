@@ -2,6 +2,35 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Simplificacao para Copilot-only (breaking)
+
+### Antes
+
+- O runtime suportava providers `copilot`, `codex`, `claude` e `openai`, com selector `:PinguModel` / `<leader>pim`, env vars dedicadas (`PINGU_AI_PROVIDER`, `PINGU_AI_MODEL`, `PINGU_OPENAI_*`, `PINGU_CODEX_*`, `PINGU_CLAUDE_*`, `OPENAI_API_KEY`) e prompt terminal flutuante interativo via `:PinguPrompt` sem argumento, `:PinguPromptTerminal`, `:PinguPromptClose` e `<leader>pip`.
+
+### Depois
+
+- Restou apenas a integracao com o GitHub Copilot CLI; o Pingu detecta automaticamente o login do `copilot` no PATH, sem variaveis obrigatorias.
+- Removidos `lib/ai-provider-codex.js`, `lib/ai-provider-claude.js`, `lib/ai-provider-openai.js` e respectivos testes.
+- Removidos `:PinguModel`, `:PinguPromptTerminal`, `:PinguPromptClose`, `<leader>pim`, `<leader>pip` e as funcoes/variaveis associadas no plugin Vim.
+- Removidas variaveis de ambiente `PINGU_AI_PROVIDER`, `PINGU_AI_MODEL`, `PINGU_OPENAI_*`, `PINGU_CODEX_*`, `PINGU_CLAUDE_*`, `PINGU_ANTHROPIC_*`, `OPENAI_API_KEY` (do Pingu) e `PINGU_PROMPT_TERMINAL_COMMAND`.
+- Mantido `:PinguPrompt <texto>` como patch direto via Copilot; sem argumento agora orienta o usuario.
+- Mantidas `PINGU_COPILOT_COMMAND`, `PINGU_COPILOT_MODEL`, `PINGU_COPILOT_TIMEOUT_MS`, `PINGU_COPILOT_FAILURE_COOLDOWN_MS`, `PINGU_COPILOT_DISABLED` como alavancas de debug/CI.
+- `pingu doctor` reporta apenas o estado do Copilot.
+- Cobertura de testes ampliada: 258 testes (era 184), incluindo 63 cenarios multilingue para o parser de action comments e 11 cenarios cobrindo o fluxo automatico de geracao de testes via Copilot e seus modos de falha (PINGU_COPILOT_DISABLED, exit code != 0, JSON invalido, spawnSync throw, override de PINGU_COPILOT_COMMAND).
+
+### Motivo
+
+- Alinhar o Pingu com a intencao operacional do usuario: agente integrado nativamente ao Copilot quando ele estiver autenticado na IDE, sem exigir nenhuma configuracao extra.
+- Reduzir complexidade arquitetural removendo a abstracao multi-provider que nao agregava valor pratico.
+- Reduzir surface area de bugs e simplificar contratos de configuracao.
+
+### Impacto
+
+- Breaking change: usuarios que dependiam de `:PinguModel`, `<leader>pim`/`<leader>pip`, `:PinguPromptTerminal`, `:PinguPromptClose` ou das variaveis `PINGU_AI_PROVIDER`, `PINGU_AI_MODEL`, `PINGU_OPENAI_*`, `PINGU_CODEX_*`, `PINGU_CLAUDE_*` ou `OPENAI_API_KEY` devem migrar para o Copilot CLI autenticado.
+- O fluxo automatico de geracao de testes (`unit_test`) continua disparando sem action comment quando o Copilot estiver disponivel; sem Copilot, cai para template offline.
+- Diff: -1372 / +25 no runtime Vim, -958 / +39 no runtime Node, +499 linhas de novos testes.
+
 ## 0.1.44 - Em desenvolvimento
 
 ### Antes
