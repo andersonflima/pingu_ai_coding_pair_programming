@@ -13,7 +13,7 @@ O projeto funciona hoje em `Vim/Neovim`, com foco pratico em `LazyVim`, runtime 
 - Analisa o arquivo atual em tempo real e publica diagnosticos orientados a manutencao.
 - Interpreta comentarios acionaveis para gerar codigo no proprio arquivo.
 - Cria `context_file` a partir de blueprints descritos no comentario, com scaffold nativo nas stacks principais.
-- Gera ou complementa testes automaticamente e cria `tests/` ou `test/` quando necessario, seguindo o convenio da linguagem.
+- Sugere cobertura de testes e atualizacao de testes existentes de forma opt-in: o Pingu aponta o que falta (ou o teste relacionado a um metodo alterado) e so cria ou ajusta quando o desenvolvedor aplica a sugestao.
 - Detecta dependencias faltantes quando o snippet gerado exige imports, `use`, `require` ou `#include`.
 - Consulta bibliotecas Node instaladas e importadas pelo buffer para orientar geracoes e correcoes com base na API real da dependencia.
 - Tenta inserir imports e includes na fronteira correta do arquivo em vez de simplesmente despejar tudo na linha do comentario.
@@ -51,6 +51,7 @@ Ela organiza os erros que o Pingu deve tratar por familias:
 - sintaxe e estrutura
 - higiene de workspace
 - nulabilidade e igualdade
+- erros de digitacao em palavras-chave e builtins
 - imports e dependencias
 - tratamento de erros
 - contrato publico
@@ -67,6 +68,19 @@ Correcoes deterministicas ja mapeadas:
 - Python: `except:` vira `except Exception:`.
 - Ruby: comparacoes diretas com `nil` viram `nil?`.
 - Elixir: comparacoes diretas com `nil` viram `is_nil/1`.
+
+### Atribuicao acidental em condicao (sugestao)
+
+Em JavaScript/TypeScript, `if (x = y)` compila sem erro mas quase sempre era para ser uma comparacao. O Pingu sinaliza esse caso e sugere `===`, ignorando comparacoes (`==`, `===`, `<=`), operadores compostos (`+=`), arrow functions (`=>`), `=` dentro de strings e o idioma de atribuicao intencional com parenteses duplos (`if ((m = regex.exec(s)))`). E suggest-only: nunca reescreve sozinho.
+
+### Erros de digitacao (sugestao, sem reescrita automatica)
+
+O Pingu detecta erros de digitacao em palavras-chave e builtins comuns (por exemplo `cosole.log`, `fucntion`, `retrun`, `improt`, em Python `pirnt`, `slef`, `Flase`) e responde com `Voce quis dizer 'X'?`. Esse fluxo e deliberadamente conservador:
+
+- so reconhece grafias claramente incorretas, versionadas em [config/common-typos.json](./config/common-typos.json);
+- ignora ocorrencias dentro de strings e comentarios;
+- nunca casa um typo como substring de um identificador maior;
+- nunca reescreve automaticamente (`typo` tem `autoFixDefault: false`): a correcao so e aplicada quando o desenvolvedor aceita no editor.
 
 ## Operacao de issues
 

@@ -2,6 +2,72 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de atribuicao acidental em condicao
+
+### Antes
+
+- O Pingu nao detectava o erro humano classico `if (x = y)` em JavaScript/TypeScript, que compila sem erro mas costuma ser uma comparacao pretendida.
+
+### Depois
+
+- Novo check `checkAssignmentInCondition` em `lib/analyzer-developer-errors.js` e novo issue kind `assignment_in_condition` (`autoFixDefault: false`, suggest-only) mapeado na familia `control_flow_and_complexity`.
+- Sinaliza atribuicao de identificador/acesso dentro de `if`/`while` e sugere `===`, sem reescrever automaticamente.
+- Evita falsos positivos: ignora comparacoes (`==`, `===`, `<=`, `>=`, `!=`), operadores compostos (`+=` etc.), arrow functions (`=>`), `=` dentro de strings/comentarios e o idioma de atribuicao intencional com parenteses duplos.
+
+### Motivo
+
+- Ampliar a cobertura de erros humanos que o compilador nao acusa, alinhado ao objetivo de o Pingu encontrar erros alem dos de compilacao.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere; nenhum auto-fix novo.
+
+## Unreleased - Cobertura e atualizacao de testes opt-in
+
+### Antes
+
+- Os kinds `unit_test` (criar cobertura) e `unit_test_signature` (atualizar teste apos mudanca de assinatura) tinham `autoFixDefault: true` e entravam no auto-fix padrao, podendo criar ou reescrever testes sem aprovacao explicita do desenvolvedor.
+- A mensagem de drift de assinatura nao identificava qual teste estava desatualizado.
+- A deduplicacao de issues por `replace_range` nao considerava `target_file`, entao quando o mesmo metodo era coberto por mais de um teste apenas um aviso sobrevivia.
+
+### Depois
+
+- `unit_test` e `unit_test_signature` passam a `autoFixDefault: false`: o Pingu sugere, mas so cria ou atualiza o teste quando o desenvolvedor aplica a sugestao. `unit_test` tambem foi removido da whitelist de `write_file` auto-seguro no runtime Vim e da lista fallback de auto-fix.
+- A mensagem de drift agora aponta o teste existente pelo nome (`Teste existente <arquivo> referencia <metodo> com assinatura antiga.`) e pergunta se o desenvolvedor quer aplicar o ajuste.
+- A chave de deduplicacao de issues passou a incluir `target_file` para acoes baseadas em range, de modo que cada teste relacionado a um metodo alterado gera seu proprio aviso acionavel, mesmo quando o metodo tem mais de um teste.
+
+### Motivo
+
+- Atender ao pedido de tornar a criacao e a atualizacao de testes uma decisao do desenvolvedor (sugerir e perguntar, em vez de agir automaticamente), inclusive apontando os testes existentes relacionados a um metodo alterado.
+
+### Impacto
+
+- Mudanca de comportamento (nao breaking de API): testes deixam de ser criados/atualizados automaticamente no loop de auto-fix; a acao continua disponivel manualmente via quick-fix. Quem dependia do comportamento automatico pode reativar adicionando `unit_test`/`unit_test_signature` a `g:pingu_auto_fix_kinds`.
+
+## Unreleased - Deteccao conservadora de erros de digitacao
+
+### Antes
+
+- O Pingu detectava erros humanos por um conjunto pequeno de checks (`==`/`!=` em JS, `== None`/`except:` em Python, `nil` em Ruby/Elixir). Nao havia nenhuma deteccao de erro de digitacao em palavras-chave ou builtins.
+- As primitivas de similaridade (`levenshteinDistance`, `suggestSimilarIdentifier`, `collapseRepeatedChars`, `isSubsequence`) viviam dentro de `lib/analyzer.js`, com `levenshteinDistance` declarada duas vezes (a primeira definicao era codigo morto por hoisting).
+
+### Depois
+
+- Novo modulo `lib/identifier-similarity.js` concentra as primitivas de similaridade; `lib/analyzer.js` passa a importa-las e a definicao duplicada de `levenshteinDistance` foi removida. Comportamento preservado.
+- Novo modulo `lib/analyzer-typos.js` detecta erros de digitacao em palavras-chave e builtins a partir do dicionario versionado `config/common-typos.json` (JavaScript/TypeScript, Python, Ruby, Go, Rust).
+- Novo issue kind `typo` com `autoFixDefault: false`: o Pingu sugere `Voce quis dizer 'X'?`, mas nunca reescreve sozinho. A correcao so e aplicada quando o desenvolvedor aceita no editor.
+- Nova familia `typo_and_naming` na taxonomia versionada de erros (`safeAutoFix: false`).
+- Deteccao ignora strings e comentarios e nunca casa um typo como substring de identificador maior.
+
+### Motivo
+
+- Atender ao pedido de ajudar a encontrar nao so erros de compilador, mas tambem erros humanos comuns como erros de digitacao.
+- Reduzir o God file `lib/analyzer.js` extraindo um modulo coeso e remover a duplicacao de `levenshteinDistance`.
+
+### Impacto
+
+- Aditivo e seguro: nenhum auto-fix novo: o kind `typo` apenas sugere. Cobertura de testes ampliada (modulo de similaridade e detector de typos).
+
 ## Unreleased - Simplificacao para Copilot-only (breaking)
 
 ### Antes
