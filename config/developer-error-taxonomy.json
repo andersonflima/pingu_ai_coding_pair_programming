@@ -24,6 +24,13 @@
       "languages": ["javascript", "python", "ruby"]
     },
     {
+      "id": "typo_and_naming",
+      "description": "Erros de digitacao em palavras-chave e builtins. Pingu sugere a correcao mais provavel, mas nunca reescreve automaticamente.",
+      "mappedIssueKinds": ["typo"],
+      "safeAutoFix": false,
+      "languages": ["javascript", "python", "ruby", "go", "rust"]
+    },
+    {
       "id": "imports_and_dependencies",
       "description": "Imports inexistentes, exports incorretos, includes/use ausentes e dependencias exigidas por snippets.",
       "mappedIssueKinds": ["undefined_variable", "missing_dependency"],

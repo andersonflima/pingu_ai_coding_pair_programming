@@ -51,6 +51,7 @@ Ela organiza os erros que o Pingu deve tratar por familias:
 - sintaxe e estrutura
 - higiene de workspace
 - nulabilidade e igualdade
+- erros de digitacao em palavras-chave e builtins
 - imports e dependencias
 - tratamento de erros
 - contrato publico
@@ -67,6 +68,15 @@ Correcoes deterministicas ja mapeadas:
 - Python: `except:` vira `except Exception:`.
 - Ruby: comparacoes diretas com `nil` viram `nil?`.
 - Elixir: comparacoes diretas com `nil` viram `is_nil/1`.
+
+### Erros de digitacao (sugestao, sem reescrita automatica)
+
+O Pingu detecta erros de digitacao em palavras-chave e builtins comuns (por exemplo `cosole.log`, `fucntion`, `retrun`, `improt`, em Python `pirnt`, `slef`, `Flase`) e responde com `Voce quis dizer 'X'?`. Esse fluxo e deliberadamente conservador:
+
+- so reconhece grafias claramente incorretas, versionadas em [config/common-typos.json](./config/common-typos.json);
+- ignora ocorrencias dentro de strings e comentarios;
+- nunca casa um typo como substring de um identificador maior;
+- nunca reescreve automaticamente (`typo` tem `autoFixDefault: false`): a correcao so e aplicada quando o desenvolvedor aceita no editor.
 
 ## Operacao de issues
 

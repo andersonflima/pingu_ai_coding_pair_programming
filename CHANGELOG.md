@@ -2,6 +2,30 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao conservadora de erros de digitacao
+
+### Antes
+
+- O Pingu detectava erros humanos por um conjunto pequeno de checks (`==`/`!=` em JS, `== None`/`except:` em Python, `nil` em Ruby/Elixir). Nao havia nenhuma deteccao de erro de digitacao em palavras-chave ou builtins.
+- As primitivas de similaridade (`levenshteinDistance`, `suggestSimilarIdentifier`, `collapseRepeatedChars`, `isSubsequence`) viviam dentro de `lib/analyzer.js`, com `levenshteinDistance` declarada duas vezes (a primeira definicao era codigo morto por hoisting).
+
+### Depois
+
+- Novo modulo `lib/identifier-similarity.js` concentra as primitivas de similaridade; `lib/analyzer.js` passa a importa-las e a definicao duplicada de `levenshteinDistance` foi removida. Comportamento preservado.
+- Novo modulo `lib/analyzer-typos.js` detecta erros de digitacao em palavras-chave e builtins a partir do dicionario versionado `config/common-typos.json` (JavaScript/TypeScript, Python, Ruby, Go, Rust).
+- Novo issue kind `typo` com `autoFixDefault: false`: o Pingu sugere `Voce quis dizer 'X'?`, mas nunca reescreve sozinho. A correcao so e aplicada quando o desenvolvedor aceita no editor.
+- Nova familia `typo_and_naming` na taxonomia versionada de erros (`safeAutoFix: false`).
+- Deteccao ignora strings e comentarios e nunca casa um typo como substring de identificador maior.
+
+### Motivo
+
+- Atender ao pedido de ajudar a encontrar nao so erros de compilador, mas tambem erros humanos comuns como erros de digitacao.
+- Reduzir o God file `lib/analyzer.js` extraindo um modulo coeso e remover a duplicacao de `levenshteinDistance`.
+
+### Impacto
+
+- Aditivo e seguro: nenhum auto-fix novo: o kind `typo` apenas sugere. Cobertura de testes ampliada (modulo de similaridade e detector de typos).
+
 ## Unreleased - Simplificacao para Copilot-only (breaking)
 
 ### Antes

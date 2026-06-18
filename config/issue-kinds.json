@@ -6,6 +6,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": false
   },
+  "typo": {
+    "defaultAction": { "op": "replace_line" },
+    "autoFixDefault": false,
+    "autoFixPriority": 40,
+    "supportsQuickFix": true,
+    "supportsFollowUp": false
+  },
   "comment_task": {
     "defaultAction": { "op": "replace_line" },
     "autoFixDefault": true,
