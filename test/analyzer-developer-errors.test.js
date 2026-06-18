@@ -23,3 +23,37 @@ test('developer error checker emits deterministic language fixes', () => {
   assert.equal(pythonIssue.kind, 'none_comparison');
   assert.equal(pythonIssue.snippet, 'if value is None:');
 });
+
+function assignmentIssues(line) {
+  return checkCommonDeveloperErrors([line], '/tmp/sample.js', '.js')
+    .filter((issue) => issue.kind === 'assignment_in_condition');
+}
+
+test('detecta atribuicao acidental dentro de if e sugere comparacao', () => {
+  const issue = assignmentIssues('if (status = active) {')[0];
+  assert.ok(issue, 'esperava aviso de atribuicao em condicao');
+  assert.equal(issue.severity, 'warning');
+  assert.equal(issue.snippet, 'if (status === active) {');
+});
+
+test('detecta atribuicao acidental dentro de while', () => {
+  const issue = assignmentIssues('while (node = node.next) {')[0];
+  assert.ok(issue);
+  assert.equal(issue.snippet, 'while (node === node.next) {');
+});
+
+test('nao marca comparacoes nem operadores compostos em condicao', () => {
+  assert.equal(assignmentIssues('if (a === b) {').length, 0);
+  assert.equal(assignmentIssues('if (a == b) {').length, 0);
+  assert.equal(assignmentIssues('if (a <= b) {').length, 0);
+  assert.equal(assignmentIssues('if (count += 1) {').length, 0);
+  assert.equal(assignmentIssues('if (items.find((x) => x.id)) {').length, 0);
+});
+
+test('respeita parenteses duplos como atribuicao intencional', () => {
+  assert.equal(assignmentIssues('if ((match = regex.exec(input))) {').length, 0);
+});
+
+test('ignora sinais de igual dentro de strings na condicao', () => {
+  assert.equal(assignmentIssues('if (label("x = y")) {').length, 0);
+});

@@ -2,6 +2,26 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de atribuicao acidental em condicao
+
+### Antes
+
+- O Pingu nao detectava o erro humano classico `if (x = y)` em JavaScript/TypeScript, que compila sem erro mas costuma ser uma comparacao pretendida.
+
+### Depois
+
+- Novo check `checkAssignmentInCondition` em `lib/analyzer-developer-errors.js` e novo issue kind `assignment_in_condition` (`autoFixDefault: false`, suggest-only) mapeado na familia `control_flow_and_complexity`.
+- Sinaliza atribuicao de identificador/acesso dentro de `if`/`while` e sugere `===`, sem reescrever automaticamente.
+- Evita falsos positivos: ignora comparacoes (`==`, `===`, `<=`, `>=`, `!=`), operadores compostos (`+=` etc.), arrow functions (`=>`), `=` dentro de strings/comentarios e o idioma de atribuicao intencional com parenteses duplos.
+
+### Motivo
+
+- Ampliar a cobertura de erros humanos que o compilador nao acusa, alinhado ao objetivo de o Pingu encontrar erros alem dos de compilacao.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere; nenhum auto-fix novo.
+
 ## Unreleased - Cobertura e atualizacao de testes opt-in
 
 ### Antes

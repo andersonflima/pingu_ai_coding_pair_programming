@@ -69,6 +69,10 @@ Correcoes deterministicas ja mapeadas:
 - Ruby: comparacoes diretas com `nil` viram `nil?`.
 - Elixir: comparacoes diretas com `nil` viram `is_nil/1`.
 
+### Atribuicao acidental em condicao (sugestao)
+
+Em JavaScript/TypeScript, `if (x = y)` compila sem erro mas quase sempre era para ser uma comparacao. O Pingu sinaliza esse caso e sugere `===`, ignorando comparacoes (`==`, `===`, `<=`), operadores compostos (`+=`), arrow functions (`=>`), `=` dentro de strings e o idioma de atribuicao intencional com parenteses duplos (`if ((m = regex.exec(s)))`). E suggest-only: nunca reescreve sozinho.
+
 ### Erros de digitacao (sugestao, sem reescrita automatica)
 
 O Pingu detecta erros de digitacao em palavras-chave e builtins comuns (por exemplo `cosole.log`, `fucntion`, `retrun`, `improt`, em Python `pirnt`, `slef`, `Flase`) e responde com `Voce quis dizer 'X'?`. Esse fluxo e deliberadamente conservador:
