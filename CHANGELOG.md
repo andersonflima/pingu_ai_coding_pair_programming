@@ -2,6 +2,28 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Cobertura e atualizacao de testes opt-in
+
+### Antes
+
+- Os kinds `unit_test` (criar cobertura) e `unit_test_signature` (atualizar teste apos mudanca de assinatura) tinham `autoFixDefault: true` e entravam no auto-fix padrao, podendo criar ou reescrever testes sem aprovacao explicita do desenvolvedor.
+- A mensagem de drift de assinatura nao identificava qual teste estava desatualizado.
+- A deduplicacao de issues por `replace_range` nao considerava `target_file`, entao quando o mesmo metodo era coberto por mais de um teste apenas um aviso sobrevivia.
+
+### Depois
+
+- `unit_test` e `unit_test_signature` passam a `autoFixDefault: false`: o Pingu sugere, mas so cria ou atualiza o teste quando o desenvolvedor aplica a sugestao. `unit_test` tambem foi removido da whitelist de `write_file` auto-seguro no runtime Vim e da lista fallback de auto-fix.
+- A mensagem de drift agora aponta o teste existente pelo nome (`Teste existente <arquivo> referencia <metodo> com assinatura antiga.`) e pergunta se o desenvolvedor quer aplicar o ajuste.
+- A chave de deduplicacao de issues passou a incluir `target_file` para acoes baseadas em range, de modo que cada teste relacionado a um metodo alterado gera seu proprio aviso acionavel, mesmo quando o metodo tem mais de um teste.
+
+### Motivo
+
+- Atender ao pedido de tornar a criacao e a atualizacao de testes uma decisao do desenvolvedor (sugerir e perguntar, em vez de agir automaticamente), inclusive apontando os testes existentes relacionados a um metodo alterado.
+
+### Impacto
+
+- Mudanca de comportamento (nao breaking de API): testes deixam de ser criados/atualizados automaticamente no loop de auto-fix; a acao continua disponivel manualmente via quick-fix. Quem dependia do comportamento automatico pode reativar adicionando `unit_test`/`unit_test_signature` a `g:pingu_auto_fix_kinds`.
+
 ## Unreleased - Deteccao conservadora de erros de digitacao
 
 ### Antes

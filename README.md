@@ -13,7 +13,7 @@ O projeto funciona hoje em `Vim/Neovim`, com foco pratico em `LazyVim`, runtime 
 - Analisa o arquivo atual em tempo real e publica diagnosticos orientados a manutencao.
 - Interpreta comentarios acionaveis para gerar codigo no proprio arquivo.
 - Cria `context_file` a partir de blueprints descritos no comentario, com scaffold nativo nas stacks principais.
-- Gera ou complementa testes automaticamente e cria `tests/` ou `test/` quando necessario, seguindo o convenio da linguagem.
+- Sugere cobertura de testes e atualizacao de testes existentes de forma opt-in: o Pingu aponta o que falta (ou o teste relacionado a um metodo alterado) e so cria ou ajusta quando o desenvolvedor aplica a sugestao.
 - Detecta dependencias faltantes quando o snippet gerado exige imports, `use`, `require` ou `#include`.
 - Consulta bibliotecas Node instaladas e importadas pelo buffer para orientar geracoes e correcoes com base na API real da dependencia.
 - Tenta inserir imports e includes na fronteira correta do arquivo em vez de simplesmente despejar tudo na linha do comentario.

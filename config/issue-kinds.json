@@ -274,14 +274,14 @@
   },
   "unit_test": {
     "defaultAction": { "op": "write_file" },
-    "autoFixDefault": true,
+    "autoFixDefault": false,
     "autoFixPriority": 140,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "unit_test_signature": {
     "defaultAction": { "op": "replace_range" },
-    "autoFixDefault": true,
+    "autoFixDefault": false,
     "autoFixPriority": 75,
     "supportsQuickFix": true,
     "supportsFollowUp": true
