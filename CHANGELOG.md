@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Geracao offline de funcao para Java, C#, Kotlin, Swift e Scala
+
+### Antes
+
+- Para Java, C#, Kotlin, Swift e Scala, a geracao offline de codigo (`@pingu code funcao ...`) caia no fallback estilo JavaScript (`function nome(a, b) { ... }`), produzindo assinatura nao idiomatica.
+
+### Depois
+
+- `functionSignature` em `lib/generation.js` passa a renderizar assinaturas idiomaticas para essas linguagens: `public Object nome(Object a, ...)` (Java), `public object nome(object a, ...)` (C#), `fun nome(a: Any, ...): Any` (Kotlin), `func nome(_ a: Any, ...) -> Any` (Swift) e `def nome(a: Any, ...): Any =` (Scala). `baseHint` cobre o retorno de Swift/Scala (sem ponto e virgula).
+- Nenhuma mudanca de capacidade foi necessaria: o runtime ja roda essa geracao offline; o fix corrige apenas a assinatura emitida.
+
+### Motivo
+
+- Completar a geracao offline de esqueleto de funcao para as linguagens JVM/.NET que ja eram suportadas para documentacao, entregando codigo idiomatico em vez do fallback.
+
+### Impacto
+
+- Aditivo: somente melhora a saida de `code` para essas cinco linguagens. PHP fica de fora por ora (variaveis `$` exigem transformar o corpo gerado, nao so a assinatura).
+
 ## Unreleased - Modularizacao: parsers de import bindings
 
 ### Antes
