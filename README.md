@@ -181,9 +181,21 @@ Tambem e aceito o formato `pingu: <intencao> <pedido>`:
 Intencoes suportadas:
 
 - `code`, `fix`, `refactor`: gera ou ajusta codigo (`comment_task`)
+- `comment`, `doc`, `document`: comenta a funcao seguinte passo a passo, com docstring idiomatico, sem alterar o codigo (`comment_task`)
 - `context`, `ctx`, `blueprint`, `scaffold`: cria contexto persistente/scaffold (`context_file`)
 - `test`, `tests`, `unit-test`: gera um prompt de codigo orientado a testes (`comment_task`)
 - `terminal`, `shell`, `cmd`, `command`, `run`: prepara acao de terminal (`terminal_task`)
+
+Para documentar/comentar o codigo existente, escreva o gatilho logo acima da funcao:
+
+```python
+# : comment this code
+def helper(planta, fert):
+    use_item(fert)
+    return planta
+```
+
+Ao aplicar, o Pingu insere um docstring idiomatico e um comentario factual antes de cada instrucao relevante (`# Chama use_item.`, `# Retorna planta.`), preservando todas as linhas de codigo originais e removendo o gatilho. O fluxo e idempotente: se a funcao ja estiver documentada e comentada, nada e sugerido. Disponivel offline para Python e JavaScript/TypeScript (em JS/TS o bloco vai como JSDoc acima da funcao).
 
 Os marcadores simbolicos abaixo continuam suportados como atalhos compatíveis.
 
