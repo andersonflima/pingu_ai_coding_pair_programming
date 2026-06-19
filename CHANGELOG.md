@@ -2,6 +2,28 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Comentar codigo existente passo a passo
+
+### Antes
+
+- O comentario acionavel `# : comment this code` era detectado, mas o gerador offline apenas ecoava a instrucao (snippet `# comment this code`), sem documentar a funcao seguinte. Na pratica o pedido nao era executado.
+- Nao havia intent `comment`/`doc`/`document` no contrato de comentarios acionaveis; `@pingu comment ...` nem virava tarefa.
+
+### Depois
+
+- Novo modulo `lib/generation-inline-comments.js`: para um pedido de "comentar/documentar este codigo", o Pingu reconstroi a funcao seguinte ao gatilho inserindo um docstring idiomatico (docstring Python apos a assinatura, JSDoc acima da funcao em JS/TS) e um comentario factual antes de cada instrucao relevante (`# Chama use_item.`, `# Retorna planta.`). Os comentarios descrevem a sintaxe real da linha, sem inventar semantica.
+- Toda linha de codigo original e preservada verbatim; a acao e um `replace_range` local que cobre o gatilho e o bloco da funcao, removendo o gatilho. O fluxo e idempotente: se a funcao ja tiver docstring e comentarios, nada e sugerido.
+- Novo intent explicito `comment`/`comente`/`doc`/`document`/`documenta` no parser de `@pingu`/`pingu:`; o marcador `:` continua funcionando (`# : comment this code`, `#: comment this code`).
+- Disponivel offline para Python e JavaScript/TypeScript.
+
+### Motivo
+
+- Corrigir o caso reportado em que o Pingu nao respeitava/executava `# : comment this code`, entregando o resultado esperado: comentar o codigo passo a passo sem altera-lo.
+
+### Impacto
+
+- Aditivo e seguro: o kind `comment_task` ja existia; a geracao agora produz comentarios uteis em vez de eco. Nenhuma linha de codigo e modificada pela acao.
+
 ## Unreleased - Deteccao de atribuicao acidental em condicao
 
 ### Antes
