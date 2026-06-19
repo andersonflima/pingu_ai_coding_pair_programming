@@ -2,6 +2,26 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Lint de funcao duplicada e limpeza de codigo morto
+
+### Antes
+
+- O lint (`scripts/check-syntax.js`) so validava sintaxe; nada impedia a reintroducao de uma definicao de funcao duplicada no nivel do arquivo (que vira codigo morto silencioso por hoisting, como foi o caso de `levenshteinDistance`).
+- Havia funcoes mortas (nunca referenciadas) em `analyzer.js`, `generation.js` e `generation-unit-tests.js`.
+
+### Depois
+
+- `scripts/check-syntax.js` passa a falhar quando ha funcao top-level duplicada no mesmo arquivo, com mensagem apontando as duas linhas. Check deterministico e sem dependencias, alinhado a filosofia de zero-dependencia do projeto. A funcao e exportada e coberta por testes.
+- Removidas dez funcoes mortas e seus helpers exclusivos: `extractFunctionParams`, `parseGenericFunctionParams`, `hasFunctionSpecAbove` (analyzer), `executablePlaceholderStatement`, `executablePlaceholderSnippet` (generation), `collectUnitTestCallArityOperations`, `collectUnitTestInvocations`, `resolveMatchingParenRange`, `applyLineRewriteOperations`, `serializePythonLiteral` (generation-unit-tests).
+
+### Motivo
+
+- Prevenir uma classe de bug ja observada (definicao duplicada) e reduzir ruido/peso dos arquivos sem alterar comportamento.
+
+### Impacto
+
+- Sem mudanca de comportamento em runtime. Suite de testes ampliada com cobertura do novo check.
+
 ## Unreleased - Comentar codigo: Java, C#, Kotlin, Swift, Scala e PHP
 
 ### Antes

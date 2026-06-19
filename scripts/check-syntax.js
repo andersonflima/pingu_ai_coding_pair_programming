@@ -39,6 +39,29 @@ function checkFile(filePath) {
   };
 }
 
+function findDuplicateTopLevelFunctions(filePath) {
+  // Declaracoes de funcao no nivel do arquivo (sem indentacao) com o mesmo nome
+  // sao quase sempre um bug: por hoisting, a ultima vence e a primeira vira
+  // codigo morto silencioso (foi o caso de uma definicao duplicada de
+  // levenshteinDistance no analyzer). Check deterministico e sem dependencias.
+  const content = fs.readFileSync(filePath, 'utf8');
+  const seen = new Map();
+  const duplicates = [];
+  content.split('\n').forEach((line, index) => {
+    const match = line.match(/^function\s+([A-Za-z_$][\w$]*)\s*\(/);
+    if (!match) {
+      return;
+    }
+    const name = match[1];
+    if (seen.has(name)) {
+      duplicates.push({ name, firstLine: seen.get(name), duplicateLine: index + 1 });
+    } else {
+      seen.set(name, index + 1);
+    }
+  });
+  return duplicates;
+}
+
 function run() {
   const files = [
     ...ENTRY_FILES.map((file) => path.join(ROOT, file)),
@@ -54,7 +77,27 @@ function run() {
     process.exit(1);
   }
 
-  process.stdout.write(`syntax ok: ${results.length} files\n`);
+  const duplicateFailures = files
+    .map((filePath) => ({ filePath, duplicates: findDuplicateTopLevelFunctions(filePath) }))
+    .filter((entry) => entry.duplicates.length > 0);
+
+  if (duplicateFailures.length > 0) {
+    duplicateFailures.forEach((entry) => {
+      entry.duplicates.forEach((duplicate) => {
+        process.stderr.write(
+          `${path.relative(ROOT, entry.filePath)}: funcao duplicada '${duplicate.name}' `
+          + `(linhas ${duplicate.firstLine} e ${duplicate.duplicateLine})\n`,
+        );
+      });
+    });
+    process.exit(1);
+  }
+
+  process.stdout.write(`syntax ok: ${results.length} files (sem funcoes duplicadas)\n`);
 }
 
-run();
+module.exports = { findDuplicateTopLevelFunctions };
+
+if (require.main === module) {
+  run();
+}
