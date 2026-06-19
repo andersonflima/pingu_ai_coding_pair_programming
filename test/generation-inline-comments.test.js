@@ -11,7 +11,9 @@ const { buildLeadingFunctionDocumentation } = require('../lib/generation');
 const { analyzeText } = require('../lib/analyzer');
 
 function docFor(ext) {
-  return (header) => (header ? buildLeadingFunctionDocumentation(header.name, header.params, 'comment this code', ext) : '');
+  return (header, context) => (header
+    ? buildLeadingFunctionDocumentation(header.name, header.params, 'comment this code', ext, context || {})
+    : '');
 }
 
 function build(lines, ext) {
@@ -44,6 +46,15 @@ test('comenta funcao Python passo a passo com docstring idiomatico', () => {
   assert.match(result.snippet, /"""/);
   assert.match(result.snippet, /# Chama use_item\./);
   assert.match(result.snippet, /# Retorna planta\./);
+});
+
+test('o resumo da docstring descreve o que a funcao faz (proposito derivado do corpo)', () => {
+  const py = build(['# : comment this code', 'def total(items):', '    soma = 0', '    for i in items:', '        soma += i', '    return soma'], '.py');
+  assert.match(py.snippet, /Calcula soma e retorna soma\./);
+  assert.doesNotMatch(py.snippet, /Executa a etapa principal/);
+
+  const js = build(['//: comment this code', 'function soma(a, b) {', '  const total = a + b;', '  log(total);', '  return total;', '}'], '.js');
+  assert.match(js.snippet, /Aciona log e retorna total\./);
 });
 
 test('preserva todas as linhas de codigo originais verbatim (Python)', () => {
