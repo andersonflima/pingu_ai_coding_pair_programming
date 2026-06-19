@@ -40,7 +40,7 @@
     {
       "id": "error_handling",
       "description": "Captura ampla demais, erros ignorados e fluxos que escondem falhas.",
-      "mappedIssueKinds": ["bare_except"],
+      "mappedIssueKinds": ["bare_except", "swallowed_error"],
       "safeAutoFix": true,
       "languages": ["python"]
     },
@@ -60,8 +60,8 @@
     },
     {
       "id": "control_flow_and_complexity",
-      "description": "Condicionais profundas, reatribuicao imperativa, atribuicao acidental em condicao e fluxo dificil de testar.",
-      "mappedIssueKinds": ["nested_condition", "functional_reassignment", "assignment_in_condition"],
+      "description": "Condicionais profundas, reatribuicao imperativa, atribuicao acidental em condicao, codigo inalcancavel e fluxo dificil de testar.",
+      "mappedIssueKinds": ["nested_condition", "functional_reassignment", "assignment_in_condition", "unreachable_code"],
       "safeAutoFix": false,
       "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c"]
     },
