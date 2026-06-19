@@ -199,7 +199,7 @@ Ao aplicar, o Pingu insere um doc idiomatico e um comentario factual antes de ca
 
 O resumo do doc descreve **o que** a funcao faz (proposito inferido do nome e dos efeitos/retorno do corpo, p.ex. `Calcula frete, retornando total.`), enquanto os comentarios passo a passo descrevem **o como**.
 
-Disponivel offline para Python, JavaScript/TypeScript, Go, Rust, C/C++, Ruby, Elixir, Lua, Vim e Shell. O doc segue a convencao de cada linguagem (docstring Python apos a assinatura; JSDoc/`///`/`@doc`/comentario de cabecalho acima da funcao).
+Disponivel offline para Python, JavaScript/TypeScript, Go, Rust, C/C++, Ruby, Elixir, Lua, Vim, Shell, Java, C#, Kotlin, Swift, Scala e PHP. O doc segue a convencao de cada linguagem (docstring Python apos a assinatura; JSDoc/JavaDoc/KDoc/Scaladoc/PHPDoc no estilo `/** */`; `///` em Rust/C#/Swift; `@doc` em Elixir; comentario de cabecalho acima da funcao nas demais).
 
 Os marcadores simbolicos abaixo continuam suportados como atalhos compatíveis.
 
