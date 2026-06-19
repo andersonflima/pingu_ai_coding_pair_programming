@@ -139,6 +139,48 @@ const LANGUAGE_CASES = [
     code: ['deploy() {', '  build_app', '  return 0', '}'],
     expect: [/# Executa o comando build_app\./, /# Retorna 0\./],
   },
+  {
+    label: 'Java',
+    ext: '.java',
+    lines: ['// : comment this code', 'public int soma(int a, int b) {', '    int total = a + b;', '    return total;', '}'],
+    code: ['public int soma(int a, int b) {', '    int total = a + b;', '    return total;', '}'],
+    expect: [/\/\*\*/, /@return total/, /\/\/ Retorna total\./],
+  },
+  {
+    label: 'C#',
+    ext: '.cs',
+    lines: ['// : comment this code', 'public int Soma(int a) {', '    return a;', '}'],
+    code: ['public int Soma(int a) {', '    return a;', '}'],
+    expect: [/\/\/\/ /, /\/\/ Retorna a\./],
+  },
+  {
+    label: 'Kotlin',
+    ext: '.kt',
+    lines: ['// : comment this code', 'fun calculaFrete(pedido: Int): Int {', '    val total = pedido + 1', '    return total', '}'],
+    code: ['fun calculaFrete(pedido: Int): Int {', '    val total = pedido + 1', '    return total', '}'],
+    expect: [/\/\*\*/, /Calcula frete/, /\/\/ Define total a partir de pedido \+ 1\./],
+  },
+  {
+    label: 'Swift',
+    ext: '.swift',
+    lines: ['// : comment this code', 'func soma(a: Int, b: Int) -> Int {', '    let total = a + b', '    return total', '}'],
+    code: ['func soma(a: Int, b: Int) -> Int {', '    let total = a + b', '    return total', '}'],
+    expect: [/\/\/\/ /, /\/\/ Define total a partir de a \+ b\./, /\/\/ Retorna total\./],
+  },
+  {
+    label: 'Scala',
+    ext: '.scala',
+    lines: ['// : comment this code', 'def soma(a: Int, b: Int): Int = {', '    val total = a + b', '    total', '}'],
+    code: ['def soma(a: Int, b: Int): Int = {', '    val total = a + b', '    total', '}'],
+    expect: [/\/\*\*/, /\/\/ Define total a partir de a \+ b\./],
+  },
+  {
+    label: 'PHP',
+    ext: '.php',
+    lines: ['// : comment this code', 'function calc($x) {', '    $y = $x + 1;', '    return $y;', '}'],
+    code: ['function calc($x) {', '    $y = $x + 1;', '    return $y;', '}'],
+    expect: [/\/\*\*/, /\/\/ Define \$y a partir de \$x \+ 1\./, /\/\/ Retorna \$y\./],
+  },
 ];
 
 for (const testCase of LANGUAGE_CASES) {
@@ -152,6 +194,29 @@ for (const testCase of LANGUAGE_CASES) {
     assertContainsInOrder(result.snippet, testCase.code);
   });
 }
+
+test('integracao: novas linguagens geram comment_task pelo pipeline real', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pingu-newlang-'));
+  try {
+    const cases = [
+      ['App.java', '// : comment this code\npublic int soma(int a, int b) {\n    return a + b;\n}'],
+      ['app.php', '<?php\n// : comment this code\nfunction calc($x) {\n    return $x + 1;\n}'],
+      ['Svc.cs', '// : comment this code\npublic int Soma(int a) {\n    return a;\n}'],
+      ['m.kt', '// : comment this code\nfun soma(a: Int): Int {\n    return a\n}'],
+      ['s.swift', '// : comment this code\nfunc soma(a: Int) -> Int {\n    return a\n}'],
+      ['x.scala', '// : comment this code\ndef soma(a: Int): Int = {\n    a\n}'],
+    ];
+    for (const [name, source] of cases) {
+      const file = path.join(dir, name);
+      fs.writeFileSync(file, source);
+      const task = analyzeText(file, source).filter((issue) => issue.kind === 'comment_task')[0];
+      assert.ok(task, `esperava comment_task para ${name}`);
+      assert.equal(task.action.op, 'replace_range');
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test('e idempotente quando ja ha docstring e comentarios', () => {
   const lines = ['# : comment this code', 'def helper(p):', '    """', '    doc', '    """', '    # Chama foo.', '    foo(p)'];

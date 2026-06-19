@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Comentar codigo: Java, C#, Kotlin, Swift, Scala e PHP
+
+### Antes
+
+- O fluxo de comentar codigo cobria Python, JS/TS, Go, Rust, C/C++, Ruby, Elixir, Lua, Vim e Shell, mas nao Java, C#, Kotlin, Swift, Scala e PHP — essas linguagens nao estavam no registry de capacidades, entao nem geravam `comment_task`.
+
+### Depois
+
+- `lib/language-capabilities.js` passa a registrar Java, C#, Kotlin, Swift, Scala e PHP como linguagens ativas com `comment_task` offline (via `document_generation`), sem habilitar geracao de codigo/teste offline que essas linguagens ainda nao tem.
+- `lib/generation-inline-comments.js` ganhou familias para essas seis linguagens (bloco por chaves) e um gerador de doc de fallback embutido: Javadoc/KDoc/Scaladoc/PHPDoc no estilo `/** */` e doc `///` para C# e Swift, derivado do mesmo resumo de proposito. O classificador C-style passou a reconhecer `val`/`var`/`fun`/`def` e variaveis PHP (`$x`).
+
+### Motivo
+
+- Completar a cobertura do recurso de comentar/documentar codigo para todas as linguagens de funcao relevantes do runtime.
+
+### Impacto
+
+- Aditivo: seis linguagens novas geram `comment_task` offline com doc e comentarios passo a passo; nenhuma linha de codigo e modificada pela acao. Para um arquivo dessas linguagens, apenas `comment_task` e emitido (sem ruido de outras features).
+
 ## Unreleased - Comentar codigo: todas as linguagens e melhor resumo offline
 
 ### Antes
