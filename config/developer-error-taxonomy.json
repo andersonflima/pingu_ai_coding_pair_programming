@@ -39,8 +39,8 @@
     },
     {
       "id": "error_handling",
-      "description": "Captura ampla demais, erros ignorados e fluxos que escondem falhas.",
-      "mappedIssueKinds": ["bare_except", "swallowed_error"],
+      "description": "Captura ampla demais, erros ignorados, promises nao aguardadas e fluxos que escondem falhas.",
+      "mappedIssueKinds": ["bare_except", "swallowed_error", "missing_await"],
       "safeAutoFix": true,
       "languages": ["python"]
     },
