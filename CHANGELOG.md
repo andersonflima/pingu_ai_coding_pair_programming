@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de variavel local nao utilizada
+
+### Antes
+
+- O Pingu detectava imports nao usados, mas nao variaveis locais declaradas e nunca lidas.
+
+### Depois
+
+- Novo `checkUnusedVariables` em `lib/analyzer-unused.js` (suggest-only, JavaScript/TypeScript): sinaliza variaveis locais `const`/`let` indentadas, com lado direito puro (sem chamada de funcao, `await`, `new` ou arrow) e nome nunca referenciado. Novo issue kind `unused_variable` (`autoFixDefault: false`), mapeado na familia `control_flow_and_complexity`.
+- Conservador para evitar falso positivo e mudanca de comportamento: ignora declaracoes de modulo (possivelmente exportadas), nomes `_`-prefixados e qualquer lado direito com possivel efeito colateral. Python fica de fora por ora (atributos de classe exigiriam analise de escopo).
+
+### Motivo
+
+- Ampliar a deteccao de erros humanos com mais um check de alto sinal e baixo falso-positivo.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere.
+
 ## Unreleased - Deteccao de import nao utilizado
 
 ### Antes

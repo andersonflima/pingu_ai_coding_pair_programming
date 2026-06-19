@@ -73,6 +73,10 @@ Correcoes deterministicas ja mapeadas:
 
 Em JavaScript/TypeScript e Python, o Pingu sinaliza imports cujo nome nunca e referenciado no arquivo (named, default, namespace `* as`, `require` desestruturado, `import`/`from import`). E suggest-only e conservador: imports por efeito colateral (`import 'polyfill'`) sao ignorados, e qualquer ocorrencia do nome (inclusive em JSX, acesso a propriedade ou anotacao de tipo) conta como uso, para evitar falso positivo.
 
+### Variavel local nao utilizada (sugestao)
+
+Em JavaScript/TypeScript, o Pingu sinaliza variaveis locais (`const`/`let` indentadas) cujo nome nunca e referenciado e cujo lado direito e "puro" (sem chamada de funcao, `await`, `new` ou arrow), onde remover nao muda comportamento. E deliberadamente conservador: ignora declaracoes de modulo (que podem ser exportadas), nomes prefixados com `_` e qualquer atribuicao com possivel efeito colateral.
+
 ### Codigo inalcancavel e erros engolidos (sugestao)
 
 O Pingu sinaliza dois erros humanos de fluxo que o compilador costuma deixar passar, em JavaScript/TypeScript e Python:
