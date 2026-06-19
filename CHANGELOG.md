@@ -2,6 +2,27 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de codigo inalcancavel e erros engolidos
+
+### Antes
+
+- O Pingu nao detectava dois erros humanos comuns que o compilador costuma deixar passar: codigo inalcancavel apos uma instrucao terminal e erros capturados e ignorados silenciosamente.
+
+### Depois
+
+- Novo modulo `lib/analyzer-control-flow.js` com dois checks suggest-only para JavaScript/TypeScript e Python:
+  - `unreachable_code`: instrucao no mesmo bloco logo apos `return`/`throw`/`raise`/`break`/`continue`. Ignora terminais dentro de `if` (proxima linha com indentacao menor e alcancavel) e fronteiras de bloco (`else`/`elif`/`except`/`case`/fechamento).
+  - `swallowed_error`: `catch {}` vazio em JS (inline ou multilinha) e `except ...: pass` em Python. Nao acusa quando o bloco trata ou registra o erro.
+- Novos issue kinds `unreachable_code` e `swallowed_error` (`autoFixDefault: false`, sem auto-fix), mapeados nas familias `control_flow_and_complexity` e `error_handling` da taxonomia.
+
+### Motivo
+
+- Ampliar a deteccao de erros humanos alem do compilador, com alto sinal e baixo falso-positivo.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere; nenhum auto-fix novo.
+
 ## Unreleased - Lint de funcao duplicada e limpeza de codigo morto
 
 ### Antes

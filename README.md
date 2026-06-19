@@ -69,6 +69,15 @@ Correcoes deterministicas ja mapeadas:
 - Ruby: comparacoes diretas com `nil` viram `nil?`.
 - Elixir: comparacoes diretas com `nil` viram `is_nil/1`.
 
+### Codigo inalcancavel e erros engolidos (sugestao)
+
+O Pingu sinaliza dois erros humanos de fluxo que o compilador costuma deixar passar, em JavaScript/TypeScript e Python:
+
+- **Codigo inalcancavel**: instrucao no mesmo bloco logo apos um `return`/`throw`/`raise`/`break`/`continue`. Ignora terminais dentro de `if` (a proxima linha com indentacao menor e alcancavel).
+- **Erro engolido**: `catch {}` vazio em JS e `except ...: pass` em Python. Sugere tratar, registrar ou repropagar. Nao acusa quando o bloco trata/loga o erro.
+
+Ambos sao suggest-only (nunca reescrevem).
+
 ### Atribuicao acidental em condicao (sugestao)
 
 Em JavaScript/TypeScript, `if (x = y)` compila sem erro mas quase sempre era para ser uma comparacao. O Pingu sinaliza esse caso e sugere `===`, ignorando comparacoes (`==`, `===`, `<=`), operadores compostos (`+=`), arrow functions (`=>`), `=` dentro de strings e o idioma de atribuicao intencional com parenteses duplos (`if ((m = regex.exec(s)))`). E suggest-only: nunca reescreve sozinho.
