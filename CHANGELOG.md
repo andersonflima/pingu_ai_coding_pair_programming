@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: checks de higiene fora do analyzer
+
+### Antes
+
+- `lib/analyzer.js` concentrava tambem os checks de higiene de workspace (moduledoc ausente, linhas longas, saidas de debug, TODO/FIXME, linhas duplicadas, espaco final, tabs e arquivo grande), contribuindo para um arquivo grande demais.
+
+### Depois
+
+- Esses oito checks foram extraidos para `lib/analyzer-hygiene.js`, um modulo coeso com responsabilidade unica. `analyzer.js` passa a importa-los; os imports de snippet que so eram usados por eles foram removidos do arquivo principal. Comportamento preservado (mesmos kinds, mensagens e acoes).
+
+### Motivo
+
+- Reduzir o God file `analyzer.js` em fatia segura e isolar um dominio coeso, alinhado a filosofia de arquivos pequenos do projeto.
+
+### Impacto
+
+- Sem mudanca de comportamento em runtime; os checks continuam sendo exercitados pelos testes existentes, mais um smoke test direto do novo modulo.
+
 ## Unreleased - Deteccao de codigo inalcancavel e erros engolidos
 
 ### Antes
