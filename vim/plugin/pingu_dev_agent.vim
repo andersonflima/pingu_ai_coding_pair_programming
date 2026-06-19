@@ -99,7 +99,7 @@ function! s:is_safe_default_auto_fix_kind(kind, entry) abort
   endif
 
   let l:op = get(l:action, 'op', '')
-  if index(['context_file', 'unit_test'], a:kind) != -1 && l:op ==# 'write_file'
+  if a:kind ==# 'context_file' && l:op ==# 'write_file'
     return v:true
   endif
   if a:kind ==# 'terminal_task' && l:op ==# 'run_command'
@@ -593,7 +593,6 @@ if !exists('g:pingu_auto_fix_kinds')
         \ 'missing_dependency',
         \ 'nested_condition',
         \ 'todo_fixme',
-        \ 'unit_test',
         \ 'trailing_whitespace',
         \ 'tabs',
           \ 'markdown_title',

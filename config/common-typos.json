@@ -1,0 +1,133 @@
+{
+  "version": "1.0.0",
+  "scope": "Erros de digitacao comuns em palavras-chave e builtins por familia de linguagem. Apenas grafias claramente incorretas e improvaveis de serem identificadores reais, para sugerir (nunca reescrever automaticamente) a correcao mais provavel.",
+  "families": {
+    "javascript": {
+      "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
+      "corrections": {
+        "fucntion": "function",
+        "funtion": "function",
+        "fuction": "function",
+        "functoin": "function",
+        "fnuction": "function",
+        "retrun": "return",
+        "reutrn": "return",
+        "retunr": "return",
+        "cosole": "console",
+        "consoel": "console",
+        "conosle": "console",
+        "consloe": "console",
+        "improt": "import",
+        "imoprt": "import",
+        "exprot": "export",
+        "exoprt": "export",
+        "requrie": "require",
+        "reuqire": "require",
+        "udnefined": "undefined",
+        "undefiend": "undefined",
+        "undefnied": "undefined",
+        "flase": "false",
+        "fasle": "false",
+        "ture": "true",
+        "lenght": "length",
+        "legnth": "length",
+        "swich": "switch",
+        "swtich": "switch",
+        "cathc": "catch",
+        "cacth": "catch",
+        "finaly": "finally",
+        "fianlly": "finally",
+        "contiue": "continue",
+        "conitnue": "continue",
+        "typoef": "typeof",
+        "asycn": "async",
+        "awiat": "await",
+        "defualt": "default",
+        "defalut": "default",
+        "documnet": "document",
+        "docuemnt": "document",
+        "wnidow": "window"
+      }
+    },
+    "python": {
+      "extensions": [".py", ".pyi"],
+      "corrections": {
+        "retrun": "return",
+        "reutrn": "return",
+        "improt": "import",
+        "imoprt": "import",
+        "pirnt": "print",
+        "pritn": "print",
+        "prnit": "print",
+        "lamda": "lambda",
+        "Ture": "True",
+        "Treu": "True",
+        "Flase": "False",
+        "Fasle": "False",
+        "Noen": "None",
+        "Nnoe": "None",
+        "slef": "self",
+        "eilf": "elif",
+        "esle": "else",
+        "exept": "except",
+        "excpet": "except",
+        "raies": "raise",
+        "rnage": "range",
+        "appnd": "append",
+        "contiue": "continue",
+        "whiel": "while",
+        "yeild": "yield"
+      }
+    },
+    "ruby": {
+      "extensions": [".rb", ".rake"],
+      "corrections": {
+        "retrun": "return",
+        "requrie": "require",
+        "reuqire": "require",
+        "pust": "puts",
+        "ptus": "puts",
+        "esle": "else",
+        "elseif": "elsif",
+        "defualt": "default",
+        "yeild": "yield",
+        "atrr_accessor": "attr_accessor",
+        "atr_accessor": "attr_accessor"
+      }
+    },
+    "go": {
+      "extensions": [".go"],
+      "corrections": {
+        "retrun": "return",
+        "fucn": "func",
+        "fnuc": "func",
+        "imoprt": "import",
+        "improt": "import",
+        "pacakge": "package",
+        "packge": "package",
+        "strcut": "struct",
+        "sturct": "struct",
+        "interfcae": "interface",
+        "swich": "switch",
+        "defualt": "default",
+        "contiue": "continue"
+      }
+    },
+    "rust": {
+      "extensions": [".rs"],
+      "corrections": {
+        "retrun": "return",
+        "fnuction": "fn",
+        "imoprt": "use",
+        "strcut": "struct",
+        "sturct": "struct",
+        "mathc": "match",
+        "macth": "match",
+        "pirntln": "println",
+        "pritnln": "println",
+        "moduel": "module",
+        "contiue": "continue"
+      }
+    }
+  }
+}
