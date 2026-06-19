@@ -48,6 +48,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
+  "missing_await": {
+    "defaultAction": { "op": "insert_before" },
+    "autoFixDefault": false,
+    "autoFixPriority": 45,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
   "comment_task": {
     "defaultAction": { "op": "replace_line" },
     "autoFixDefault": true,

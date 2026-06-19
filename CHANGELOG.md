@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de await ausente
+
+### Antes
+
+- O Pingu nao detectava chamadas a funcoes async deixadas sem await (fire-and-forget), uma fonte comum de bug de ordem de execucao e rejeicao nao tratada.
+
+### Depois
+
+- Novo modulo `lib/analyzer-async.js` com `checkMissingAwait` suggest-only para JavaScript/TypeScript: coleta funcoes async definidas no arquivo (`async function`, `const x = async`, metodo `async nome`) e sinaliza chamadas a elas usadas como instrucao isolada sem `await`/`return`/`void` e sem `.then`/`.catch`. Novo issue kind `missing_await` (`autoFixDefault: false`), mapeado na familia `error_handling`.
+- Conservador: nao acusa quando a promise e consumida (await/return/.then/void) ou atribuida, nem chamadas a funcoes sincronas.
+
+### Motivo
+
+- Ampliar a deteccao de erros humanos com um caso de alto impacto (promises nao aguardadas) e baixo falso-positivo.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere; adicionar await muda semantica e exige funcao async no escopo, por isso nunca e automatico.
+
 ## Unreleased - Deteccao de variavel local nao utilizada
 
 ### Antes
