@@ -2,6 +2,26 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: parsers de import bindings
+
+### Antes
+
+- O `analyzer.js` concentrava os parsers de import bindings (JS/TS e Python) usados na validacao de bindings inexistentes, alem do util generico `splitTopLevelParams`.
+
+### Depois
+
+- `splitTopLevelParams` foi movido para `lib/support.js` (util de string generico, ao lado de `escapeRegExp` e afins).
+- Os parsers puros de import bindings foram extraidos para `lib/analyzer-import-bindings.js` (`supportsLocalImportBindingValidation`, `parseLocalImportBindings`, leitura de import ESM/CommonJS multilinha, `from import` Python, `isRelativeModuleSpecifier`). Sao funcoes sem efeito colateral; a resolucao de arquivos/exports e o cache permanecem no analyzer por dependerem de IO e de helpers de escopo.
+- `analyzer.js` importa as entradas do novo modulo e caiu ~180 linhas.
+
+### Motivo
+
+- Continuar a reducao do God file `analyzer.js` por uma fatia de fronteira limpa (parsers puros), sem mover o subsistema acoplado de resolucao/escopo (que exigiria refactor maior e mais arriscado).
+
+### Impacto
+
+- Comportamento preservado: os mesmos checks de bindings inexistentes continuam validados pelos golden-fixtures e demais testes, mais um smoke test do novo modulo.
+
 ## Unreleased - Deteccao de await ausente
 
 ### Antes
