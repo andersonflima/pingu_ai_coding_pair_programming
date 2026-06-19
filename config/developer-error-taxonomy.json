@@ -32,8 +32,8 @@
     },
     {
       "id": "imports_and_dependencies",
-      "description": "Imports inexistentes, exports incorretos, includes/use ausentes e dependencias exigidas por snippets.",
-      "mappedIssueKinds": ["undefined_variable", "missing_dependency"],
+      "description": "Imports inexistentes, exports incorretos, includes/use ausentes, imports nao utilizados e dependencias exigidas por snippets.",
+      "mappedIssueKinds": ["undefined_variable", "missing_dependency", "unused_import"],
       "safeAutoFix": true,
       "languages": ["javascript", "python", "elixir", "go", "rust", "c"]
     },

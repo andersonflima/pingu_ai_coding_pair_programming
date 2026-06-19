@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de import nao utilizado
+
+### Antes
+
+- O Pingu nao detectava imports declarados e nunca usados, um erro humano comum que polui o arquivo e mantem dependencias mortas.
+
+### Depois
+
+- Novo modulo `lib/analyzer-unused.js` com `checkUnusedImports` suggest-only para JavaScript/TypeScript e Python: cobre named, default, namespace `* as`, `require` desestruturado e `import`/`from import`. Novo issue kind `unused_import` (`autoFixDefault: false`), mapeado na familia `imports_and_dependencies`.
+- Conservador para evitar falso positivo: imports por efeito colateral (`import 'polyfill'`) sao ignorados e qualquer ocorrencia do nome (JSX, acesso a propriedade, anotacao de tipo) conta como uso.
+
+### Motivo
+
+- Ampliar a deteccao de erros humanos com um check de alto sinal, sem remover nada automaticamente (imports podem ter efeito colateral).
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere.
+
 ## Unreleased - Modularizacao: checks de higiene fora do analyzer
 
 ### Antes
