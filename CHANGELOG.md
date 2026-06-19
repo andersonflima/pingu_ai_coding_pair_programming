@@ -2,6 +2,27 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Comentar codigo: todas as linguagens e melhor resumo offline
+
+### Antes
+
+- O fluxo de comentar codigo passo a passo so existia para Python e JavaScript/TypeScript.
+- O resumo do doc descrevia o proposito a partir apenas da estrutura do corpo (defs/chamadas/atribuicoes/retorno), sem considerar a intencao expressa no nome da funcao.
+
+### Depois
+
+- `lib/generation-inline-comments.js` foi generalizado para um registry de linguagens com tres estrategias de bloco (chaves, indentacao e palavra-chave de fechamento `end`/`endfunction`). Passa a cobrir, offline, Python, JavaScript/TypeScript, Go, Rust, C/C++, Ruby, Elixir, Lua, Vim e Shell, cada uma com seu prefixo de comentario e convencao de doc.
+- O resumo do doc agora infere a intencao pelo nome da funcao (mapa de verbos pt/en: `calcula_frete` -> "Calcula frete", `fetchUser` -> "Busca user") combinada com o retorno do corpo, caindo para o resumo estrutural quando o nome nao e um verbo conhecido.
+- Seguranca preservada: o snippet reproduz o bloco verbatim e a acao continua sendo um `replace_range` local que cobre o gatilho e a funcao; deteccao de bloco imperfeita nao corrompe codigo (no pior caso comenta de menos/mais).
+
+### Motivo
+
+- Atender ao pedido de estender o recurso para todas as linguagens mapeadas e tornar o detalhamento da funcao mais preciso sobre o que ela faz no cenario offline.
+
+### Impacto
+
+- Aditivo: mais linguagens cobertas e resumos mais informativos; nenhuma linha de codigo e modificada pela acao.
+
 ## Unreleased - Comentar codigo existente passo a passo
 
 ### Antes
