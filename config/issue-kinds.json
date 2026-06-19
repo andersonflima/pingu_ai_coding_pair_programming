@@ -41,6 +41,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
+  "unused_variable": {
+    "defaultAction": { "op": "insert_before" },
+    "autoFixDefault": false,
+    "autoFixPriority": 47,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
   "comment_task": {
     "defaultAction": { "op": "replace_line" },
     "autoFixDefault": true,
