@@ -69,6 +69,10 @@ Correcoes deterministicas ja mapeadas:
 - Ruby: comparacoes diretas com `nil` viram `nil?`.
 - Elixir: comparacoes diretas com `nil` viram `is_nil/1`.
 
+### Import nao utilizado (sugestao)
+
+Em JavaScript/TypeScript e Python, o Pingu sinaliza imports cujo nome nunca e referenciado no arquivo (named, default, namespace `* as`, `require` desestruturado, `import`/`from import`). E suggest-only e conservador: imports por efeito colateral (`import 'polyfill'`) sao ignorados, e qualquer ocorrencia do nome (inclusive em JSX, acesso a propriedade ou anotacao de tipo) conta como uso, para evitar falso positivo.
+
 ### Codigo inalcancavel e erros engolidos (sugestao)
 
 O Pingu sinaliza dois erros humanos de fluxo que o compilador costuma deixar passar, em JavaScript/TypeScript e Python:
