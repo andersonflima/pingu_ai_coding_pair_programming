@@ -77,6 +77,10 @@ Em JavaScript/TypeScript e Python, o Pingu sinaliza imports cujo nome nunca e re
 
 Em JavaScript/TypeScript, o Pingu sinaliza variaveis locais (`const`/`let` indentadas) cujo nome nunca e referenciado e cujo lado direito e "puro" (sem chamada de funcao, `await`, `new` ou arrow), onde remover nao muda comportamento. E deliberadamente conservador: ignora declaracoes de modulo (que podem ser exportadas), nomes prefixados com `_` e qualquer atribuicao com possivel efeito colateral.
 
+### await ausente (sugestao)
+
+Em JavaScript/TypeScript, o Pingu sinaliza uma chamada a funcao async definida no arquivo usada como instrucao isolada (fire-and-forget) sem `await`, `return`, `void` ou encadeamento `.then`/`.catch` — padrao que costuma ser bug de ordem de execucao ou rejeicao nao tratada. Conservador: nao acusa quando a promise e consumida ou atribuida, nem chamadas a funcoes sincronas.
+
 ### Codigo inalcancavel e erros engolidos (sugestao)
 
 O Pingu sinaliza dois erros humanos de fluxo que o compilador costuma deixar passar, em JavaScript/TypeScript e Python:
