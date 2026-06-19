@@ -48,13 +48,21 @@ test('comenta funcao Python passo a passo com docstring idiomatico', () => {
   assert.match(result.snippet, /# Retorna planta\./);
 });
 
-test('o resumo da docstring descreve o que a funcao faz (proposito derivado do corpo)', () => {
-  const py = build(['# : comment this code', 'def total(items):', '    soma = 0', '    for i in items:', '        soma += i', '    return soma'], '.py');
-  assert.match(py.snippet, /Calcula soma e retorna soma\./);
+test('o resumo da docstring descreve o que a funcao faz (proposito estrutural)', () => {
+  const py = build(['# : comment this code', 'def total(items):', '    acc = 0', '    for i in items:', '        acc += i', '    return acc'], '.py');
+  assert.match(py.snippet, /Calcula acc e retorna acc\./);
   assert.doesNotMatch(py.snippet, /Executa a etapa principal/);
 
-  const js = build(['//: comment this code', 'function soma(a, b) {', '  const total = a + b;', '  log(total);', '  return total;', '}'], '.js');
+  const js = build(['//: comment this code', 'function helper(a, b) {', '  const total = a + b;', '  log(total);', '  return total;', '}'], '.js');
   assert.match(js.snippet, /Aciona log e retorna total\./);
+});
+
+test('o resumo infere a intencao pelo nome da funcao (melhor offline)', () => {
+  const py = build(['# : comment this code', 'def calcula_frete(pedido):', '    total = pedido.base', '    return total'], '.py');
+  assert.match(py.snippet, /Calcula frete, retornando total\./);
+
+  const js = build(['//: comment this code', 'function fetchUser(id) {', '  const user = db.find(id);', '  return user;', '}'], '.js');
+  assert.match(js.snippet, /Busca user, retornando user\./);
 });
 
 test('preserva todas as linhas de codigo originais verbatim (Python)', () => {
@@ -73,6 +81,77 @@ test('comenta funcao JavaScript com JSDoc antes da funcao', () => {
   const idx = result.snippet.indexOf('function soma');
   assert.ok(result.snippet.indexOf('/**') < idx, 'JSDoc deve vir antes da funcao');
 });
+
+const LANGUAGE_CASES = [
+  {
+    label: 'Go',
+    ext: '.go',
+    lines: ['// : comment this code', 'func Soma(a int, b int) int {', '\ttotal := a + b', '\treturn total', '}'],
+    code: ['func Soma(a int, b int) int {', '\ttotal := a + b', '\treturn total', '}'],
+    expect: [/retornando total/, /\/\/ Define total a partir de a \+ b\./, /\/\/ Retorna total\./],
+  },
+  {
+    label: 'Rust',
+    ext: '.rs',
+    lines: ['// : comment this code', 'pub fn soma(a: i32, b: i32) -> i32 {', '    let total = a + b;', '    return total;', '}'],
+    code: ['pub fn soma(a: i32, b: i32) -> i32 {', '    let total = a + b;', '    return total;', '}'],
+    expect: [/\/\/\//, /\/\/ Define total a partir de a \+ b\./, /\/\/ Retorna total\./],
+  },
+  {
+    label: 'Ruby',
+    ext: '.rb',
+    lines: ['# : comment this code', 'def calcula(itens)', '  soma = 0', '  return soma', 'end'],
+    code: ['def calcula(itens)', '  soma = 0', '  return soma', 'end'],
+    expect: [/# Calcula/, /# Atribui 0 a soma\./, /# Retorna soma\./],
+  },
+  {
+    label: 'Elixir',
+    ext: '.ex',
+    lines: ['# : comment this code', 'def soma(a, b) do', '  total = a + b', '  total', 'end'],
+    code: ['def soma(a, b) do', '  total = a + b', '  total', 'end'],
+    expect: [/@doc/, /# Atribui a \+ b a total\./],
+  },
+  {
+    label: 'Lua',
+    ext: '.lua',
+    lines: ['-- : comment this code', 'function calcula(a, b)', '  local total = a + b', '  return total', 'end'],
+    code: ['function calcula(a, b)', '  local total = a + b', '  return total', 'end'],
+    expect: [/-- Calcula/, /-- Atribui a \+ b a total\./, /-- Retorna total\./],
+  },
+  {
+    label: 'Vim',
+    ext: '.vim',
+    lines: ['" : comment this code', 'function! MyFunc(a, b)', '  let l:total = a:a + a:b', '  return l:total', 'endfunction'],
+    code: ['function! MyFunc(a, b)', '  let l:total = a:a + a:b', '  return l:total', 'endfunction'],
+    expect: [/" Atribui a:a \+ a:b a l:total\./, /" Retorna l:total\./],
+  },
+  {
+    label: 'C',
+    ext: '.c',
+    lines: ['// : comment this code', 'int soma(int a, int b) {', '    int total = a + b;', '    return total;', '}'],
+    code: ['int soma(int a, int b) {', '    int total = a + b;', '    return total;', '}'],
+    expect: [/\/\/ Soma/, /\/\/ Retorna total\./],
+  },
+  {
+    label: 'Shell',
+    ext: '.sh',
+    lines: ['# : comment this code', 'deploy() {', '  build_app', '  return 0', '}'],
+    code: ['deploy() {', '  build_app', '  return 0', '}'],
+    expect: [/# Executa o comando build_app\./, /# Retorna 0\./],
+  },
+];
+
+for (const testCase of LANGUAGE_CASES) {
+  test(`comenta e preserva o codigo em ${testCase.label}`, () => {
+    const result = build(testCase.lines, testCase.ext);
+    assert.ok(result && result.snippet, `esperava snippet para ${testCase.label}`);
+    assert.equal(result.action.op, 'replace_range');
+    for (const pattern of testCase.expect) {
+      assert.match(result.snippet, pattern, `${testCase.label}: faltou ${pattern}`);
+    }
+    assertContainsInOrder(result.snippet, testCase.code);
+  });
+}
 
 test('e idempotente quando ja ha docstring e comentarios', () => {
   const lines = ['# : comment this code', 'def helper(p):', '    """', '    doc', '    """', '    # Chama foo.', '    foo(p)'];

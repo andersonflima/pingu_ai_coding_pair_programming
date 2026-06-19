@@ -195,7 +195,11 @@ def helper(planta, fert):
     return planta
 ```
 
-Ao aplicar, o Pingu insere um docstring idiomatico e um comentario factual antes de cada instrucao relevante (`# Chama use_item.`, `# Retorna planta.`), preservando todas as linhas de codigo originais e removendo o gatilho. O fluxo e idempotente: se a funcao ja estiver documentada e comentada, nada e sugerido. Disponivel offline para Python e JavaScript/TypeScript (em JS/TS o bloco vai como JSDoc acima da funcao).
+Ao aplicar, o Pingu insere um doc idiomatico e um comentario factual antes de cada instrucao relevante (`# Chama use_item.`, `# Retorna planta.`), preservando todas as linhas de codigo originais e removendo o gatilho. O fluxo e idempotente: se a funcao ja estiver documentada e comentada, nada e sugerido.
+
+O resumo do doc descreve **o que** a funcao faz (proposito inferido do nome e dos efeitos/retorno do corpo, p.ex. `Calcula frete, retornando total.`), enquanto os comentarios passo a passo descrevem **o como**.
+
+Disponivel offline para Python, JavaScript/TypeScript, Go, Rust, C/C++, Ruby, Elixir, Lua, Vim e Shell. O doc segue a convencao de cada linguagem (docstring Python apos a assinatura; JSDoc/`///`/`@doc`/comentario de cabecalho acima da funcao).
 
 Os marcadores simbolicos abaixo continuam suportados como atalhos compatíveis.
 
