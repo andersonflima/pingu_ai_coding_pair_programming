@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de typeof invalido e comparacao com NaN
+
+### Antes
+
+- O Pingu nao detectava dois bugs silenciosos comuns em JavaScript: comparar `typeof` com uma string de tipo invalida/com typo (`typeof x === "fucntion"`, sempre falsa) e comparar diretamente com `NaN` (`x === NaN`, sempre falsa).
+
+### Depois
+
+- `checkRedundantConstructs` (`lib/analyzer-redundant.js`) ganhou `findInvalidTypeof` e `hasNaNComparison`: novos kinds `invalid_typeof` e `nan_comparison` (`autoFixDefault: false`, suggest-only, apenas JavaScript/TypeScript), mapeados na familia `control_flow_and_complexity`.
+- `invalid_typeof` valida contra o conjunto de tipos validos (`undefined`, `object`, `boolean`, `number`, `bigint`, `string`, `symbol`, `function`), inclusive na forma invertida (`"x" === typeof y`). `nan_comparison` sugere `Number.isNaN()`.
+
+### Motivo
+
+- Mais dois erros humanos de alto sinal que o compilador nao acusa.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere.
+
 ## Unreleased - Vocabulario do resumo offline ampliado
 
 ### Antes

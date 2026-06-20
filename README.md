@@ -73,6 +73,8 @@ Correcoes deterministicas ja mapeadas:
 
 Em JavaScript/TypeScript e Python, o Pingu sinaliza `x === x` / `x == x` (sempre verdadeiro/falso), `x = x` (sem efeito) e chave duplicada em literal de objeto/dict de uma linha (`{ a: 1, a: 2 }`, onde a ultima sobrescreve as anteriores). Quase sempre sao bug humano. Conservador: nao acusa `this.x = x`, `const x = x` (escopo externo), `x = x.next`, comparacao entre chamadas (`f() === f()`) nem blocos de codigo/objetos com spread ou chave computada.
 
+Especificamente em JavaScript/TypeScript, tambem sinaliza dois bugs silenciosos comuns: `typeof x === "fucntion"` (string de tipo invalida/com typo, sempre falsa — os tipos validos sao `undefined`, `object`, `boolean`, `number`, `bigint`, `string`, `symbol`, `function`) e comparacao direta com `NaN` (`x === NaN`, sempre falsa — use `Number.isNaN()`).
+
 ### Import nao utilizado (sugestao)
 
 Em JavaScript/TypeScript e Python, o Pingu sinaliza imports cujo nome nunca e referenciado no arquivo (named, default, namespace `* as`, `require` desestruturado, `import`/`from import`). E suggest-only e conservador: imports por efeito colateral (`import 'polyfill'`) sao ignorados, e qualquer ocorrencia do nome (inclusive em JSX, acesso a propriedade ou anotacao de tipo) conta como uso, para evitar falso positivo.
