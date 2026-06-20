@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Consolidacao da documentacao de erros humanos
+
+### Antes
+
+- A visao geral do README ("O que o Pingu faz") nao destacava o conjunto de detectores de erro humano construido ao longo das ultimas versoes; nao havia um resumo consolidado das classes detectadas; e a consistencia entre a taxonomia e o `issue-kinds.json` nao era validada por teste.
+
+### Depois
+
+- README ganhou, na visao geral, a mencao explicita a deteccao de erros humanos e a documentacao passo a passo, e uma nova subsecao "Erros humanos detectados" com tabela consolidada (classe, exemplo, linguagens).
+- Novo `test/taxonomy-consistency.test.js`: garante que todo kind mapeado na taxonomia existe em `issue-kinds.json`, que os 14 detectores de erro humano sao suggest-only (`autoFixDefault: false`) e que cada familia declara `safeAutoFix` e `languages`.
+
+### Motivo
+
+- Tornar o arsenal de deteccao de erros humanos descoberto e coerente, e travar por teste as invariantes entre configuracao e comportamento.
+
+### Impacto
+
+- Sem mudanca de comportamento em runtime; apenas documentacao e cobertura de invariantes.
+
 ## Unreleased - Deteccao de desvio de fluxo em finally
 
 ### Antes
