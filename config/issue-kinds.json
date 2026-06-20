@@ -27,6 +27,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
+  "duplicate_case": {
+    "defaultAction": { "op": "insert_before" },
+    "autoFixDefault": false,
+    "autoFixPriority": 43,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
   "swallowed_error": {
     "defaultAction": { "op": "insert_before" },
     "autoFixDefault": false,
