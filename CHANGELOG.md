@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: checks de sintaxe Elixir
+
+### Antes
+
+- O `analyzer.js` mantinha os checks de sintaxe especificos de Elixir (blocos do/end pendentes, keyword `end` malformada, token isolado inesperado) e os helpers genericos de varredura de sintaxe usados por eles e por outros checks.
+
+### Depois
+
+- Os tres checks de sintaxe Elixir (mais o helper `looksLikeMalformedElixirEndToken`) foram extraidos para `lib/analyzer-elixir-syntax.js`. Os helpers genericos e puros de varredura (`syntaxRelevantLine`, `findNextSyntaxLine`, `findPreviousSyntaxLine`) foram para `lib/support.js`, ficando disponiveis tanto para o novo modulo quanto para os checks que permaneceram (virgula ausente). `analyzer.js` caiu para 5400 linhas.
+
+### Motivo
+
+- Continuar a reducao do God file isolando um dominio coeso (sintaxe Elixir) e promovendo os utilitarios de varredura compartilhados a support.
+
+### Impacto
+
+- Comportamento preservado: mesmos kinds e mensagens, exercitados pelos testes existentes mais um smoke test direto do novo modulo.
+
 ## Unreleased - Modularizacao: maquina de correcao de variaveis nao declaradas
 
 ### Antes
