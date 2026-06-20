@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: parsing de assinatura Python e descritores genericos
+
+### Antes
+
+- O `analyzer.js` concentrava o parsing de declaracao de funcao/classe Python (incluindo decorators e assinatura multilinha) e os descritores de parametros genericos cross-language. Esse cluster era a base de acoplamento transitivo de `buildFunctionIssueMetadata`, bloqueando a futura extracao dos checks de documentacao/spec de Elixir.
+
+### Depois
+
+- Dez funcoes (`readPythonFunctionDeclaration`, `parsePythonFunctionDeclarationSource`, `parsePythonClassDeclaration`, `collectPythonLeadingDecorators`, `parsePythonDecoratorName`, `pythonSignatureHasTrailingColon`, `countPythonSignatureParenDelta`, `parseGenericParamDescriptors`, `isGenericFunctionParamOptional`, `isGenericFunctionParamVariadic`) foram extraidas para `lib/python-signature.js`, cluster leaf fechado sob `support`, `python-scope-utils` e `language-profiles`. `analyzer.js` importa as quatro entradas usadas externamente e caiu de 4844 para 4651 linhas.
+
+### Motivo
+
+- Primeiro passo do untangle do nucleo de documentacao: isolar a infraestrutura compartilhada de parsing de assinatura, abrindo caminho para extrair depois os metadados cross-language de funcao e o cluster de doc/spec de Elixir.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de doc/spec/undefined-variable continuam validando o resultado, mais um smoke test direto do novo modulo (`test/python-signature.test.js`).
+
 ## Unreleased - Offline: blueprint de contexto document-only para Java/C#/Kotlin/Swift/Scala/PHP
 
 ### Antes
