@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: maquina de correcao de variaveis nao declaradas
+
+### Antes
+
+- O `analyzer.js` mantinha a maquina de correcao usada pela deteccao de variaveis nao declaradas: resolucao da sugestao (incluindo a dica explicita `pingu - correction:`), construcao de snippet/range/action de substituicao e a checagem de seguranca que bloqueia correcoes que alterariam a estrutura do codigo ou tocariam imports.
+
+### Depois
+
+- Esse cluster de nove funcoes foi extraido para `lib/analyzer-undefined-correction.js`, dependendo apenas de utilitarios puros (`replaceIdentifierOnce`/`countMatches` do support e `suggestSimilarIdentifier`). `analyzer.js` importa os cinco pontos de entrada e caiu para 5586 linhas (era 6657 no inicio da serie de modularizacoes).
+
+### Motivo
+
+- Isolar um fluxo coeso e de fronteira limpa dentro do nucleo de undefined-variables, reduzindo o God file sem mexer no detector acoplado em si.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de undefined-variable e o fluxo de dica `pingu - correction:` continuam validando o resultado, mais um smoke test direto do novo modulo.
+
 ## Unreleased - Modularizacao: checks de texto estruturado
 
 ### Antes
