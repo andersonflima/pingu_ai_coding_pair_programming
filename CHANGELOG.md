@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: scanner de estrutura sintatica
+
+### Antes
+
+- O `analyzer.js` mantinha o scanner de estrutura sintatica generico (`scanSyntaxStructure`), a deteccao de virgula ausente (`checkMissingCommaIssues`) e os helpers de delimitador/entry (delimitadores de abertura/fechamento, contexto de colecao, comentario inline, entradas de objeto/array) — cerca de 290 linhas.
+
+### Depois
+
+- Esse cluster coeso foi extraido para `lib/analyzer-syntax-scan.js`, dependendo apenas de perfis de linguagem e de utilitarios de varredura do support. O orquestrador `checkSyntaxIssues` permanece no analyzer e importa as duas entradas. `analyzer.js` caiu para 5107 linhas (era 6657 no inicio da serie de modularizacoes, ~23% menor).
+
+### Motivo
+
+- Continuar a reducao do God file isolando o dominio de estrutura sintatica (balanceamento de delimitadores/strings e virgula ausente), distinto da analise de escopo.
+
+### Impacto
+
+- Comportamento preservado: mesmos kinds e mensagens de sintaxe, exercitados pelos golden-fixtures e demais testes, mais um smoke test direto do novo modulo.
+
 ## Unreleased - Modularizacao: checks de sintaxe Elixir
 
 ### Antes
