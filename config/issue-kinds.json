@@ -1,393 +1,524 @@
 {
   "ai_required": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 5,
     "supportsQuickFix": false,
     "supportsFollowUp": false
   },
   "typo": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 40,
     "supportsQuickFix": true,
     "supportsFollowUp": false
   },
   "assignment_in_condition": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 41,
     "supportsQuickFix": true,
     "supportsFollowUp": false
   },
   "unreachable_code": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 43,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "duplicate_case": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 43,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "swallowed_error": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 44,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "control_flow_in_finally": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 44,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "mutable_default_arg": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 44,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "unused_import": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 46,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "unused_variable": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 47,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "missing_await": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 45,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "self_comparison": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 42,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "self_assignment": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 42,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "duplicate_key": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 42,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "invalid_typeof": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 42,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "nan_comparison": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 42,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "parseint_no_radix": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 42,
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
   "comment_task": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 50,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "prompt_task": {
-    "defaultAction": { "op": "replace_range" },
+    "defaultAction": {
+      "op": "replace_range"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 48,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "context_file": {
-    "defaultAction": { "op": "write_file" },
+    "defaultAction": {
+      "op": "write_file"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 130,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "context_contract": {
-    "defaultAction": { "op": "write_file" },
+    "defaultAction": {
+      "op": "write_file"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 75,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "debug_output": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 55,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "duplicate_line": {
-    "defaultAction": { "op": "delete_line" },
+    "defaultAction": {
+      "op": "delete_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 52,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "dockerfile_workdir": {
-    "defaultAction": { "op": "insert_after" },
+    "defaultAction": {
+      "op": "insert_after"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 200,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "class_doc": {
-    "defaultAction": { "op": "insert_after" },
+    "defaultAction": {
+      "op": "insert_after"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 212,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "flow_comment": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 330,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "function_comment": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 330,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "function_doc": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 210,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "function_spec": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 80,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "functional_reassignment": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 100,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "large_file": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 210,
     "supportsQuickFix": false,
     "supportsFollowUp": false
   },
   "long_line": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 190,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "lsp_code_action": {
-    "defaultAction": { "op": "lsp_code_action" },
+    "defaultAction": {
+      "op": "lsp_code_action"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 15,
     "supportsQuickFix": true,
     "supportsFollowUp": false
   },
   "lsp_ai_fix": {
-    "defaultAction": { "op": "lsp_ai_fix" },
+    "defaultAction": {
+      "op": "lsp_ai_fix"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 16,
     "supportsQuickFix": true,
     "supportsFollowUp": false
   },
   "loose_equality": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 42,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "markdown_title": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 180,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "missing_dependency": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 65,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "moduledoc": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 70,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "nested_condition": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 170,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "nil_comparison": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 43,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "none_comparison": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 42,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "bare_except": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 44,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "syntax_extra_delimiter": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 20,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "syntax_missing_comma": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 40,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "syntax_missing_delimiter": {
-    "defaultAction": { "op": "insert_after", "dedupeLookahead": 6 },
+    "defaultAction": {
+      "op": "insert_after",
+      "dedupeLookahead": 6
+    },
     "autoFixDefault": true,
     "autoFixPriority": 30,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "syntax_malformed_keyword": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 22,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "syntax_missing_quote": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 10,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "tabs": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 160,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "terraform_required_version": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 190,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "terminal_task": {
-    "defaultAction": { "op": "run_command" },
+    "defaultAction": {
+      "op": "run_command"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 150,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "todo_fixme": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 165,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "trailing_whitespace": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 155,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "undefined_variable": {
-    "defaultAction": { "op": "replace_line" },
+    "defaultAction": {
+      "op": "replace_line"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 45,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "variable_doc": {
-    "defaultAction": { "op": "insert_before" },
+    "defaultAction": {
+      "op": "insert_before"
+    },
     "autoFixDefault": true,
     "autoFixPriority": 214,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "unit_test": {
-    "defaultAction": { "op": "write_file" },
+    "defaultAction": {
+      "op": "write_file"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 140,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   },
   "unit_test_signature": {
-    "defaultAction": { "op": "replace_range" },
+    "defaultAction": {
+      "op": "replace_range"
+    },
     "autoFixDefault": false,
     "autoFixPriority": 75,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
+  },
+  "chained_comparison": {
+    "defaultAction": {
+      "op": "replace_line"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 46,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
+  },
+  "literal_identity_comparison": {
+    "defaultAction": {
+      "op": "replace_line"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 46,
     "supportsQuickFix": true,
     "supportsFollowUp": true
   }

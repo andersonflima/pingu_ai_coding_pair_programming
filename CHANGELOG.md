@@ -2,6 +2,42 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao: comparacao encadeada e identidade contra literal
+
+### Antes
+
+- O Pingu cobria erros humanos de comparacao apenas via nullability (`loose_equality`, `none_comparison`, `nil_comparison`) e auto-comparacao/`NaN`/`typeof`. Comparacoes encadeadas em linguagens C-like (`a < b < c`, que avalia `(a < b) < c`) e identidade contra literal em Python (`x is 5`, `x is "foo"`) passavam sem aviso.
+
+### Depois
+
+- Novo modulo `lib/analyzer-logic-errors.js` com dois detectores suggest-only: `chained_comparison` (JS/TS) e `literal_identity_comparison` (Python). Registrados em `config/issue-kinds.json` (`autoFixDefault: false`) e na nova familia `comparison_logic` da taxonomia. Cada um propoe a correcao (`a < b && b < c`; troca de `is`/`is not` por `==`/`!=`) sem reescrever sozinho.
+
+### Motivo
+
+- Ampliar a cobertura de erros humanos que o compilador aceita em silencio, mantendo a politica conservadora (mascara strings/comentarios, preserva `is None`/`is True`/`is False`, ignora shifts e o encadeamento valido de Python).
+
+### Impacto
+
+- Comportamento preservado para o codigo existente: detectores aditivos, suggest-only, sem auto-fix. Cobertos por `test/analyzer-logic-errors.test.js` e pelo invariante de taxonomia.
+
+## Unreleased - Modularizacao: utilitarios de corpo de funcao
+
+### Antes
+
+- O `analyzer.js` mantinha `isFunctionDeclarationLine`, `collectFunctionBodyLines` e `lastMeaningfulBodyLine`, helpers de varredura de corpo de funcao compartilhados pelos checks de documentacao e escopo.
+
+### Depois
+
+- Esses tres helpers foram extraidos para `lib/function-body.js`, modulo leaf puro que faz par com `function-signature` (depende so de `support` e `function-signature`). `analyzer.js` caiu para 4842 linhas.
+
+### Motivo
+
+- Isolar mais um util de fronteira limpa, reduzindo o nucleo do analyzer e dando cobertura unitaria focada a infraestrutura compartilhada.
+
+### Impacto
+
+- Comportamento preservado: os helpers sao reimportados e exercitados pelos golden-fixtures, mais um smoke test direto (`test/function-body.test.js`).
+
 ## Unreleased - Modularizacao: parsing de assinatura de funcao
 
 ### Antes

@@ -11,7 +11,7 @@ O projeto funciona hoje em `Vim/Neovim`, com foco pratico em `LazyVim`, runtime 
 ## O que o Pingu faz
 
 - Analisa o arquivo atual em tempo real e publica diagnosticos orientados a manutencao.
-- Encontra erros humanos que o compilador costuma deixar passar: erros de digitacao, atribuicao acidental em condicao, codigo inalcancavel, `case` duplicado, desvio de fluxo em `finally`, erro engolido, import/variavel nao usados, `await` ausente, auto-comparacao/auto-atribuicao, chave duplicada, `typeof` invalido e comparacao com `NaN` (ver "Erros humanos detectados").
+- Encontra erros humanos que o compilador costuma deixar passar: erros de digitacao, atribuicao acidental em condicao, codigo inalcancavel, `case` duplicado, desvio de fluxo em `finally`, erro engolido, import/variavel nao usados, `await` ausente, auto-comparacao/auto-atribuicao, chave duplicada, `typeof` invalido, comparacao com `NaN`, comparacao encadeada (`a < b < c`) e identidade contra literal em Python (`x is 5`) (ver "Erros humanos detectados").
 - Comenta e documenta o codigo existente passo a passo, com resumo que descreve o que a funcao faz, em 16 linguagens.
 - Interpreta comentarios acionaveis para gerar codigo no proprio arquivo.
 - Cria `context_file` a partir de blueprints descritos no comentario, com scaffold nativo nas stacks principais.
@@ -85,6 +85,8 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | `typeof` invalido | `typeof x === "fucntion"` | JS/TS |
 | Comparacao com `NaN` | `x === NaN` | JS/TS |
 | `parseInt` sem radix | `parseInt(x)` sem base | JS/TS |
+| Comparacao encadeada | `a < b < c` | JS/TS |
+| Identidade contra literal | `x is 5`, `x is "foo"` | Python |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
@@ -134,6 +136,15 @@ Todos sao suggest-only (nunca reescrevem).
 ### Atribuicao acidental em condicao (sugestao)
 
 Em JavaScript/TypeScript, `if (x = y)` compila sem erro mas quase sempre era para ser uma comparacao. O Pingu sinaliza esse caso e sugere `===`, ignorando comparacoes (`==`, `===`, `<=`), operadores compostos (`+=`), arrow functions (`=>`), `=` dentro de strings e o idioma de atribuicao intencional com parenteses duplos (`if ((m = regex.exec(s)))`). E suggest-only: nunca reescreve sozinho.
+
+### Comparacao encadeada e identidade contra literal (sugestao)
+
+Dois erros de logica que o compilador costuma aceitar em silencio:
+
+- **Comparacao encadeada** (JavaScript/TypeScript): `a < b < c` nao significa "b entre a e c" — a primeira comparacao produz um booleano que entra na segunda (`(a < b) < c`), quase sempre um engano. O Pingu sugere separar em `a < b && b < c`. Nao se aplica a Python, onde o encadeamento e valido e idiomatico. Conservador: exige operadores relacionais com espacos e operandos simples, ignorando shifts (`>>`, `<<`) e ocorrencias dentro de strings.
+- **Identidade contra literal** (Python): `x is 5`, `x is "foo"`, `x is []` comparam identidade de objeto, nunca o valor de um literal — o proprio CPython ja emite `SyntaxWarning`. O Pingu sugere `==`. Preserva os idiomas corretos `is None`, `is True` e `is False` e a comparacao entre identificadores (`x is other`); ignora ocorrencias em strings e comentarios.
+
+Ambos sao suggest-only (nunca reescrevem).
 
 ### Erros de digitacao (sugestao, sem reescrita automatica)
 

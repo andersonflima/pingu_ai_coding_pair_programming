@@ -5,72 +5,260 @@
     {
       "id": "syntax_structure",
       "description": "Aspas, delimitadores, virgulas, blocos e fences quebrados.",
-      "mappedIssueKinds": ["syntax_missing_quote", "syntax_missing_delimiter", "syntax_missing_comma", "syntax_extra_delimiter", "syntax_malformed_keyword"],
+      "mappedIssueKinds": [
+        "syntax_missing_quote",
+        "syntax_missing_delimiter",
+        "syntax_missing_comma",
+        "syntax_extra_delimiter",
+        "syntax_malformed_keyword"
+      ],
       "safeAutoFix": true,
-      "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c", "terraform", "yaml", "markdown", "mermaid", "dockerfile", "shell", "toml"]
+      "languages": [
+        "javascript",
+        "python",
+        "elixir",
+        "go",
+        "rust",
+        "ruby",
+        "lua",
+        "vim",
+        "c",
+        "terraform",
+        "yaml",
+        "markdown",
+        "mermaid",
+        "dockerfile",
+        "shell",
+        "toml"
+      ]
     },
     {
       "id": "workspace_hygiene",
       "description": "Tabs, espacos finais, linhas duplicadas, TODO/FIXME sem contrato e saidas de debug.",
-      "mappedIssueKinds": ["tabs", "trailing_whitespace", "duplicate_line", "todo_fixme", "debug_output"],
+      "mappedIssueKinds": [
+        "tabs",
+        "trailing_whitespace",
+        "duplicate_line",
+        "todo_fixme",
+        "debug_output"
+      ],
       "safeAutoFix": true,
-      "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c", "terraform", "yaml", "markdown", "mermaid", "dockerfile", "shell", "toml"]
+      "languages": [
+        "javascript",
+        "python",
+        "elixir",
+        "go",
+        "rust",
+        "ruby",
+        "lua",
+        "vim",
+        "c",
+        "terraform",
+        "yaml",
+        "markdown",
+        "mermaid",
+        "dockerfile",
+        "shell",
+        "toml"
+      ]
     },
     {
       "id": "nullability_and_equality",
       "description": "Comparacoes frouxas ou idiomaticamente incorretas contra valores nulos.",
-      "mappedIssueKinds": ["loose_equality", "none_comparison", "nil_comparison"],
+      "mappedIssueKinds": [
+        "loose_equality",
+        "none_comparison",
+        "nil_comparison"
+      ],
       "safeAutoFix": true,
-      "languages": ["javascript", "python", "ruby"]
+      "languages": [
+        "javascript",
+        "python",
+        "ruby"
+      ]
+    },
+    {
+      "id": "comparison_logic",
+      "description": "Erros de logica em comparacoes que o compilador aceita silenciosamente: encadeamento indevido e identidade contra literal.",
+      "mappedIssueKinds": [
+        "chained_comparison",
+        "literal_identity_comparison"
+      ],
+      "safeAutoFix": false,
+      "languages": [
+        "javascript",
+        "typescript",
+        "python"
+      ]
     },
     {
       "id": "typo_and_naming",
       "description": "Erros de digitacao em palavras-chave e builtins. Pingu sugere a correcao mais provavel, mas nunca reescreve automaticamente.",
-      "mappedIssueKinds": ["typo"],
+      "mappedIssueKinds": [
+        "typo"
+      ],
       "safeAutoFix": false,
-      "languages": ["javascript", "python", "ruby", "go", "rust", "java", "csharp", "kotlin", "swift", "scala", "php", "c", "elixir", "lua", "shell"]
+      "languages": [
+        "javascript",
+        "python",
+        "ruby",
+        "go",
+        "rust",
+        "java",
+        "csharp",
+        "kotlin",
+        "swift",
+        "scala",
+        "php",
+        "c",
+        "elixir",
+        "lua",
+        "shell"
+      ]
     },
     {
       "id": "imports_and_dependencies",
       "description": "Imports inexistentes, exports incorretos, includes/use ausentes, imports nao utilizados e dependencias exigidas por snippets.",
-      "mappedIssueKinds": ["undefined_variable", "missing_dependency", "unused_import"],
+      "mappedIssueKinds": [
+        "undefined_variable",
+        "missing_dependency",
+        "unused_import"
+      ],
       "safeAutoFix": true,
-      "languages": ["javascript", "python", "elixir", "go", "rust", "c"]
+      "languages": [
+        "javascript",
+        "python",
+        "elixir",
+        "go",
+        "rust",
+        "c"
+      ]
     },
     {
       "id": "error_handling",
       "description": "Captura ampla demais, erros ignorados, promises nao aguardadas, desvio de fluxo em finally, argumento padrao mutavel e fluxos que escondem falhas.",
-      "mappedIssueKinds": ["bare_except", "swallowed_error", "missing_await", "control_flow_in_finally", "mutable_default_arg"],
+      "mappedIssueKinds": [
+        "bare_except",
+        "swallowed_error",
+        "missing_await",
+        "control_flow_in_finally",
+        "mutable_default_arg"
+      ],
       "safeAutoFix": true,
-      "languages": ["python"]
+      "languages": [
+        "python"
+      ]
     },
     {
       "id": "public_contract",
       "description": "Funcoes, classes, specs, moduledocs, variaveis relevantes e contratos sem documentacao suficiente.",
-      "mappedIssueKinds": ["function_doc", "class_doc", "function_spec", "moduledoc", "variable_doc", "function_comment", "flow_comment"],
+      "mappedIssueKinds": [
+        "function_doc",
+        "class_doc",
+        "function_spec",
+        "moduledoc",
+        "variable_doc",
+        "function_comment",
+        "flow_comment"
+      ],
       "safeAutoFix": true,
-      "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c"]
+      "languages": [
+        "javascript",
+        "python",
+        "elixir",
+        "go",
+        "rust",
+        "ruby",
+        "lua",
+        "vim",
+        "c"
+      ]
     },
     {
       "id": "architecture_and_tests",
       "description": "Contexto arquitetural ausente, scaffolds solicitados, cobertura de testes e contratos de arquivos estruturados.",
-      "mappedIssueKinds": ["comment_task", "context_file", "context_contract", "unit_test", "unit_test_signature"],
+      "mappedIssueKinds": [
+        "comment_task",
+        "context_file",
+        "context_contract",
+        "unit_test",
+        "unit_test_signature"
+      ],
       "safeAutoFix": true,
-      "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c", "terraform", "yaml", "markdown", "mermaid", "dockerfile", "shell", "toml"]
+      "languages": [
+        "javascript",
+        "python",
+        "elixir",
+        "go",
+        "rust",
+        "ruby",
+        "lua",
+        "vim",
+        "c",
+        "terraform",
+        "yaml",
+        "markdown",
+        "mermaid",
+        "dockerfile",
+        "shell",
+        "toml"
+      ]
     },
     {
       "id": "control_flow_and_complexity",
       "description": "Condicionais profundas, reatribuicao imperativa, atribuicao acidental em condicao, codigo inalcancavel, variaveis nao utilizadas, construcoes redundantes (auto-comparacao/auto-atribuicao) e fluxo dificil de testar.",
-      "mappedIssueKinds": ["nested_condition", "functional_reassignment", "assignment_in_condition", "unreachable_code", "duplicate_case", "unused_variable", "self_comparison", "self_assignment", "duplicate_key", "invalid_typeof", "nan_comparison", "parseint_no_radix"],
+      "mappedIssueKinds": [
+        "nested_condition",
+        "functional_reassignment",
+        "assignment_in_condition",
+        "unreachable_code",
+        "duplicate_case",
+        "unused_variable",
+        "self_comparison",
+        "self_assignment",
+        "duplicate_key",
+        "invalid_typeof",
+        "nan_comparison",
+        "parseint_no_radix"
+      ],
       "safeAutoFix": false,
-      "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c"]
+      "languages": [
+        "javascript",
+        "python",
+        "elixir",
+        "go",
+        "rust",
+        "ruby",
+        "lua",
+        "vim",
+        "c"
+      ]
     },
     {
       "id": "runtime_commands",
       "description": "Acoes de terminal, testes, build, lint, formatacao e scripts locais com politica de risco.",
-      "mappedIssueKinds": ["terminal_task"],
+      "mappedIssueKinds": [
+        "terminal_task"
+      ],
       "safeAutoFix": false,
-      "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c", "terraform", "yaml", "markdown", "mermaid", "dockerfile", "shell", "toml"]
+      "languages": [
+        "javascript",
+        "python",
+        "elixir",
+        "go",
+        "rust",
+        "ruby",
+        "lua",
+        "vim",
+        "c",
+        "terraform",
+        "yaml",
+        "markdown",
+        "mermaid",
+        "dockerfile",
+        "shell",
+        "toml"
+      ]
     }
   ]
 }
