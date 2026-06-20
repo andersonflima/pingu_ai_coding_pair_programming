@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: checks de complexidade/fluxo
+
+### Antes
+
+- O `analyzer.js` mantinha os checks de complexidade/fluxo: reatribuicao imperativa em Elixir (`checkFunctionalReassignment`) e aninhamento alto de controle (`checkNestedConditionDepth`).
+
+### Depois
+
+- Esses dois checks puros foram extraidos para `lib/analyzer-complexity.js` (dependem apenas de utilitarios do support). `analyzer.js` importa-os e caiu para 5034 linhas.
+
+### Motivo
+
+- Continuar a reducao do God file isolando o dominio de complexidade/fluxo.
+
+### Impacto
+
+- Comportamento preservado: mesmos kinds e mensagens, exercitados pelos testes existentes mais um smoke test direto do novo modulo.
+
 ## Unreleased - Modularizacao: scanner de estrutura sintatica
 
 ### Antes
