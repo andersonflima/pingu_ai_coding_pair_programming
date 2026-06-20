@@ -2,6 +2,42 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: checks de documentacao e @spec de Elixir
+
+### Antes
+
+- O `analyzer.js` ainda concentrava o cluster de documentacao/@spec de Elixir (~600 linhas, 17 funcoes): resolucao do range de `@doc`/`@spec` acima de uma funcao, deteccao de doc/@spec desatualizados frente a assinatura atual e inferencia do contexto de spec (tipos de parametro e retorno). Era o ultimo no acoplado do nucleo de documentacao.
+
+### Depois
+
+- As 17 funcoes foram extraidas para `lib/analyzer-elixir-doc-spec.js`, agora um cluster leaf fechado sob `support`, `function-body`, `function-signature`, `function-metadata`, `language-profiles` e `analyzer-options` (possivel apenas apos isolar o parsing de assinatura e os metadados de funcao). `analyzer.js` importa as seis entradas usadas externamente e caiu de 4535 para 3937 linhas — abaixo de quatro mil pela primeira vez (6657 no inicio da serie, ~41% menor).
+
+### Motivo
+
+- Concluir o untangle do nucleo de documentacao: o cluster de Elixir, que era a maior teia de acoplamento, agora vive em modulo proprio e importa a infraestrutura compartilhada em vez de arrasta-la.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de doc/@spec de Elixir (incluindo multiplas clausulas, idempotencia e nao-sobrescrita de spec de outra funcao) continuam validando o resultado, mais um smoke test direto do novo modulo (`test/analyzer-elixir-doc-spec.test.js`).
+
+## Unreleased - Modularizacao: metadados cross-language de funcao
+
+### Antes
+
+- O `analyzer.js` mantinha o cluster de metadados cross-language de funcao (`buildFunctionIssueMetadata` e helpers: resolucao do fim da declaracao, coleta do corpo, inferencia de retorno e da classe Python envolvente, extracao de retorno inline em JavaScript). Esse era o ultimo no de acoplamento entre os checks de doc/spec e o nucleo do analyzer.
+
+### Depois
+
+- As seis funcoes foram extraidas para `lib/function-metadata.js`, cluster leaf fechado sob `support`, `language-profiles` e `python-signature`. `analyzer.js` importa as quatro entradas usadas externamente e caiu de 4656 para 4530 linhas.
+
+### Motivo
+
+- Segundo passo do untangle do nucleo de documentacao: agora os metadados de funcao consumidos pelos checks de doc/spec estao isolados, restando apenas o cluster de doc/spec de Elixir para uma extracao futura sem arrastar infraestrutura compartilhada.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de doc/spec/undefined-variable continuam validando o resultado, mais um smoke test direto do novo modulo (`test/function-metadata.test.js`).
+
 ## Unreleased - Modularizacao: parsing de assinatura Python e descritores genericos
 
 ### Antes
