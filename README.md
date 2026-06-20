@@ -338,6 +338,8 @@ Quando o blueprint descreve um fluxo de BFF CRUD, o scaffold nativo hoje e mais 
 - `Ruby`
 - `C`
 
+Para as demais linguagens com `context_file` offline — `Java`, `C#`, `Kotlin`, `Swift`, `Scala` e `PHP` — o blueprint e **document-only**: gera o documento de contexto arquitetural (com `language`/`source_ext` da propria stack) e o `.gitignore` do agente, sem espalhar um scaffold de outra linguagem no projeto. O scaffold nativo dessas stacks pode ser adicionado depois sem mudar o contrato.
+
 ### `*` executa acao de terminal
 
 ```javascript
