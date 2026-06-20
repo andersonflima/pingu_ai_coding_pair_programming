@@ -58,6 +58,18 @@ test('nao acusa case igual em switches distintos nem aninhados', () => {
   assert.deepEqual(kindsAt('switch (x) {\n  case 1:\n    switch (y) {\n      case 1: a(); break;\n    }\n    break;\n  case 2: b(); break;\n}', '.js'), []);
 });
 
+test('detecta return/break/continue dentro de finally', () => {
+  assert.deepEqual(kindsAt('try {\n  a();\n} finally {\n  return 1;\n}', '.js'), ['control_flow_in_finally@4']);
+  assert.deepEqual(kindsAt('try {\n  a();\n} finally {\n  if (x) return 1;\n}', '.js'), ['control_flow_in_finally@4']);
+  assert.deepEqual(kindsAt('try { a(); } finally { return 2; }', '.js'), ['control_flow_in_finally@1']);
+});
+
+test('nao acusa return fora do finally nem em funcao aninhada no finally', () => {
+  assert.deepEqual(kindsAt('try {\n  return 1;\n} finally {\n  cleanup();\n}', '.js'), []);
+  assert.deepEqual(kindsAt('try {\n  a();\n} finally {\n  list.map((x) => { return x; });\n}', '.js'), []);
+  assert.deepEqual(kindsAt('try {\n  a();\n} finally {\n  const returnValue = compute();\n}', '.js'), []);
+});
+
 test('respeita focusRange', () => {
   const source = 'function f() {\n  return 1;\n  doStuff();\n}\nfunction g() {\n  return 2;\n  more();\n}';
   const issues = checkControlFlowSmells(source.split('\n'), 'sample.js', '.js', { focusRange: { start: 5, end: 8 } });

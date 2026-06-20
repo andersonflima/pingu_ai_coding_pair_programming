@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de desvio de fluxo em finally
+
+### Antes
+
+- O Pingu nao detectava `return`/`break`/`continue` dentro de `finally`, que engole excecoes e sobrescreve o retorno do `try`/`catch`.
+
+### Depois
+
+- `lib/analyzer-control-flow.js` ganhou `checkControlFlowInFinally` (suggest-only, JavaScript/TypeScript): novo kind `control_flow_in_finally` (`autoFixDefault: false`), mapeado na familia `error_handling`.
+- Usa uma pilha de tipos de bloco (`finally`/`function`/outro), entao nao confunde o desvio do `finally` com `return` de funcao aninhada dentro dele; cobre tambem `return` condicional (`if (x) return`) e finally de uma linha.
+
+### Motivo
+
+- Mais um erro humano de alto impacto (mascaramento de excecao) que o compilador nao acusa.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere.
+
 ## Unreleased - Deteccao de case duplicado em switch
 
 ### Antes
