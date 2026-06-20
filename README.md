@@ -75,6 +75,7 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | `case` duplicado em `switch` | dois `case 1:` no mesmo switch | JS/TS |
 | Desvio de fluxo em `finally` | `return`/`break`/`continue` no `finally` | JS/TS |
 | Erro engolido | `catch {}` vazio, `except: pass` | JS/TS, Python |
+| Argumento padrao mutavel | `def f(x=[])` | Python |
 | `await` ausente | chamada async fire-and-forget | JS/TS |
 | Import nao utilizado | binding importado nunca usado | JS/TS, Python |
 | Variavel local nao utilizada | `const x = 5` nunca lido | JS/TS |
@@ -122,6 +123,10 @@ O Pingu sinaliza dois erros humanos de fluxo que o compilador costuma deixar pas
 - **`return`/`break`/`continue` dentro de `finally`** (JavaScript/TypeScript): desviar o fluxo no `finally` engole excecoes e sobrescreve o retorno do `try`/`catch`. Usa uma pilha de tipos de bloco, entao nao confunde com `return` de funcao aninhada dentro do `finally`.
 
 Todos sao suggest-only (nunca reescrevem).
+
+### Argumento padrao mutavel em Python (sugestao)
+
+`def f(x=[])` (ou `{}`, `list()`, `dict()`, `set()`, ou literais nao vazios) usa um valor padrao mutavel compartilhado entre todas as chamadas — um dos erros mais comuns em Python. O Pingu sugere usar `None` como padrao e inicializar dentro da funcao. Conservador: nao acusa defaults imutaveis (`None`, numeros, strings, tuplas `()`), indices (`g[0]`) nem chamadas que nao sejam `def`.
 
 ### Atribuicao acidental em condicao (sugestao)
 

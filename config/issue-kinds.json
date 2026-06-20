@@ -48,6 +48,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
+  "mutable_default_arg": {
+    "defaultAction": { "op": "insert_before" },
+    "autoFixDefault": false,
+    "autoFixPriority": 44,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
   "unused_import": {
     "defaultAction": { "op": "insert_before" },
     "autoFixDefault": false,
