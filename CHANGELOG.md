@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Limpeza de codigo morto (segunda passada)
+
+### Antes
+
+- Restavam funcoes mortas: um cluster de helpers de descricao de instrucao nunca conectado em `lib/support.js` (`matchConditionalStatement`, `looksEarlyExitLine`, `describeConditionalGuard`, `matchReturnStatement`, `looksCommentWorthyReturn`, `describeReturnExpression`, `matchCallStatement`, `describeCallStatement`) e `vimStringLiteral` em `lib/generation.js` (orfa apos a remocao de `executablePlaceholderStatement`), alem do import nao usado `getCapabilityProfile`.
+
+### Depois
+
+- Removidas as nove funcoes mortas (verificadas sem nenhuma referencia) e o import nao usado.
+
+### Motivo
+
+- Reduzir ruido e peso dos arquivos sem alterar comportamento.
+
+### Impacto
+
+- Sem mudanca de comportamento em runtime.
+
 ## Unreleased - Deteccao de auto-comparacao e auto-atribuicao
 
 ### Antes
