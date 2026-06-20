@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de argumento padrao mutavel em Python
+
+### Antes
+
+- O Pingu nao detectava o classico footgun de Python `def f(x=[])`, onde o valor padrao mutavel e compartilhado entre chamadas.
+
+### Depois
+
+- `lib/analyzer-developer-errors.js` ganhou `checkPythonMutableDefaultArg`: novo kind `mutable_default_arg` (`autoFixDefault: false`, suggest-only), mapeado na familia `error_handling`. Detecta defaults `[]`, `{}`, literais nao vazios e `list()/dict()/set()` na assinatura (inclusive `async def` e com type hints).
+- Conservador: nao acusa defaults imutaveis (`None`, numeros, strings, tuplas `()`), indices (`g[0]`) nem chamadas que nao sejam `def`.
+
+### Motivo
+
+- Mais um erro humano de altissimo sinal (bug silencioso muito comum em Python).
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere (usar `None` e inicializar dentro da funcao).
+
 ## Unreleased - Consolidacao da documentacao de erros humanos
 
 ### Antes

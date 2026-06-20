@@ -24,6 +24,28 @@ test('developer error checker emits deterministic language fixes', () => {
   assert.equal(pythonIssue.snippet, 'if value is None:');
 });
 
+function mutableDefaults(line) {
+  return checkCommonDeveloperErrors([line], '/tmp/sample.py', '.py')
+    .filter((issue) => issue.kind === 'mutable_default_arg');
+}
+
+test('detecta argumento padrao mutavel em Python (suggest-only)', () => {
+  const { issueKindConfig } = require('../lib/issue-kinds');
+  assert.equal(issueKindConfig('mutable_default_arg').autoFixDefault, false);
+  assert.equal(mutableDefaults('def f(x=[]):').length, 1);
+  assert.equal(mutableDefaults('def f(a, b={}):')[0].message.includes("'b'"), true);
+  assert.equal(mutableDefaults('async def f(cache=dict()):').length, 1);
+  assert.equal(mutableDefaults('def f(x: int, y=[1, 2]) -> None:').length, 1);
+});
+
+test('nao acusa defaults imutaveis nem chamadas que nao sao def', () => {
+  assert.equal(mutableDefaults('def f(x=None):').length, 0);
+  assert.equal(mutableDefaults('def f(x=0, y=""):').length, 0);
+  assert.equal(mutableDefaults('def f(x=()):').length, 0);
+  assert.equal(mutableDefaults('def f(x=g[0]):').length, 0);
+  assert.equal(mutableDefaults('result = compute(x=[])').length, 0);
+});
+
 function assignmentIssues(line) {
   return checkCommonDeveloperErrors([line], '/tmp/sample.js', '.js')
     .filter((issue) => issue.kind === 'assignment_in_condition');
