@@ -9,6 +9,26 @@ function typosFor(lines, file) {
   return checkCommonTypos(lines, file, file.slice(file.lastIndexOf('.')));
 }
 
+test('detecta typos de keyword/builtin nas linguagens estendidas', () => {
+  const cases = [
+    ['App.java', 'pubic void main() {}', /public/],
+    ['Svc.cs', 'Cosole.WriteLine(x);', /Console/],
+    ['m.kt', 'fnu soma() {}', /fun/],
+    ['s.swift', 'fucn soma() {}', /func/],
+    ['x.scala', 'vla x = 1', /val/],
+    ['a.php', 'funtcion soma() {}', /function/],
+    ['m.c', 'pirntf("%d", x);', /printf/],
+    ['m.ex', 'improt Enum', /import/],
+    ['s.lua', 'funtion f() end', /function/],
+    ['d.sh', 'ehco hello', /echo/],
+  ];
+  for (const [file, line, expected] of cases) {
+    const issues = typosFor([line], file);
+    assert.equal(issues.length, 1, `esperava 1 typo em ${file}`);
+    assert.match(issues[0].suggestion, expected);
+  }
+});
+
 test('detecta typo de builtin JavaScript e sugere a correcao', () => {
   const issues = typosFor(['cosole.log("oi");'], 'app.js');
   assert.equal(issues.length, 1);
