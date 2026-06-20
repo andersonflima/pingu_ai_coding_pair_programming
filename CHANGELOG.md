@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: resolucao de modulos e exports JS
+
+### Antes
+
+- O `analyzer.js` concentrava a resolucao de arquivos de modulo local (caminhos relativos JS/Python, busca em disco) e a coleta de nomes exportados em JavaScript (ESM e CommonJS), passando de 5,9 mil linhas.
+
+### Depois
+
+- Esse cluster foi extraido para `lib/analyzer-module-resolution.js` (`resolveLocalModuleFile`, resolucao JS/Python, busca em disco, e coleta de exports JS). Depende apenas de `fs`/`path`, `language-profiles`, `analyzer-import-bindings` e `support`; o cache continua injetado por parametro. A coleta de exports Python permanece no analyzer por usar helpers de escopo compartilhados.
+- `analyzer.js` importa as duas entradas (`resolveLocalModuleFile`, `collectJavaScriptExportNames`) e caiu para 5965 linhas (era 6657 no inicio da serie de modularizacoes).
+
+### Motivo
+
+- Continuar a reducao do God file por uma fatia de fronteira limpa, alinhado a regra de arquivos pequenos do projeto.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de undefined-variable/import continuam validando o fluxo, mais um smoke test do novo modulo.
+
 ## Unreleased - Deteccao de parseInt sem radix
 
 ### Antes
