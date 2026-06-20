@@ -11,6 +11,8 @@ O projeto funciona hoje em `Vim/Neovim`, com foco pratico em `LazyVim`, runtime 
 ## O que o Pingu faz
 
 - Analisa o arquivo atual em tempo real e publica diagnosticos orientados a manutencao.
+- Encontra erros humanos que o compilador costuma deixar passar: erros de digitacao, atribuicao acidental em condicao, codigo inalcancavel, `case` duplicado, desvio de fluxo em `finally`, erro engolido, import/variavel nao usados, `await` ausente, auto-comparacao/auto-atribuicao, chave duplicada, `typeof` invalido e comparacao com `NaN` (ver "Erros humanos detectados").
+- Comenta e documenta o codigo existente passo a passo, com resumo que descreve o que a funcao faz, em 16 linguagens.
 - Interpreta comentarios acionaveis para gerar codigo no proprio arquivo.
 - Cria `context_file` a partir de blueprints descritos no comentario, com scaffold nativo nas stacks principais.
 - Sugere cobertura de testes e atualizacao de testes existentes de forma opt-in: o Pingu aponta o que falta (ou o teste relacionado a um metodo alterado) e so cria ou ajusta quando o desenvolvedor aplica a sugestao.
@@ -60,6 +62,29 @@ Ela organiza os erros que o Pingu deve tratar por familias:
 - comandos de runtime
 
 Nem toda classe de erro tem auto-fix seguro. Quando a correcao depende de tipo, framework, contrato de dominio ou efeito colateral externo, o Pingu deve sinalizar ou pedir contexto em vez de reescrever especulativamente.
+
+### Erros humanos detectados
+
+Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrita automatica) uma serie de erros humanos que o compilador costuma deixar passar:
+
+| Classe | Exemplo | Linguagens |
+| --- | --- | --- |
+| Erro de digitacao | `cosole.log`, `fucntion`, `retrun` | 15 linguagens (ver secao de typos) |
+| Atribuicao acidental em condicao | `if (x = y)` | JS/TS |
+| Codigo inalcancavel | instrucao apos `return`/`throw`/`raise` | JS/TS, Python |
+| `case` duplicado em `switch` | dois `case 1:` no mesmo switch | JS/TS |
+| Desvio de fluxo em `finally` | `return`/`break`/`continue` no `finally` | JS/TS |
+| Erro engolido | `catch {}` vazio, `except: pass` | JS/TS, Python |
+| `await` ausente | chamada async fire-and-forget | JS/TS |
+| Import nao utilizado | binding importado nunca usado | JS/TS, Python |
+| Variavel local nao utilizada | `const x = 5` nunca lido | JS/TS |
+| Auto-comparacao | `x === x` | JS/TS, Python |
+| Auto-atribuicao | `x = x` | JS/TS, Python |
+| Chave duplicada | `{ a: 1, a: 2 }` | JS/TS, Python |
+| `typeof` invalido | `typeof x === "fucntion"` | JS/TS |
+| Comparacao com `NaN` | `x === NaN` | JS/TS |
+
+Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
 Correcoes deterministicas ja mapeadas:
 
