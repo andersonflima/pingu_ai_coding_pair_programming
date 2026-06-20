@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao: shadowing de builtin, typo em dunder e await em loop
+
+### Antes
+
+- O Pingu nao cobria tres enganos humanos comuns que o runtime aceita em silencio: sobrescrever um builtin Python (`list = [...]`), grafar errado um metodo dunder (`def __inti__`, que nunca e chamado pelo protocolo de dados) e usar `await` direto no corpo de um loop sequencial em JS/TS.
+
+### Depois
+
+- Novo modulo `lib/analyzer-python-naming.js` com `shadowed_builtin` e `dunder_typo` (este usando distancia de edicao 1 mais transposicao adjacente Damerau contra o conjunto de dunders conhecidos). O `lib/analyzer-async.js` ganhou `checkAwaitInLoop` (`await_in_loop`), que usa uma pilha de blocos para distinguir o corpo do loop de funcoes aninhadas e ignora `for await...of` e `await Promise.all/allSettled/race`. Os tres sao suggest-only (`autoFixDefault: false`), registrados em `config/issue-kinds.json` e nas familias `typo_and_naming` e na nova `async_and_concurrency` da taxonomia.
+
+### Motivo
+
+- Ampliar a cobertura de erro humano para classes de bug frequentes em Python e em codigo assincrono, mantendo a politica conservadora (guardas explicitas contra falso positivo em cada detector).
+
+### Impacto
+
+- Comportamento preservado para o codigo existente: detectores aditivos, suggest-only, sem auto-fix. Cobertos por `test/analyzer-python-naming.test.js`, `test/analyzer-await-in-loop.test.js` e pelo invariante de taxonomia estendido.
+
 ## Unreleased - Modularizacao: checks de documentacao e @spec de Elixir
 
 ### Antes

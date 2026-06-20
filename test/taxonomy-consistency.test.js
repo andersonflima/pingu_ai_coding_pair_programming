@@ -32,6 +32,9 @@ test('os detectores de erro humano sao todos suggest-only (autoFixDefault false)
     'parseint_no_radix',
     'chained_comparison',
     'literal_identity_comparison',
+    'shadowed_builtin',
+    'dunder_typo',
+    'await_in_loop',
   ];
   for (const kind of detectors) {
     assert.ok(issueKinds[kind], `issue kind ausente: ${kind}`);
