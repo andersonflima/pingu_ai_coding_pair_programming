@@ -55,3 +55,28 @@ test('nao acusa objeto sem chave duplicada nem blocos de codigo', () => {
   assert.deepEqual(kinds('const o = { a: x ? 1 : 2, b: 3 };', '.js'), []);
   assert.deepEqual(kinds('const o = { ...base, a: 1 };', '.js'), []);
 });
+
+test('detecta typeof comparado com tipo invalido (typo)', () => {
+  assert.deepEqual(kinds('if (typeof x === "fucntion") {}', '.js'), ['invalid_typeof']);
+  assert.deepEqual(kinds('if (typeof x !== "undefiend") {}', '.js'), ['invalid_typeof']);
+  assert.deepEqual(kinds('if ("strnig" === typeof y) {}', '.js'), ['invalid_typeof']);
+});
+
+test('nao acusa typeof com tipo valido', () => {
+  assert.deepEqual(kinds('if (typeof x === "function") {}', '.js'), []);
+  assert.deepEqual(kinds('if (typeof x === "undefined") {}', '.js'), []);
+});
+
+test('detecta comparacao direta com NaN', () => {
+  assert.deepEqual(kinds('if (x === NaN) {}', '.js'), ['nan_comparison']);
+  assert.deepEqual(kinds('if (NaN !== y) {}', '.js'), ['nan_comparison']);
+});
+
+test('nao acusa Number.isNaN nem identificador parecido', () => {
+  assert.deepEqual(kinds('if (Number.isNaN(x)) {}', '.js'), []);
+  assert.deepEqual(kinds('if (x === NaNlike) {}', '.js'), []);
+});
+
+test('typeof e NaN sao apenas para JavaScript', () => {
+  assert.deepEqual(kinds('if (x === NaN) {}', '.py'), []);
+});
