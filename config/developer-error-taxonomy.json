@@ -61,7 +61,7 @@
     {
       "id": "control_flow_and_complexity",
       "description": "Condicionais profundas, reatribuicao imperativa, atribuicao acidental em condicao, codigo inalcancavel, variaveis nao utilizadas, construcoes redundantes (auto-comparacao/auto-atribuicao) e fluxo dificil de testar.",
-      "mappedIssueKinds": ["nested_condition", "functional_reassignment", "assignment_in_condition", "unreachable_code", "unused_variable", "self_comparison", "self_assignment", "duplicate_key"],
+      "mappedIssueKinds": ["nested_condition", "functional_reassignment", "assignment_in_condition", "unreachable_code", "unused_variable", "self_comparison", "self_assignment", "duplicate_key", "invalid_typeof", "nan_comparison"],
       "safeAutoFix": false,
       "languages": ["javascript", "python", "elixir", "go", "rust", "ruby", "lua", "vim", "c"]
     },
