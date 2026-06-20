@@ -2,6 +2,78 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: parsing de assinatura Python e descritores genericos
+
+### Antes
+
+- O `analyzer.js` concentrava o parsing de declaracao de funcao/classe Python (incluindo decorators e assinatura multilinha) e os descritores de parametros genericos cross-language. Esse cluster era a base de acoplamento transitivo de `buildFunctionIssueMetadata`, bloqueando a futura extracao dos checks de documentacao/spec de Elixir.
+
+### Depois
+
+- Dez funcoes (`readPythonFunctionDeclaration`, `parsePythonFunctionDeclarationSource`, `parsePythonClassDeclaration`, `collectPythonLeadingDecorators`, `parsePythonDecoratorName`, `pythonSignatureHasTrailingColon`, `countPythonSignatureParenDelta`, `parseGenericParamDescriptors`, `isGenericFunctionParamOptional`, `isGenericFunctionParamVariadic`) foram extraidas para `lib/python-signature.js`, cluster leaf fechado sob `support`, `python-scope-utils` e `language-profiles`. `analyzer.js` importa as quatro entradas usadas externamente e caiu de 4844 para 4651 linhas.
+
+### Motivo
+
+- Primeiro passo do untangle do nucleo de documentacao: isolar a infraestrutura compartilhada de parsing de assinatura, abrindo caminho para extrair depois os metadados cross-language de funcao e o cluster de doc/spec de Elixir.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de doc/spec/undefined-variable continuam validando o resultado, mais um smoke test direto do novo modulo (`test/python-signature.test.js`).
+
+## Unreleased - Offline: blueprint de contexto document-only para Java/C#/Kotlin/Swift/Scala/PHP
+
+### Antes
+
+- As linguagens Java, C#, Kotlin, Swift, Scala e PHP nao ofereciam `context_file` offline. Ao forcar o fluxo, o `resolveBlueprintSourceExtension` caia para `.js` (via deteccao de `package.json`/`tsconfig.json`) e o Pingu gerava um scaffold CRUD inteiro em JavaScript dentro de um projeto Java/PHP/etc. — saida enganosa.
+
+### Depois
+
+- Essas seis linguagens passam a declarar `context_file`/`context_blueprint` offline. O `resolveBlueprintSourceExtension` agora reconhece suas extensoes e preserva a extensao original, de modo que o blueprint fica **document-only**: gera o documento de contexto arquitetural (com `language`/`source_ext` corretos) e o `.gitignore` do agente, sem scaffold de outra linguagem. O scaffold CRUD nativo dessas stacks pode ser adicionado depois sem mudar o contrato.
+
+### Motivo
+
+- Estender a cobertura offline do marcador `**` para as stacks tier-2 de forma honesta, eliminando o fallback cross-language que poluia o projeto com arquivos JavaScript.
+
+### Impacto
+
+- Comportamento preservado para as linguagens com scaffold nativo (JS/TS, Python, Go, Rust, Elixir, Ruby, C). Coberto por `test/blueprint-document-only-languages.test.js`, que garante documento de contexto presente e ausencia de arquivos `.js`/`.ts`/`.py`/`.go`/`.rs` para essas extensoes.
+
+## Unreleased - Deteccao: comparacao encadeada e identidade contra literal
+
+### Antes
+
+- O Pingu cobria erros humanos de comparacao apenas via nullability (`loose_equality`, `none_comparison`, `nil_comparison`) e auto-comparacao/`NaN`/`typeof`. Comparacoes encadeadas em linguagens C-like (`a < b < c`, que avalia `(a < b) < c`) e identidade contra literal em Python (`x is 5`, `x is "foo"`) passavam sem aviso.
+
+### Depois
+
+- Novo modulo `lib/analyzer-logic-errors.js` com dois detectores suggest-only: `chained_comparison` (JS/TS) e `literal_identity_comparison` (Python). Registrados em `config/issue-kinds.json` (`autoFixDefault: false`) e na nova familia `comparison_logic` da taxonomia. Cada um propoe a correcao (`a < b && b < c`; troca de `is`/`is not` por `==`/`!=`) sem reescrever sozinho.
+
+### Motivo
+
+- Ampliar a cobertura de erros humanos que o compilador aceita em silencio, mantendo a politica conservadora (mascara strings/comentarios, preserva `is None`/`is True`/`is False`, ignora shifts e o encadeamento valido de Python).
+
+### Impacto
+
+- Comportamento preservado para o codigo existente: detectores aditivos, suggest-only, sem auto-fix. Cobertos por `test/analyzer-logic-errors.test.js` e pelo invariante de taxonomia.
+
+## Unreleased - Modularizacao: utilitarios de corpo de funcao
+
+### Antes
+
+- O `analyzer.js` mantinha `isFunctionDeclarationLine`, `collectFunctionBodyLines` e `lastMeaningfulBodyLine`, helpers de varredura de corpo de funcao compartilhados pelos checks de documentacao e escopo.
+
+### Depois
+
+- Esses tres helpers foram extraidos para `lib/function-body.js`, modulo leaf puro que faz par com `function-signature` (depende so de `support` e `function-signature`). `analyzer.js` caiu para 4842 linhas.
+
+### Motivo
+
+- Isolar mais um util de fronteira limpa, reduzindo o nucleo do analyzer e dando cobertura unitaria focada a infraestrutura compartilhada.
+
+### Impacto
+
+- Comportamento preservado: os helpers sao reimportados e exercitados pelos golden-fixtures, mais um smoke test direto (`test/function-body.test.js`).
+
 ## Unreleased - Modularizacao: parsing de assinatura de funcao
 
 ### Antes
