@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Supressao de diagnosticos por kind
+
+### Antes
+
+- Nao havia como o desenvolvedor silenciar uma classe especifica de diagnostico que considerasse ruidosa; o unico controle existente era sobre o auto-fix, nao sobre a exibicao do diagnostico.
+
+### Depois
+
+- `analyzeText` passa a respeitar a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` (lista de `kind`s separados por virgula): qualquer issue kind listado e suprimido do resultado, no fim do pipeline (apos confianca/ordenacao/dedup). Funciona para qualquer kind, nao so os de erro humano.
+
+### Motivo
+
+- Dar controle de ruido ao desenvolvedor sem precisar alterar codigo, melhorando a adocao dos novos detectores em times com preferencias diferentes.
+
+### Impacto
+
+- Aditivo e opt-in: sem a variavel, nada muda. No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = '...'` no init.
+
 ## Unreleased - Modularizacao: resolucao de modulos e exports JS
 
 ### Antes
