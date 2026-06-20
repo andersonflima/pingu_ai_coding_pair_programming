@@ -65,6 +65,19 @@ test('o resumo infere a intencao pelo nome da funcao (melhor offline)', () => {
   assert.match(js.snippet, /Busca user, retornando user\./);
 });
 
+test('o mapa de verbos ampliado cobre mais nomes de funcao', () => {
+  const cases = [
+    ['def select_user(p):\n    x = p\n    return x', /Seleciona user/],
+    ['def authenticate_token(p):\n    x = p\n    return x', /Autentica token/],
+    ['def paginate_results(p):\n    x = p\n    return x', /Pagina results/],
+    ['def classify_input(p):\n    x = p\n    return x', /Classifica input/],
+  ];
+  for (const [body, expected] of cases) {
+    const snippet = build(['# : comment this code', ...body.split('\n')], '.py').snippet;
+    assert.match(snippet, expected);
+  }
+});
+
 test('preserva todas as linhas de codigo originais verbatim (Python)', () => {
   const lines = ['# : comment this code', 'def helper(planta, fert):', '    use_item(fert)', '    return planta'];
   const result = build(lines, '.py');

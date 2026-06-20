@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Vocabulario do resumo offline ampliado
+
+### Antes
+
+- O resumo de proposito da funcao (no fluxo de comentar codigo) reconhecia ~117 verbos no nome da funcao; nomes com verbos fora dessa lista caiam no resumo estrutural.
+
+### Depois
+
+- O mapa `VERB_TRANSLATIONS` em `lib/generation-inline-comments.js` foi ampliado para 278 entradas (ingles e portugues), cobrindo verbos comuns como `select`, `assign`, `subscribe`, `authenticate`, `compress`, `paginate`, `compare`, `classify`, `list` e equivalentes em portugues. Removida tambem uma chave `remove` duplicada pre-existente.
+
+### Motivo
+
+- Melhorar a precisao do resumo "o que a funcao faz" para mais nomes de funcao, em todas as 16 linguagens suportadas pelo fluxo de comentar codigo.
+
+### Impacto
+
+- Aditivo: apenas melhora os resumos; nomes sem verbo conhecido continuam no resumo estrutural.
+
 ## Unreleased - Cobertura de typos estendida para 15 linguagens
 
 ### Antes
