@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Offline: blueprint de contexto document-only para Java/C#/Kotlin/Swift/Scala/PHP
+
+### Antes
+
+- As linguagens Java, C#, Kotlin, Swift, Scala e PHP nao ofereciam `context_file` offline. Ao forcar o fluxo, o `resolveBlueprintSourceExtension` caia para `.js` (via deteccao de `package.json`/`tsconfig.json`) e o Pingu gerava um scaffold CRUD inteiro em JavaScript dentro de um projeto Java/PHP/etc. — saida enganosa.
+
+### Depois
+
+- Essas seis linguagens passam a declarar `context_file`/`context_blueprint` offline. O `resolveBlueprintSourceExtension` agora reconhece suas extensoes e preserva a extensao original, de modo que o blueprint fica **document-only**: gera o documento de contexto arquitetural (com `language`/`source_ext` corretos) e o `.gitignore` do agente, sem scaffold de outra linguagem. O scaffold CRUD nativo dessas stacks pode ser adicionado depois sem mudar o contrato.
+
+### Motivo
+
+- Estender a cobertura offline do marcador `**` para as stacks tier-2 de forma honesta, eliminando o fallback cross-language que poluia o projeto com arquivos JavaScript.
+
+### Impacto
+
+- Comportamento preservado para as linguagens com scaffold nativo (JS/TS, Python, Go, Rust, Elixir, Ruby, C). Coberto por `test/blueprint-document-only-languages.test.js`, que garante documento de contexto presente e ausencia de arquivos `.js`/`.ts`/`.py`/`.go`/`.rs` para essas extensoes.
+
 ## Unreleased - Deteccao: comparacao encadeada e identidade contra literal
 
 ### Antes
