@@ -201,7 +201,7 @@ Tambem e aceito o formato `pingu: <intencao> <pedido>`:
 
 Intencoes suportadas:
 
-- `code`, `fix`, `refactor`: gera ou ajusta codigo (`comment_task`). A geracao offline de esqueleto de funcao cobre as principais stacks, incluindo Java, C#, Kotlin, Swift e Scala (assinatura idiomatica com tipos `Object`/`object`/`Any` e retorno inferido).
+- `code`, `fix`, `refactor`: gera ou ajusta codigo (`comment_task`). A geracao offline de esqueleto de funcao cobre as principais stacks, incluindo Java, C#, Kotlin, Swift, Scala e PHP (assinatura idiomatica com tipos `Object`/`object`/`Any`, variaveis `$` em PHP e retorno inferido).
 - `comment`, `doc`, `document`: comenta a funcao seguinte passo a passo, com docstring idiomatico, sem alterar o codigo (`comment_task`)
 - `context`, `ctx`, `blueprint`, `scaffold`: cria contexto persistente/scaffold (`context_file`)
 - `test`, `tests`, `unit-test`: gera um prompt de codigo orientado a testes (`comment_task`)
