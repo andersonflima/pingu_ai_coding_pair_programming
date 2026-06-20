@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Geracao offline de funcao para PHP
+
+### Antes
+
+- PHP ficou de fora da geracao offline de funcao porque o corpo gerado usava nomes nus (`a + b`), invalidos em PHP, e a assinatura caia no fallback sem `$`.
+
+### Depois
+
+- `functionSignature` emite `function nome($a, $b) {` para PHP e `buildRenderedFunctionSnippet` aplica `phpVariableizeBody`, prefixando com `$` as referencias aos parametros no corpo (preservando as ja prefixadas). `baseHint` cobre o retorno PHP com ponto e virgula. Resultado: `function soma($a, $b) { return $a + $b; }`.
+
+### Motivo
+
+- Completar a geracao offline de esqueleto de funcao para as seis linguagens recém-adicionadas (Java, C#, Kotlin, Swift, Scala e agora PHP).
+
+### Impacto
+
+- Aditivo: apenas melhora a saida de `code` para PHP.
+
 ## Unreleased - Geracao offline de funcao para Java, C#, Kotlin, Swift e Scala
 
 ### Antes
