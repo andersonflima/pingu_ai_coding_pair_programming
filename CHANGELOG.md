@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Robustez: corpus de regressao anti-falso-positivo
+
+### Antes
+
+- A confianca de que os detectores suggest-only nao geram ruido vinha de testes pontuais por detector. Nao havia um corpus dedicado de codigo legitimo que se parece com os gatilhos mas nao deve dispara-los, rodado pela analise completa.
+
+### Depois
+
+- Novo `test/false-positive-corpus.test.js` com dez trechos realistas (JS/TS e Python) que exercitam `analyzeText` de ponta a ponta e afirmam que nenhum kind proibido dispara: `a < b && b < c`, `for await...of`/`await Promise.all` em loop, atribuicao intencional com parenteses duplos, `typeof` valido/`Number.isNaN`/`parseInt(x, 10)`, encadeamento valido e `is None` em Python, variaveis de dominio que apenas usam builtins, dunders corretos, `== null`, comparacao entre chamadas distintas e import efetivamente usado.
+
+### Motivo
+
+- Travar o comportamento conservador dos detectores contra regressoes futuras que afrouxem as guardas, aumentando a confianca de que o Pingu nao atrapalha o fluxo do desenvolvedor.
+
+### Impacto
+
+- Apenas teste, sem mudanca de runtime. Serve de rede de seguranca para a evolucao dos detectores.
+
 ## Unreleased - Deteccao: shadowing de builtin, typo em dunder e await em loop
 
 ### Antes
