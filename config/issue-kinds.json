@@ -111,6 +111,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
+  "parseint_no_radix": {
+    "defaultAction": { "op": "insert_before" },
+    "autoFixDefault": false,
+    "autoFixPriority": 42,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
   "comment_task": {
     "defaultAction": { "op": "replace_line" },
     "autoFixDefault": true,
