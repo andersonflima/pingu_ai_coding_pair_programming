@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de parseInt sem radix
+
+### Antes
+
+- O Pingu nao detectava `parseInt(x)` sem o argumento de base, gotcha conhecido de JavaScript (interpretacao ambigua de base, recomendacao da regra `radix` de linters).
+
+### Depois
+
+- `lib/analyzer-redundant.js` ganhou `hasParseIntWithoutRadix`: novo kind `parseint_no_radix` (`autoFixDefault: false`, suggest-only, JavaScript/TypeScript), mapeado na familia `control_flow_and_complexity`. So sinaliza `parseInt` com um unico argumento (sem virgula de topo), usando leitura balanceada de parenteses.
+- Conservador: mascara strings antes de detectar (ignora `parseInt` em literais de string), ignora acesso a membro custom (`obj.parseInt`) e chamadas que ja informam a base.
+
+### Motivo
+
+- Mais um erro/gotcha de JavaScript reconhecido por linters, com baixo falso-positivo.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere informar a base (`parseInt(x, 10)`).
+
 ## Unreleased - Deteccao de argumento padrao mutavel em Python
 
 ### Antes

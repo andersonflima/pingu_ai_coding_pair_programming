@@ -84,6 +84,7 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Chave duplicada | `{ a: 1, a: 2 }` | JS/TS, Python |
 | `typeof` invalido | `typeof x === "fucntion"` | JS/TS |
 | Comparacao com `NaN` | `x === NaN` | JS/TS |
+| `parseInt` sem radix | `parseInt(x)` sem base | JS/TS |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
@@ -99,7 +100,7 @@ Correcoes deterministicas ja mapeadas:
 
 Em JavaScript/TypeScript e Python, o Pingu sinaliza `x === x` / `x == x` (sempre verdadeiro/falso), `x = x` (sem efeito) e chave duplicada em literal de objeto/dict de uma linha (`{ a: 1, a: 2 }`, onde a ultima sobrescreve as anteriores). Quase sempre sao bug humano. Conservador: nao acusa `this.x = x`, `const x = x` (escopo externo), `x = x.next`, comparacao entre chamadas (`f() === f()`) nem blocos de codigo/objetos com spread ou chave computada.
 
-Especificamente em JavaScript/TypeScript, tambem sinaliza dois bugs silenciosos comuns: `typeof x === "fucntion"` (string de tipo invalida/com typo, sempre falsa — os tipos validos sao `undefined`, `object`, `boolean`, `number`, `bigint`, `string`, `symbol`, `function`) e comparacao direta com `NaN` (`x === NaN`, sempre falsa — use `Number.isNaN()`).
+Especificamente em JavaScript/TypeScript, tambem sinaliza bugs silenciosos comuns: `typeof x === "fucntion"` (string de tipo invalida/com typo, sempre falsa — os tipos validos sao `undefined`, `object`, `boolean`, `number`, `bigint`, `string`, `symbol`, `function`), comparacao direta com `NaN` (`x === NaN`, sempre falsa — use `Number.isNaN()`) e `parseInt` sem o argumento de base (`parseInt(x)` em vez de `parseInt(x, 10)`). Ignora `parseInt` em string, acesso a membro custom (`obj.parseInt`) e chamadas que ja informam a base.
 
 ### Import nao utilizado (sugestao)
 
