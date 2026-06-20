@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: utilitarios de analise lexica de Python
+
+### Antes
+
+- O `analyzer.js` mantinha um cluster de helpers puros de analise lexica de Python (validacao de identificador, leitura de string inline, remocao de comentarios/strings, extracao de nomes importados), alem do utilitario generico `leadingIndentLength`.
+
+### Depois
+
+- Os cinco helpers Python foram extraidos para `lib/python-scope-utils.js` (puros, sem efeito colateral, dependendo apenas de `splitTopLevelParams`); `leadingIndentLength` foi movido para `lib/support.js` (utilitario generico). `analyzer.js` importa o que ainda usa diretamente (`stripPythonInlineSyntax`, `extractPythonImportVars`, `leadingIndentLength`) e caiu para 5829 linhas.
+
+### Motivo
+
+- Continuar a reducao do God file e isolar utilitarios puros reusaveis, abrindo caminho para futuras extracoes do subsistema de escopo.
+
+### Impacto
+
+- Comportamento preservado: os mesmos helpers continuam exercitados pelos testes existentes, mais um smoke test direto do novo modulo.
+
 ## Unreleased - Supressao de diagnosticos por kind
 
 ### Antes
