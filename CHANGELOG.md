@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: checks de documentacao e @spec de Elixir
+
+### Antes
+
+- O `analyzer.js` ainda concentrava o cluster de documentacao/@spec de Elixir (~600 linhas, 17 funcoes): resolucao do range de `@doc`/`@spec` acima de uma funcao, deteccao de doc/@spec desatualizados frente a assinatura atual e inferencia do contexto de spec (tipos de parametro e retorno). Era o ultimo no acoplado do nucleo de documentacao.
+
+### Depois
+
+- As 17 funcoes foram extraidas para `lib/analyzer-elixir-doc-spec.js`, agora um cluster leaf fechado sob `support`, `function-body`, `function-signature`, `function-metadata`, `language-profiles` e `analyzer-options` (possivel apenas apos isolar o parsing de assinatura e os metadados de funcao). `analyzer.js` importa as seis entradas usadas externamente e caiu de 4535 para 3937 linhas — abaixo de quatro mil pela primeira vez (6657 no inicio da serie, ~41% menor).
+
+### Motivo
+
+- Concluir o untangle do nucleo de documentacao: o cluster de Elixir, que era a maior teia de acoplamento, agora vive em modulo proprio e importa a infraestrutura compartilhada em vez de arrasta-la.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de doc/@spec de Elixir (incluindo multiplas clausulas, idempotencia e nao-sobrescrita de spec de outra funcao) continuam validando o resultado, mais um smoke test direto do novo modulo (`test/analyzer-elixir-doc-spec.test.js`).
+
 ## Unreleased - Modularizacao: metadados cross-language de funcao
 
 ### Antes
