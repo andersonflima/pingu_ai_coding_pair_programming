@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: metadados cross-language de funcao
+
+### Antes
+
+- O `analyzer.js` mantinha o cluster de metadados cross-language de funcao (`buildFunctionIssueMetadata` e helpers: resolucao do fim da declaracao, coleta do corpo, inferencia de retorno e da classe Python envolvente, extracao de retorno inline em JavaScript). Esse era o ultimo no de acoplamento entre os checks de doc/spec e o nucleo do analyzer.
+
+### Depois
+
+- As seis funcoes foram extraidas para `lib/function-metadata.js`, cluster leaf fechado sob `support`, `language-profiles` e `python-signature`. `analyzer.js` importa as quatro entradas usadas externamente e caiu de 4656 para 4530 linhas.
+
+### Motivo
+
+- Segundo passo do untangle do nucleo de documentacao: agora os metadados de funcao consumidos pelos checks de doc/spec estao isolados, restando apenas o cluster de doc/spec de Elixir para uma extracao futura sem arrastar infraestrutura compartilhada.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de doc/spec/undefined-variable continuam validando o resultado, mais um smoke test direto do novo modulo (`test/function-metadata.test.js`).
+
 ## Unreleased - Modularizacao: parsing de assinatura Python e descritores genericos
 
 ### Antes
