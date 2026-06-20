@@ -100,7 +100,7 @@ Em JavaScript/TypeScript, `if (x = y)` compila sem erro mas quase sempre era par
 
 ### Erros de digitacao (sugestao, sem reescrita automatica)
 
-O Pingu detecta erros de digitacao em palavras-chave e builtins comuns (por exemplo `cosole.log`, `fucntion`, `retrun`, `improt`, em Python `pirnt`, `slef`, `Flase`) e responde com `Voce quis dizer 'X'?`. Esse fluxo e deliberadamente conservador:
+O Pingu detecta erros de digitacao em palavras-chave e builtins comuns (por exemplo `cosole.log`, `fucntion`, `retrun`, `improt`, em Python `pirnt`, `slef`, `Flase`) e responde com `Voce quis dizer 'X'?`. Cobre JavaScript/TypeScript, Python, Ruby, Go, Rust, Java, C#, Kotlin, Swift, Scala, PHP, C/C++, Elixir, Lua e Shell. Esse fluxo e deliberadamente conservador:
 
 - so reconhece grafias claramente incorretas, versionadas em [config/common-typos.json](./config/common-typos.json);
 - ignora ocorrencias dentro de strings e comentarios;
