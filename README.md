@@ -69,6 +69,10 @@ Correcoes deterministicas ja mapeadas:
 - Ruby: comparacoes diretas com `nil` viram `nil?`.
 - Elixir: comparacoes diretas com `nil` viram `is_nil/1`.
 
+### Auto-comparacao e auto-atribuicao (sugestao)
+
+Em JavaScript/TypeScript e Python, o Pingu sinaliza `x === x` / `x == x` (sempre verdadeiro/falso) e `x = x` (sem efeito), que quase sempre sao bug humano. Conservador: nao acusa `this.x = x`, `const x = x` (escopo externo), `x = x.next` nem comparacao entre chamadas (`f() === f()`).
+
 ### Import nao utilizado (sugestao)
 
 Em JavaScript/TypeScript e Python, o Pingu sinaliza imports cujo nome nunca e referenciado no arquivo (named, default, namespace `* as`, `require` desestruturado, `import`/`from import`). E suggest-only e conservador: imports por efeito colateral (`import 'polyfill'`) sao ignorados, e qualquer ocorrencia do nome (inclusive em JSX, acesso a propriedade ou anotacao de tipo) conta como uso, para evitar falso positivo.

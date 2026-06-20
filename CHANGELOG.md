@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de auto-comparacao e auto-atribuicao
+
+### Antes
+
+- O Pingu nao detectava construcoes redundantes que quase sempre sao bug: `x === x` (sempre verdadeiro/falso) e `x = x` (sem efeito).
+
+### Depois
+
+- Novo modulo `lib/analyzer-redundant.js` com `checkRedundantConstructs` suggest-only (JS/TS e Python): novos kinds `self_comparison` e `self_assignment` (`autoFixDefault: false`), mapeados na familia `control_flow_and_complexity`.
+- Conservador: nao acusa `this.x = x`, `const x = x` (referencia a escopo externo), `x = x.next`, comparacao entre chamadas (`f() === f()`) nem ocorrencias em comentario.
+
+### Motivo
+
+- Ampliar a deteccao de erros humanos com mais dois casos de alto sinal e baixo falso-positivo.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere.
+
 ## Unreleased - Geracao offline de funcao para PHP
 
 ### Antes
