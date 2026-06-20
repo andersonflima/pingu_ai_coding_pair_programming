@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: desacopla helpers compartilhados do nucleo de escopo
+
+### Antes
+
+- O cluster de analise de variaveis indefinidas (escopo) compartilhava quatro helpers com outros checks do `analyzer.js`: `checkSyntaxIssues` (usado tambem pelo pipeline de sintaxe e por checks de texto estruturado), `stripPythonMultilineStringContent` e `sanitizeScopedAnalysisLine` (usados tambem pelos checks de variable-docs) e `isJavaScriptControlKeyword`. Isso impedia extrair o cluster de escopo sem criar dependencia circular.
+
+### Depois
+
+- `checkSyntaxIssues` foi para o novo modulo `lib/syntax-issues.js` (agregador de sintaxe, importando de analyzer-syntax-scan, analyzer-structured-text e analyzer-elixir-syntax). `stripPythonMultilineStringContent`, `nextPythonTripleQuote` e `sanitizeScopedAnalysisLine` foram para `lib/python-scope-utils.js`; `isJavaScriptControlKeyword` foi para `lib/support.js`. `analyzer.js` importa todos de volta e caiu de 3944 para 3870 linhas, com os imports orfaos removidos.
+
+### Motivo
+
+- Desacoplar os helpers compartilhados e dar ao agregador de sintaxe um modulo proprio, preparando a extracao futura do cluster de variaveis indefinidas sem dependencia circular.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de sintaxe, undefined-variable e variable-docs continuam validando o resultado, mais smoke tests diretos (`test/syntax-issues.test.js` e novos casos em `test/python-scope-utils.test.js`).
+
 ## Unreleased - Interatividade: comando `pingu explain <kind>`
 
 ### Antes

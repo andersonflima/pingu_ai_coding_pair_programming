@@ -9,6 +9,8 @@ const {
   stripPythonInlineSyntax,
   normalizePythonImportSource,
   extractPythonImportVars,
+  sanitizeScopedAnalysisLine,
+  stripPythonMultilineStringContent,
 } = require('../lib/python-scope-utils');
 
 test('matchPythonIdentifier valida identificadores', () => {
@@ -40,4 +42,18 @@ test('extractPythonImportVars extrai nomes (com alias)', () => {
   assert.deepEqual(extractPythonImportVars('import numpy as np').sort(), ['np']);
   assert.deepEqual(extractPythonImportVars('from x import a, b as c').sort(), ['a', 'c']);
   assert.deepEqual(extractPythonImportVars('from x import *'), []);
+});
+
+test('sanitizeScopedAnalysisLine remove strings/comentarios por linguagem', () => {
+  assert.equal(sanitizeScopedAnalysisLine('x = 1  # nota', '.py'), 'x = 1');
+  assert.equal(sanitizeScopedAnalysisLine('const s = "ab"; // c', '.js'), 'const s = ;');
+});
+
+test('stripPythonMultilineStringContent propaga a aspa aberta entre linhas', () => {
+  const open = stripPythonMultilineStringContent('texto = """inicio', '');
+  assert.equal(open.multilineQuote, '"""');
+  const close = stripPythonMultilineStringContent('fim""" + x', open.multilineQuote);
+  assert.equal(close.multilineQuote, '');
+  assert.ok(close.line.includes('+ x'));
+  assert.equal(close.line.includes('fim'), false);
 });
