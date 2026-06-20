@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de chave duplicada em objeto/dict
+
+### Antes
+
+- O Pingu detectava auto-comparacao e auto-atribuicao, mas nao chave duplicada em literal de objeto/dict, onde a ultima ocorrencia sobrescreve silenciosamente as anteriores.
+
+### Depois
+
+- `checkRedundantConstructs` (`lib/analyzer-redundant.js`) ganhou `findDuplicateKey`: novo kind `duplicate_key` (`autoFixDefault: false`, suggest-only) para JS/TS e Python, mapeado na familia `control_flow_and_complexity`.
+- Conservador: apenas literais de uma linha sem chaves aninhadas, exigindo ao menos dois pares chave:valor com chaves simples; aborta diante de spread/chave computada/shorthand e nao confunde blocos de codigo com objetos.
+
+### Motivo
+
+- Mais um erro humano de alto sinal e baixo falso-positivo.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere.
+
 ## Unreleased - Limpeza de codigo morto (segunda passada)
 
 ### Antes

@@ -69,9 +69,9 @@ Correcoes deterministicas ja mapeadas:
 - Ruby: comparacoes diretas com `nil` viram `nil?`.
 - Elixir: comparacoes diretas com `nil` viram `is_nil/1`.
 
-### Auto-comparacao e auto-atribuicao (sugestao)
+### Auto-comparacao, auto-atribuicao e chave duplicada (sugestao)
 
-Em JavaScript/TypeScript e Python, o Pingu sinaliza `x === x` / `x == x` (sempre verdadeiro/falso) e `x = x` (sem efeito), que quase sempre sao bug humano. Conservador: nao acusa `this.x = x`, `const x = x` (escopo externo), `x = x.next` nem comparacao entre chamadas (`f() === f()`).
+Em JavaScript/TypeScript e Python, o Pingu sinaliza `x === x` / `x == x` (sempre verdadeiro/falso), `x = x` (sem efeito) e chave duplicada em literal de objeto/dict de uma linha (`{ a: 1, a: 2 }`, onde a ultima sobrescreve as anteriores). Quase sempre sao bug humano. Conservador: nao acusa `this.x = x`, `const x = x` (escopo externo), `x = x.next`, comparacao entre chamadas (`f() === f()`) nem blocos de codigo/objetos com spread ou chave computada.
 
 ### Import nao utilizado (sugestao)
 
