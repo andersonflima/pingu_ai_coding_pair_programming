@@ -1,0 +1,92 @@
+{
+  "loose_equality": {
+    "summary": "Comparacao com == / != faz coercao implicita de tipo.",
+    "why": "Em JavaScript, == converte os operandos antes de comparar, o que produz resultados surpreendentes (0 == \"\", [] == false).",
+    "fix": "Use === / !== para comparar valor e tipo sem coercao."
+  },
+  "none_comparison": {
+    "summary": "Comparacao com None usando == / !=.",
+    "why": "None e um singleton; comparar identidade e mais correto e idiomatico que comparar valor.",
+    "fix": "Use is None / is not None."
+  },
+  "nil_comparison": {
+    "summary": "Comparacao direta com nil.",
+    "why": "Linguagens como Ruby e Elixir oferecem verificacao idiomatica de ausencia.",
+    "fix": "Use nil? (Ruby) ou is_nil/1 (Elixir)."
+  },
+  "assignment_in_condition": {
+    "summary": "Atribuicao (=) dentro de uma condicao.",
+    "why": "if (x = y) atribui e testa o resultado; quase sempre a intencao era comparar.",
+    "fix": "Use === para comparar. Se a atribuicao for intencional, envolva em parenteses duplos: if ((m = re.exec(s)))."
+  },
+  "chained_comparison": {
+    "summary": "Comparacao encadeada como a < b < c.",
+    "why": "Em JavaScript/TypeScript a primeira comparacao vira um booleano que entra na segunda ((a < b) < c), raramente o que se quer.",
+    "fix": "Separe em duas comparacoes ligadas por &&: a < b && b < c."
+  },
+  "literal_identity_comparison": {
+    "summary": "Comparacao de identidade (is) contra um literal.",
+    "why": "Em Python, is compara identidade de objeto, nao valor; CPython ja emite SyntaxWarning para x is 5 ou x is \"foo\".",
+    "fix": "Use == para comparar valor; reserve is/is not para None, True e False."
+  },
+  "shadowed_builtin": {
+    "summary": "Atribuicao a um nome que sobrescreve um builtin Python.",
+    "why": "list = [...] mascara a funcao list no escopo, quebrando usos posteriores como list(x).",
+    "fix": "Renomeie a variavel (p.ex. items, ou list_) para preservar o builtin."
+  },
+  "dunder_typo": {
+    "summary": "Metodo dunder com possivel erro de digitacao.",
+    "why": "__inti__ nunca e chamado pelo protocolo de dados do Python, entao o comportamento esperado (construcao, representacao...) some silenciosamente.",
+    "fix": "Corrija para o dunder pretendido (p.ex. __init__)."
+  },
+  "missing_await": {
+    "summary": "Chamada a funcao async usada como instrucao isolada, sem await.",
+    "why": "A promise nao e aguardada nem tratada: erros de ordem de execucao e rejeicoes nao tratadas passam despercebidos.",
+    "fix": "Adicione await (em funcao async), retorne a promise, ou use void para fire-and-forget intencional."
+  },
+  "await_in_loop": {
+    "summary": "await direto no corpo de um loop.",
+    "why": "Cada iteracao espera a anterior terminar; quando as iteracoes sao independentes, isso desperdica tempo.",
+    "fix": "Colete as promises e use await Promise.all para paralelizar; mantenha o loop sequencial se a ordem importar."
+  },
+  "self_comparison": {
+    "summary": "Comparacao de um valor com ele mesmo (x === x).",
+    "why": "O resultado e sempre verdadeiro (ou falso para NaN); normalmente era para comparar com outra coisa.",
+    "fix": "Verifique o operando pretendido; para NaN use Number.isNaN(x)."
+  },
+  "self_assignment": {
+    "summary": "Atribuicao de uma variavel a ela mesma (x = x).",
+    "why": "Nao tem efeito; costuma indicar um operando trocado ou um membro esquecido.",
+    "fix": "Atribua o valor pretendido (p.ex. this.x = x ou x = x.next)."
+  },
+  "duplicate_key": {
+    "summary": "Chave repetida em um literal de objeto/dict.",
+    "why": "A ultima ocorrencia sobrescreve as anteriores em silencio.",
+    "fix": "Remova a chave duplicada ou renomeie para a chave pretendida."
+  },
+  "invalid_typeof": {
+    "summary": "Comparacao de typeof com uma string de tipo invalida.",
+    "why": "typeof x === \"fucntion\" e sempre falsa; os tipos validos sao undefined, object, boolean, number, bigint, string, symbol, function.",
+    "fix": "Corrija a string do tipo (p.ex. \"function\")."
+  },
+  "nan_comparison": {
+    "summary": "Comparacao direta com NaN.",
+    "why": "NaN nunca e igual a nada, nem a si mesmo; x === NaN e sempre falsa.",
+    "fix": "Use Number.isNaN(x)."
+  },
+  "parseint_no_radix": {
+    "summary": "parseInt sem o argumento de base.",
+    "why": "Sem a base, a interpretacao depende do formato da string e pode variar entre ambientes.",
+    "fix": "Informe a base: parseInt(x, 10)."
+  },
+  "mutable_default_arg": {
+    "summary": "Argumento de funcao com valor padrao mutavel.",
+    "why": "def f(x=[]) compartilha a mesma lista entre todas as chamadas, acumulando estado inesperado.",
+    "fix": "Use None como padrao e inicialize dentro da funcao."
+  },
+  "bare_except": {
+    "summary": "except generico, sem tipo de excecao.",
+    "why": "except: captura tambem KeyboardInterrupt e SystemExit, mascarando interrupcoes legitimas.",
+    "fix": "Capture Exception (ou um tipo especifico) explicitamente."
+  }
+}

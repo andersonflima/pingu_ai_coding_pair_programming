@@ -95,6 +95,8 @@ Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conserv
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
 
+Para entender uma classe antes de silenciar, use `pingu explain <kind>` (p.ex. `pingu explain chained_comparison`): o comando descreve o que o detector encontra, por que importa, como corrigir, se e suggest-only e como silenciar. `pingu explain` sem argumento lista os kinds com explicacao disponivel, e `--json` devolve a forma estruturada.
+
 Correcoes deterministicas ja mapeadas:
 
 - JavaScript/TypeScript: `==` e `!=` viram `===` e `!==` quando nao envolvem `null`/`undefined`.
@@ -790,6 +792,8 @@ pingu init --json
 pingu profile --lines 180 --json
 pingu offline --json
 pingu taxonomy
+pingu explain chained_comparison
+pingu explain await_in_loop --json
 pingu doctor
 ```
 

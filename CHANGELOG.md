@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Interatividade: comando `pingu explain <kind>`
+
+### Antes
+
+- As issues traziam `message` e `suggestion`, mas nao havia como o desenvolvedor pedir uma explicacao mais completa de uma classe de erro (o porque, como corrigir, se reescreve sozinho, como silenciar) sem ler o codigo-fonte ou a documentacao.
+
+### Depois
+
+- Novo comando `pingu explain <kind>` e modulo `lib/issue-explainer.js`, apoiado em `config/issue-explanations.json` (explicacoes curadas para 18 kinds). O comando combina a explicacao curada com o contrato do kind (`autoFixDefault`) e a familia/linguagens da taxonomia, mostrando o que e, por que importa, como corrigir, se e suggest-only, e a linha `PINGU_DISABLED_ISSUE_KINDS` para silenciar. Sem argumento, lista os kinds com explicacao; `--json` devolve a forma estruturada.
+
+### Motivo
+
+- Tornar a experiencia mais interativa: dar ao desenvolvedor um caminho rapido para entender uma issue antes de aceitar a correcao ou silenciar a classe.
+
+### Impacto
+
+- Aditivo: novo subcomando read-only, sem mudanca nos detectores ou no runtime de analise. Coberto por `test/issue-explainer.test.js`, incluindo o invariante de que toda explicacao aponta para um kind real de `issue-kinds.json`.
+
 ## Unreleased - Robustez: corpus de regressao anti-falso-positivo
 
 ### Antes
