@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: parsing de assinatura de funcao
+
+### Antes
+
+- O `analyzer.js` mantinha o cluster compartilhado de parsing de assinatura de funcao (nomes de parametros, variaveis ligadas em padroes, declaracao de funcoes Elixir com guarda e forma `, do:`), usado pelos checks de escopo, documentacao e specs.
+
+### Depois
+
+- Esse cluster de nove funcoes foi extraido para `lib/function-signature.js`, fechado sob utilitarios puros do support (`sanitizeIdentifier`, `splitTopLevelParams`, `isReservedToken`). `analyzer.js` importa as tres entradas usadas (`readElixirFunctionDeclaration`, `parseFunctionDeclaration`, `extractBoundPatternVars`) e caiu para 4884 linhas — abaixo de cinco mil pela primeira vez (era 6657 no inicio da serie, ~27% menor).
+
+### Motivo
+
+- Promover um util de fronteira limpa que era a base de acoplamento de varios checks, abrindo caminho para isolar futuramente os detectores de escopo e de documentacao por linguagem.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de undefined-variable/doc/spec continuam validando o resultado, mais um smoke test direto do novo modulo.
+
 ## Unreleased - Modularizacao: checks de complexidade/fluxo
 
 ### Antes
