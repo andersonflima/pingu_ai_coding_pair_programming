@@ -128,6 +128,215 @@
         "moduel": "module",
         "contiue": "continue"
       }
+    },
+    "java": {
+      "extensions": [".java"],
+      "corrections": {
+        "pubic": "public",
+        "pirvate": "private",
+        "protectd": "protected",
+        "staic": "static",
+        "viod": "void",
+        "vooid": "void",
+        "calss": "class",
+        "inteface": "interface",
+        "interfce": "interface",
+        "extneds": "extends",
+        "implments": "implements",
+        "retrun": "return",
+        "reutrn": "return",
+        "improt": "import",
+        "imoprt": "import",
+        "pacakge": "package",
+        "packge": "package",
+        "boolen": "boolean",
+        "bolean": "boolean",
+        "Stirng": "String",
+        "Strign": "String",
+        "Sytem": "System",
+        "lenght": "length",
+        "cathc": "catch",
+        "finaly": "finally",
+        "instnceof": "instanceof",
+        "thorw": "throw",
+        "trhow": "throw"
+      }
+    },
+    "csharp": {
+      "extensions": [".cs"],
+      "corrections": {
+        "usign": "using",
+        "namepsace": "namespace",
+        "namspace": "namespace",
+        "Consoel": "Console",
+        "Cosole": "Console",
+        "WirteLine": "WriteLine",
+        "viod": "void",
+        "stirng": "string",
+        "retrun": "return",
+        "reutrn": "return",
+        "foreahc": "foreach",
+        "pubic": "public",
+        "overide": "override",
+        "virtaul": "virtual",
+        "asycn": "async",
+        "awiat": "await",
+        "calss": "class"
+      }
+    },
+    "kotlin": {
+      "extensions": [".kt", ".kts"],
+      "corrections": {
+        "fnu": "fun",
+        "vla": "val",
+        "vra": "var",
+        "retrun": "return",
+        "improt": "import",
+        "calss": "class",
+        "pirntln": "println",
+        "Stirng": "String",
+        "overide": "override",
+        "suspned": "suspend",
+        "wehn": "when",
+        "comapnion": "companion",
+        "obejct": "object"
+      }
+    },
+    "swift": {
+      "extensions": [".swift"],
+      "corrections": {
+        "fucn": "func",
+        "retrun": "return",
+        "improt": "import",
+        "strcut": "struct",
+        "protocl": "protocol",
+        "protcol": "protocol",
+        "extention": "extension",
+        "gaurd": "guard",
+        "gurad": "guard",
+        "swich": "switch",
+        "pirnt": "print",
+        "Stirng": "String",
+        "overide": "override",
+        "slef": "self"
+      }
+    },
+    "scala": {
+      "extensions": [".scala", ".sc"],
+      "corrections": {
+        "vla": "val",
+        "retrun": "return",
+        "improt": "import",
+        "triat": "trait",
+        "extneds": "extends",
+        "mtach": "match",
+        "macth": "match",
+        "pirntln": "println",
+        "Stirng": "String",
+        "overide": "override",
+        "imlicit": "implicit",
+        "implcit": "implicit",
+        "ojbect": "object"
+      }
+    },
+    "php": {
+      "extensions": [".php"],
+      "corrections": {
+        "funtcion": "function",
+        "fucntion": "function",
+        "funciton": "function",
+        "retrun": "return",
+        "ehco": "echo",
+        "pirnt": "print",
+        "calss": "class",
+        "pubic": "public",
+        "pirvate": "private",
+        "namepsace": "namespace",
+        "requrie": "require",
+        "reuqire": "require",
+        "incldue": "include",
+        "inculde": "include",
+        "foreahc": "foreach",
+        "aray": "array",
+        "arary": "array",
+        "extneds": "extends",
+        "inteface": "interface",
+        "flase": "false",
+        "ture": "true"
+      }
+    },
+    "c": {
+      "extensions": [".c", ".h", ".cpp", ".hpp", ".cc", ".cxx"],
+      "corrections": {
+        "itn": "int",
+        "viod": "void",
+        "vooid": "void",
+        "retrun": "return",
+        "reutrn": "return",
+        "incldue": "include",
+        "inculde": "include",
+        "incude": "include",
+        "strcut": "struct",
+        "sturct": "struct",
+        "pirntf": "printf",
+        "pritnf": "printf",
+        "scnaf": "scanf",
+        "sizof": "sizeof",
+        "swich": "switch",
+        "swtich": "switch",
+        "braek": "break",
+        "contiue": "continue",
+        "conitnue": "continue",
+        "mallco": "malloc"
+      }
+    },
+    "elixir": {
+      "extensions": [".ex", ".exs"],
+      "corrections": {
+        "defmoudle": "defmodule",
+        "defmodlue": "defmodule",
+        "improt": "import",
+        "alais": "alias",
+        "requrie": "require",
+        "cnod": "cond",
+        "wehn": "when",
+        "Eunm": "Enum",
+        "Emun": "Enum",
+        "Stirng": "String",
+        "retrun": "return"
+      }
+    },
+    "lua": {
+      "extensions": [".lua"],
+      "corrections": {
+        "funtion": "function",
+        "fucntion": "function",
+        "lcoal": "local",
+        "loacl": "local",
+        "retrun": "return",
+        "thne": "then",
+        "hten": "then",
+        "elsief": "elseif",
+        "pirnt": "print",
+        "requrie": "require",
+        "iapirs": "ipairs",
+        "talbe": "table",
+        "tabel": "table"
+      }
+    },
+    "shell": {
+      "extensions": [".sh", ".bash", ".zsh"],
+      "corrections": {
+        "ehco": "echo",
+        "retrun": "return",
+        "thne": "then",
+        "eilf": "elif",
+        "expor": "export",
+        "exprot": "export",
+        "lcoal": "local",
+        "pritnf": "printf",
+        "whiel": "while"
+      }
     }
   }
 }

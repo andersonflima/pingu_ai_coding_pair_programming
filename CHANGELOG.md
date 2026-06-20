@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Cobertura de typos estendida para 15 linguagens
+
+### Antes
+
+- A deteccao de erros de digitacao cobria apenas JavaScript/TypeScript, Python, Ruby, Go e Rust (5 familias, ~102 entradas).
+
+### Depois
+
+- `config/common-typos.json` ganhou familias para Java, C#, Kotlin, Swift, Scala, PHP, C/C++, Elixir, Lua e Shell, totalizando 15 familias e 261 entradas curadas (todas grafias claramente incorretas de palavras-chave/builtins, sem auto-referencia). A familia `typo_and_naming` da taxonomia passa a listar essas linguagens.
+
+### Motivo
+
+- Levar a deteccao de typos ao mesmo conjunto de linguagens ja suportado para documentacao/geracao, aumentando a cobertura de um erro humano comum.
+
+### Impacto
+
+- Aditivo e seguro: dicionario curado (zero falso-positivo por construcao), suggest-only, sem mudanca de comportamento para as linguagens ja cobertas.
+
 ## Unreleased - Deteccao de chave duplicada em objeto/dict
 
 ### Antes
