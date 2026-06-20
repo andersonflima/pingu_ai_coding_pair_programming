@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de case duplicado em switch
+
+### Antes
+
+- O Pingu nao detectava `case` duplicado num mesmo `switch`, onde a segunda ocorrencia e inalcancavel.
+
+### Depois
+
+- `lib/analyzer-control-flow.js` ganhou `checkDuplicateSwitchCase` (suggest-only, JavaScript/TypeScript): novo kind `duplicate_case` (`autoFixDefault: false`), mapeado na familia `control_flow_and_complexity`.
+- Usa uma pilha de contextos de switch com contador de chaves consciente de strings/comentarios, entao nao confunde `case` igual em switches distintos nem em switches aninhados, e ignora `case` em comentario.
+
+### Motivo
+
+- Mais um erro humano de alto sinal e baixo falso-positivo.
+
+### Impacto
+
+- Aditivo e seguro: apenas sugere.
+
 ## Unreleased - Deteccao de typeof invalido e comparacao com NaN
 
 ### Antes

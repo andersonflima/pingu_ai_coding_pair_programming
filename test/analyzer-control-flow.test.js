@@ -48,6 +48,16 @@ test('nao acusa catch/except que trata ou registra o erro', () => {
   assert.deepEqual(kindsAt('try:\n    go()\nexcept Exception:\n    handle()', '.py'), []);
 });
 
+test('detecta case duplicado no mesmo switch', () => {
+  const source = 'switch (x) {\n  case 1: a(); break;\n  case 2: b(); break;\n  case 1: c(); break;\n}';
+  assert.deepEqual(kindsAt(source, '.js'), ['duplicate_case@4']);
+});
+
+test('nao acusa case igual em switches distintos nem aninhados', () => {
+  assert.deepEqual(kindsAt('switch (x) {\n  case 1: a(); break;\n}\nswitch (y) {\n  case 1: b(); break;\n}', '.js'), []);
+  assert.deepEqual(kindsAt('switch (x) {\n  case 1:\n    switch (y) {\n      case 1: a(); break;\n    }\n    break;\n  case 2: b(); break;\n}', '.js'), []);
+});
+
 test('respeita focusRange', () => {
   const source = 'function f() {\n  return 1;\n  doStuff();\n}\nfunction g() {\n  return 2;\n  more();\n}';
   const issues = checkControlFlowSmells(source.split('\n'), 'sample.js', '.js', { focusRange: { start: 5, end: 8 } });
