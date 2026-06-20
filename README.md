@@ -88,6 +88,8 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
+Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
+
 Correcoes deterministicas ja mapeadas:
 
 - JavaScript/TypeScript: `==` e `!=` viram `===` e `!==` quando nao envolvem `null`/`undefined`.
