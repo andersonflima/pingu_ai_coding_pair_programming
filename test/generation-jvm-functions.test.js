@@ -50,3 +50,11 @@ test('Scala: gera def ... : Any =', () => {
   assert.match(snippet, /def soma\(a: Any, b: Any\): Any = \{/);
   assert.match(snippet, /return a \+ b/);
 });
+
+test('PHP: gera funcao com variaveis $ na assinatura e no corpo', () => {
+  const snippet = generatedFunction('x.php', 'funcao soma que recebe a e b');
+  assert.match(snippet, /function soma\(\$a, \$b\) \{/);
+  assert.match(snippet, /return \$a \+ \$b;/);
+  // nao deve sobrar parametro sem prefixo no corpo
+  assert.doesNotMatch(snippet, /return a \+ b/);
+});
