@@ -11,7 +11,7 @@ O projeto funciona hoje em `Vim/Neovim`, com foco pratico em `LazyVim`, runtime 
 ## O que o Pingu faz
 
 - Analisa o arquivo atual em tempo real e publica diagnosticos orientados a manutencao.
-- Encontra erros humanos que o compilador costuma deixar passar: erros de digitacao, atribuicao acidental em condicao, codigo inalcancavel, `case` duplicado, desvio de fluxo em `finally`, erro engolido, import/variavel nao usados, `await` ausente, auto-comparacao/auto-atribuicao, chave duplicada, `typeof` invalido, comparacao com `NaN`, comparacao encadeada (`a < b < c`) e identidade contra literal em Python (`x is 5`) (ver "Erros humanos detectados").
+- Encontra erros humanos que o compilador costuma deixar passar: erros de digitacao, atribuicao acidental em condicao, codigo inalcancavel, `case` duplicado, desvio de fluxo em `finally`, erro engolido, import/variavel nao usados, `await` ausente, auto-comparacao/auto-atribuicao, chave duplicada, `typeof` invalido, comparacao com `NaN`, comparacao encadeada (`a < b < c`), identidade contra literal em Python (`x is 5`), shadowing de builtin (`list = [...]`), typo em metodo dunder (`def __inti__`) e await em loop sequencial (ver "Erros humanos detectados").
 - Comenta e documenta o codigo existente passo a passo, com resumo que descreve o que a funcao faz, em 16 linguagens.
 - Interpreta comentarios acionaveis para gerar codigo no proprio arquivo.
 - Cria `context_file` a partir de blueprints descritos no comentario, com scaffold nativo nas stacks principais.
@@ -87,10 +87,15 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | `parseInt` sem radix | `parseInt(x)` sem base | JS/TS |
 | Comparacao encadeada | `a < b < c` | JS/TS |
 | Identidade contra literal | `x is 5`, `x is "foo"` | Python |
+| Shadowing de builtin | `list = [...]`, `dict = {...}` | Python |
+| Typo em metodo dunder | `def __inti__` | Python |
+| await em loop sequencial | `for (...) { await f() }` | JS/TS |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
+
+Para entender uma classe antes de silenciar, use `pingu explain <kind>` (p.ex. `pingu explain chained_comparison`): o comando descreve o que o detector encontra, por que importa, como corrigir, se e suggest-only e como silenciar. `pingu explain` sem argumento lista os kinds com explicacao disponivel, e `--json` devolve a forma estruturada.
 
 Correcoes deterministicas ja mapeadas:
 
@@ -145,6 +150,19 @@ Dois erros de logica que o compilador costuma aceitar em silencio:
 - **Identidade contra literal** (Python): `x is 5`, `x is "foo"`, `x is []` comparam identidade de objeto, nunca o valor de um literal — o proprio CPython ja emite `SyntaxWarning`. O Pingu sugere `==`. Preserva os idiomas corretos `is None`, `is True` e `is False` e a comparacao entre identificadores (`x is other`); ignora ocorrencias em strings e comentarios.
 
 Ambos sao suggest-only (nunca reescrevem).
+
+### Shadowing de builtin e typo em dunder, em Python (sugestao)
+
+Dois riscos de nomeacao que o interpretador aceita em silencio:
+
+- **Shadowing de builtin**: uma atribuicao simples a um nome de builtin comum (`list = [...]`, `dict = {...}`, `str`, `id`, `type`, `max`, `sum`, `sorted`, `open`...) mascara o builtin no escopo, quebrando usos posteriores como `list(x)`. Conservador: so acusa atribuicao simples (um `=`, sem anotacao de tipo, sem atributo/subscrito no LHS, sem operador composto).
+- **Typo em metodo dunder**: `def __inti__`, `def __rerp__` etc. — um metodo especial com grafia errada nunca e chamado pelo protocolo de dados do Python, entao o comportamento esperado some. O Pingu compara o nucleo do dunder com o conjunto conhecido a um unico erro de edicao (substituicao/insercao/remocao ou transposicao adjacente como `inti` por `init`) e responde `Voce quis dizer '__init__'?`. Preserva dunders corretos e nomes claramente distintos.
+
+Ambos sao suggest-only.
+
+### await em loop sequencial, em JavaScript/TypeScript (sugestao)
+
+`for (...) { await f(item); }` espera cada iteracao terminar antes da proxima; quando as iteracoes sao independentes, isso costuma ser oportunidade de paralelizar com `await Promise.all(...)`. O Pingu sinaliza o `await` no corpo do loop e sugere a alternativa. Conservador: ignora `for await...of` (forma sequencial intencional), `await Promise.all/allSettled/race` (ja paralelo) e `await` que pertenca a uma funcao aninhada dentro do loop (usa uma pilha de blocos para distinguir loop de fronteira de funcao). E suggest-only: paralelizar muda a semantica e fica a cargo do desenvolvedor.
 
 ### Erros de digitacao (sugestao, sem reescrita automatica)
 
@@ -774,6 +792,8 @@ pingu init --json
 pingu profile --lines 180 --json
 pingu offline --json
 pingu taxonomy
+pingu explain chained_comparison
+pingu explain await_in_loop --json
 pingu doctor
 ```
 

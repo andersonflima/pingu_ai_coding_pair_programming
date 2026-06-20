@@ -2,6 +2,78 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: desacopla helpers compartilhados do nucleo de escopo
+
+### Antes
+
+- O cluster de analise de variaveis indefinidas (escopo) compartilhava quatro helpers com outros checks do `analyzer.js`: `checkSyntaxIssues` (usado tambem pelo pipeline de sintaxe e por checks de texto estruturado), `stripPythonMultilineStringContent` e `sanitizeScopedAnalysisLine` (usados tambem pelos checks de variable-docs) e `isJavaScriptControlKeyword`. Isso impedia extrair o cluster de escopo sem criar dependencia circular.
+
+### Depois
+
+- `checkSyntaxIssues` foi para o novo modulo `lib/syntax-issues.js` (agregador de sintaxe, importando de analyzer-syntax-scan, analyzer-structured-text e analyzer-elixir-syntax). `stripPythonMultilineStringContent`, `nextPythonTripleQuote` e `sanitizeScopedAnalysisLine` foram para `lib/python-scope-utils.js`; `isJavaScriptControlKeyword` foi para `lib/support.js`. `analyzer.js` importa todos de volta e caiu de 3944 para 3870 linhas, com os imports orfaos removidos.
+
+### Motivo
+
+- Desacoplar os helpers compartilhados e dar ao agregador de sintaxe um modulo proprio, preparando a extracao futura do cluster de variaveis indefinidas sem dependencia circular.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de sintaxe, undefined-variable e variable-docs continuam validando o resultado, mais smoke tests diretos (`test/syntax-issues.test.js` e novos casos em `test/python-scope-utils.test.js`).
+
+## Unreleased - Interatividade: comando `pingu explain <kind>`
+
+### Antes
+
+- As issues traziam `message` e `suggestion`, mas nao havia como o desenvolvedor pedir uma explicacao mais completa de uma classe de erro (o porque, como corrigir, se reescreve sozinho, como silenciar) sem ler o codigo-fonte ou a documentacao.
+
+### Depois
+
+- Novo comando `pingu explain <kind>` e modulo `lib/issue-explainer.js`, apoiado em `config/issue-explanations.json` (explicacoes curadas para 18 kinds). O comando combina a explicacao curada com o contrato do kind (`autoFixDefault`) e a familia/linguagens da taxonomia, mostrando o que e, por que importa, como corrigir, se e suggest-only, e a linha `PINGU_DISABLED_ISSUE_KINDS` para silenciar. Sem argumento, lista os kinds com explicacao; `--json` devolve a forma estruturada.
+
+### Motivo
+
+- Tornar a experiencia mais interativa: dar ao desenvolvedor um caminho rapido para entender uma issue antes de aceitar a correcao ou silenciar a classe.
+
+### Impacto
+
+- Aditivo: novo subcomando read-only, sem mudanca nos detectores ou no runtime de analise. Coberto por `test/issue-explainer.test.js`, incluindo o invariante de que toda explicacao aponta para um kind real de `issue-kinds.json`.
+
+## Unreleased - Robustez: corpus de regressao anti-falso-positivo
+
+### Antes
+
+- A confianca de que os detectores suggest-only nao geram ruido vinha de testes pontuais por detector. Nao havia um corpus dedicado de codigo legitimo que se parece com os gatilhos mas nao deve dispara-los, rodado pela analise completa.
+
+### Depois
+
+- Novo `test/false-positive-corpus.test.js` com dez trechos realistas (JS/TS e Python) que exercitam `analyzeText` de ponta a ponta e afirmam que nenhum kind proibido dispara: `a < b && b < c`, `for await...of`/`await Promise.all` em loop, atribuicao intencional com parenteses duplos, `typeof` valido/`Number.isNaN`/`parseInt(x, 10)`, encadeamento valido e `is None` em Python, variaveis de dominio que apenas usam builtins, dunders corretos, `== null`, comparacao entre chamadas distintas e import efetivamente usado.
+
+### Motivo
+
+- Travar o comportamento conservador dos detectores contra regressoes futuras que afrouxem as guardas, aumentando a confianca de que o Pingu nao atrapalha o fluxo do desenvolvedor.
+
+### Impacto
+
+- Apenas teste, sem mudanca de runtime. Serve de rede de seguranca para a evolucao dos detectores.
+
+## Unreleased - Deteccao: shadowing de builtin, typo em dunder e await em loop
+
+### Antes
+
+- O Pingu nao cobria tres enganos humanos comuns que o runtime aceita em silencio: sobrescrever um builtin Python (`list = [...]`), grafar errado um metodo dunder (`def __inti__`, que nunca e chamado pelo protocolo de dados) e usar `await` direto no corpo de um loop sequencial em JS/TS.
+
+### Depois
+
+- Novo modulo `lib/analyzer-python-naming.js` com `shadowed_builtin` e `dunder_typo` (este usando distancia de edicao 1 mais transposicao adjacente Damerau contra o conjunto de dunders conhecidos). O `lib/analyzer-async.js` ganhou `checkAwaitInLoop` (`await_in_loop`), que usa uma pilha de blocos para distinguir o corpo do loop de funcoes aninhadas e ignora `for await...of` e `await Promise.all/allSettled/race`. Os tres sao suggest-only (`autoFixDefault: false`), registrados em `config/issue-kinds.json` e nas familias `typo_and_naming` e na nova `async_and_concurrency` da taxonomia.
+
+### Motivo
+
+- Ampliar a cobertura de erro humano para classes de bug frequentes em Python e em codigo assincrono, mantendo a politica conservadora (guardas explicitas contra falso positivo em cada detector).
+
+### Impacto
+
+- Comportamento preservado para o codigo existente: detectores aditivos, suggest-only, sem auto-fix. Cobertos por `test/analyzer-python-naming.test.js`, `test/analyzer-await-in-loop.test.js` e pelo invariante de taxonomia estendido.
+
 ## Unreleased - Modularizacao: checks de documentacao e @spec de Elixir
 
 ### Antes

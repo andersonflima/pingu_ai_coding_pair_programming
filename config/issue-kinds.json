@@ -521,5 +521,32 @@
     "autoFixPriority": 46,
     "supportsQuickFix": true,
     "supportsFollowUp": true
+  },
+  "shadowed_builtin": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 47,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
+  },
+  "dunder_typo": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 47,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
+  },
+  "await_in_loop": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 47,
+    "supportsQuickFix": true,
+    "supportsFollowUp": true
   }
 }
