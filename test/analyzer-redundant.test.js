@@ -80,3 +80,16 @@ test('nao acusa Number.isNaN nem identificador parecido', () => {
 test('typeof e NaN sao apenas para JavaScript', () => {
   assert.deepEqual(kinds('if (x === NaN) {}', '.py'), []);
 });
+
+test('detecta parseInt sem radix', () => {
+  assert.deepEqual(kinds('const n = parseInt(x);', '.js'), ['parseint_no_radix']);
+  assert.deepEqual(kinds('parseInt(getValue());', '.js'), ['parseint_no_radix']);
+  assert.deepEqual(kinds('parseInt("42");', '.js'), ['parseint_no_radix']);
+});
+
+test('nao acusa parseInt com radix, membro custom, ou ocorrencia em string', () => {
+  assert.deepEqual(kinds('const n = parseInt(x, 10);', '.js'), []);
+  assert.deepEqual(kinds('obj.parseInt(x);', '.js'), []);
+  assert.deepEqual(kinds('const s = "use parseInt(x)";', '.js'), []);
+  assert.deepEqual(kinds('parseFloat(x);', '.js'), []);
+});
