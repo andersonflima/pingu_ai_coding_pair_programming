@@ -41,3 +41,17 @@ test('ignora ocorrencias em comentario', () => {
 test('nao acusa comparacao entre chamadas (podem diferir)', () => {
   assert.deepEqual(kinds('if (f() === f()) {}', '.js'), []);
 });
+
+test('detecta chave duplicada em objeto JS e dict Python', () => {
+  assert.deepEqual(kinds('const o = { a: 1, b: 2, a: 3 };', '.js'), ['duplicate_key']);
+  assert.deepEqual(kinds("const o = { 'x': 1, x: 2 };", '.js'), ['duplicate_key']);
+  assert.deepEqual(kinds("d = { 'a': 1, 'a': 2 }", '.py'), ['duplicate_key']);
+});
+
+test('nao acusa objeto sem chave duplicada nem blocos de codigo', () => {
+  assert.deepEqual(kinds('const o = { a: 1, b: 2 };', '.js'), []);
+  assert.deepEqual(kinds('function f() { return 1; }', '.js'), []);
+  assert.deepEqual(kinds('if (x) { doThing(); }', '.js'), []);
+  assert.deepEqual(kinds('const o = { a: x ? 1 : 2, b: 3 };', '.js'), []);
+  assert.deepEqual(kinds('const o = { ...base, a: 1 };', '.js'), []);
+});

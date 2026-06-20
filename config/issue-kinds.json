@@ -69,6 +69,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
+  "duplicate_key": {
+    "defaultAction": { "op": "insert_before" },
+    "autoFixDefault": false,
+    "autoFixPriority": 42,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
   "comment_task": {
     "defaultAction": { "op": "replace_line" },
     "autoFixDefault": true,
