@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: checks de texto estruturado
+
+### Antes
+
+- O `analyzer.js` mantinha os checks de leaf para formatos de texto estruturado (titulo Markdown ausente, fence Markdown sem fechamento, Terraform sem required_version, Dockerfile sem WORKDIR).
+
+### Depois
+
+- Esses quatro checks puros foram extraidos para `lib/analyzer-structured-text.js`. `analyzer.js` importa-os (o orquestrador `checkStructuredTextIssues` e o `checkSyntaxIssues` permanecem no analyzer) e caiu para 5725 linhas.
+
+### Motivo
+
+- Continuar a reducao do God file por um dominio coeso e de fronteira limpa (varredura de formatos de texto, sem analise de escopo).
+
+### Impacto
+
+- Comportamento preservado: mesmos kinds e mensagens, exercitados pelos testes existentes mais um smoke test direto do novo modulo.
+
 ## Unreleased - Modularizacao: utilitarios de analise lexica de Python
 
 ### Antes
