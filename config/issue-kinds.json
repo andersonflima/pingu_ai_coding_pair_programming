@@ -41,6 +41,13 @@
     "supportsQuickFix": false,
     "supportsFollowUp": true
   },
+  "control_flow_in_finally": {
+    "defaultAction": { "op": "insert_before" },
+    "autoFixDefault": false,
+    "autoFixPriority": 44,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
   "unused_import": {
     "defaultAction": { "op": "insert_before" },
     "autoFixDefault": false,
