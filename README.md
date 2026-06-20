@@ -93,8 +93,9 @@ O Pingu sinaliza dois erros humanos de fluxo que o compilador costuma deixar pas
 
 - **Codigo inalcancavel**: instrucao no mesmo bloco logo apos um `return`/`throw`/`raise`/`break`/`continue`. Ignora terminais dentro de `if` (a proxima linha com indentacao menor e alcancavel).
 - **Erro engolido**: `catch {}` vazio em JS e `except ...: pass` em Python. Sugere tratar, registrar ou repropagar. Nao acusa quando o bloco trata/loga o erro.
+- **`case` duplicado em `switch`** (JavaScript/TypeScript): dois `case` com o mesmo valor no mesmo switch — o segundo e inalcancavel. Usa uma pilha de contextos, entao nao confunde switches distintos nem aninhados.
 
-Ambos sao suggest-only (nunca reescrevem).
+Todos sao suggest-only (nunca reescrevem).
 
 ### Atribuicao acidental em condicao (sugestao)
 
