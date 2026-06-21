@@ -106,6 +106,26 @@ Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a va
 
 A higiene que os formatters ja cobrem melhor e universalmente — `trailing_whitespace`, `tabs`, `long_line` e `large_file` — fica **off por default** (para nao competir com prettier/black/gofmt/rustfmt nem gerar ruido). Reative com `PINGU_ENABLE_FORMATTING_HYGIENE=1` se quiser esses avisos; `PINGU_DISABLED_ISSUE_KINDS` ainda permite tirar um deles individualmente depois de reativar.
 
+### Configuracao por repositorio (`.pingurc.json`)
+
+Em vez de exportar variaveis de ambiente em cada shell, declare as preferencias do projeto em um arquivo `.pingurc.json` (ou `pingu.config.json`) na raiz do repositorio. O Pingu procura o arquivo subindo a arvore a partir do arquivo analisado, entao funciona tanto na raiz quanto em monorepos com config por pacote.
+
+```json
+{
+  "disabledKinds": ["tabs", "long_line"],
+  "formattingHygiene": false,
+  "analyzeAi": false,
+  "maxLineLength": 100
+}
+```
+
+- `disabledKinds`: lista de `kind`s a suprimir (unida com o que vier em `PINGU_DISABLED_ISSUE_KINDS`).
+- `formattingHygiene`: liga a higiene redundante com formatters (equivalente a `PINGU_ENABLE_FORMATTING_HYGIENE`).
+- `analyzeAi`: permite resolucao por IA ja durante a analise (equivalente a `PINGU_ANALYZE_AI`; off por default, pois spawna um processo por issue).
+- `maxLineLength`: limite de comprimento de linha para o aviso `long_line`.
+
+Precedencia: **variavel de ambiente** (override de sessao) **>** arquivo de config (intencao do projeto) **>** default. Assim o config versionado define o padrao do time e qualquer dev ainda pode sobrepor pontualmente via env. Config malformado e tratado como ausente, sem quebrar a analise.
+
 Para entender uma classe antes de silenciar, use `pingu explain <kind>` (p.ex. `pingu explain chained_comparison`): o comando descreve o que o detector encontra, por que importa, como corrigir, se e suggest-only e como silenciar. `pingu explain` sem argumento lista os kinds com explicacao disponivel, e `--json` devolve a forma estruturada.
 
 Correcoes deterministicas ja mapeadas:

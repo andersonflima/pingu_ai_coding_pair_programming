@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Configuracao por repositorio via `.pingurc.json`
+
+### Antes
+
+- As preferencias de analise (kinds desabilitados, higiene de formatter, resolucao por IA durante a analise, limite de linha) so podiam ser ajustadas por variavel de ambiente (`PINGU_DISABLED_ISSUE_KINDS`, `PINGU_ENABLE_FORMATTING_HYGIENE`, `PINGU_ANALYZE_AI`). Isso exigia exportar envs em cada shell/editor e nao versionava o padrao do time junto do repositorio.
+
+### Depois
+
+- Um arquivo `.pingurc.json` (ou `pingu.config.json`) na raiz do projeto declara `disabledKinds`, `formattingHygiene`, `analyzeAi` e `maxLineLength`. O Pingu procura o arquivo subindo a arvore a partir do arquivo analisado (funciona em monorepos), com cache por diretorio. A resolucao segue a precedencia env > config > default; `disabledKinds` da env e do config sao unidos. Config malformado e tratado como ausente, sem quebrar a analise.
+
+### Motivo
+
+- Permitir que o padrao de analise do time seja versionado junto do codigo, sem depender do ambiente de cada dev, preservando o override pontual por variavel de ambiente.
+
+### Impacto
+
+- Nenhuma mudanca de comportamento por default (sem arquivo de config, tudo continua como antes). `lib/pingu-config.js` centraliza a resolucao; `analyzeText` e o detector de cobertura de testes passam a consultar o config alem da env.
+
 ## Unreleased - Performance: analise sem spawn de processo (0 chamadas externas)
 
 ### Antes
