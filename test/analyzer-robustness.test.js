@@ -26,10 +26,10 @@ test('analisa buffer Python ainda nao salvo em disco sem lancar excecao', () => 
 });
 
 test('um check que lanca excecao nao derruba os demais checks da analise', () => {
-  // trailing whitespace e um check simples e estavel; deve aparecer mesmo que
-  // outro check falhe internamente. Validamos que a analise retorna issues.
-  const source = 'const x = 1   \nconsole.log(x)\n';
+  // debug_output e um check simples, estavel e default-on; deve aparecer mesmo
+  // que outro check falhe internamente. Validamos que a analise retorna issues.
+  const source = 'const x = 1\nconsole.log(x)\n';
   const issues = analyzeText('/tmp/pingu-unsaved-buffer-zzz.js', source);
   assert.ok(Array.isArray(issues));
-  assert.ok(issues.some((issue) => issue.kind === 'trailing_whitespace'));
+  assert.ok(issues.some((issue) => issue.kind === 'debug_output'));
 });
