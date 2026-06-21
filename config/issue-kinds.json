@@ -548,5 +548,14 @@
     "autoFixPriority": 47,
     "supportsQuickFix": true,
     "supportsFollowUp": true
+  },
+  "hardcoded_secret": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 48,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
   }
 }

@@ -273,6 +273,27 @@
         "shell",
         "toml"
       ]
+    },
+    {
+      "id": "security",
+      "description": "Exposicao de segredos e material sensivel no codigo versionado.",
+      "mappedIssueKinds": [
+        "hardcoded_secret"
+      ],
+      "safeAutoFix": false,
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "go",
+        "rust",
+        "ruby",
+        "elixir",
+        "php",
+        "java",
+        "csharp",
+        "shell"
+      ]
     }
   ]
 }

@@ -88,5 +88,10 @@
     "summary": "except generico, sem tipo de excecao.",
     "why": "except: captura tambem KeyboardInterrupt e SystemExit, mascarando interrupcoes legitimas.",
     "fix": "Capture Exception (ou um tipo especifico) explicitamente."
+  },
+  "hardcoded_secret": {
+    "summary": "Segredo (chave/token/senha) hardcoded no codigo.",
+    "why": "Credenciais versionadas vazam em historico de git, forks e build logs; rotaciona-las depois e custoso e arriscado.",
+    "fix": "Mova para variavel de ambiente ou cofre de segredos e referencie por configuracao."
   }
 }

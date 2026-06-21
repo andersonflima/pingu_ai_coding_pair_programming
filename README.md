@@ -90,6 +90,7 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Shadowing de builtin | `list = [...]`, `dict = {...}` | Python |
 | Typo em metodo dunder | `def __inti__` | Python |
 | await em loop sequencial | `for (...) { await f() }` | JS/TS |
+| Segredo hardcoded | `password = "S3nh@..."`, `AKIA...` | todas |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
@@ -163,6 +164,15 @@ Ambos sao suggest-only.
 ### await em loop sequencial, em JavaScript/TypeScript (sugestao)
 
 `for (...) { await f(item); }` espera cada iteracao terminar antes da proxima; quando as iteracoes sao independentes, isso costuma ser oportunidade de paralelizar com `await Promise.all(...)`. O Pingu sinaliza o `await` no corpo do loop e sugere a alternativa. Conservador: ignora `for await...of` (forma sequencial intencional), `await Promise.all/allSettled/race` (ja paralelo) e `await` que pertenca a uma funcao aninhada dentro do loop (usa uma pilha de blocos para distinguir loop de fronteira de funcao). E suggest-only: paralelizar muda a semantica e fica a cargo do desenvolvedor.
+
+### Segredo hardcoded (sugestao, todas as linguagens)
+
+O Pingu sinaliza credenciais hardcoded no codigo — um dos erros mais caros em qualquer nivel, porque credenciais versionadas vazam em historico de git, forks e logs de build. Duas frentes:
+
+- **Padroes de provedor conhecidos**: AWS (`AKIA...`), GitHub (`ghp_...`, `github_pat_...`), Stripe (`sk_live_...`), Google (`AIza...`), Slack (`xox...`) e blocos de chave privada (`-----BEGIN ... PRIVATE KEY-----`). Altissima confianca, independente do nome da variavel.
+- **Atribuicao a nome sensivel**: `password`/`secret`/`token`/`api_key`/`client_secret`/`private_key` recebendo um literal de string. Conservador: ignora placeholders (`changeme`, `your-api-key`, `<...>`, `${...}`), leitura de ambiente (`process.env`, `os.environ`) e valores de baixa entropia (uma palavra minuscula como `postgres`, ou so digitos).
+
+E suggest-only e nunca reescreve (a correcao depende de mover o valor para variavel de ambiente ou cofre de segredos). Use `pingu explain hardcoded_secret` para o detalhe.
 
 ### Erros de digitacao (sugestao, sem reescrita automatica)
 
