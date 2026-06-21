@@ -82,7 +82,8 @@
       "description": "Erros de logica em comparacoes que o compilador aceita silenciosamente: encadeamento indevido e identidade contra literal.",
       "mappedIssueKinds": [
         "chained_comparison",
-        "literal_identity_comparison"
+        "literal_identity_comparison",
+        "float_equality"
       ],
       "safeAutoFix": false,
       "languages": [
@@ -272,6 +273,38 @@
         "dockerfile",
         "shell",
         "toml"
+      ]
+    },
+    {
+      "id": "security",
+      "description": "Exposicao de segredos e material sensivel no codigo versionado.",
+      "mappedIssueKinds": [
+        "hardcoded_secret"
+      ],
+      "safeAutoFix": false,
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "go",
+        "rust",
+        "ruby",
+        "elixir",
+        "php",
+        "java",
+        "csharp",
+        "shell"
+      ]
+    },
+    {
+      "id": "resource_safety",
+      "description": "Recursos (arquivos, conexoes) abertos sem garantia de fechamento.",
+      "mappedIssueKinds": [
+        "resource_leak"
+      ],
+      "safeAutoFix": false,
+      "languages": [
+        "python"
       ]
     }
   ]

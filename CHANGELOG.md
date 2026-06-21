@@ -2,6 +2,61 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao: igualdade de float e recurso aberto sem with
+
+### Antes
+
+- Duas armadilhas comuns nao eram cobertas: igualdade exata com literal de ponto flutuante (== / === com 0.1, 0.3...) e abrir um arquivo com open() sem o context manager with em Python.
+
+### Depois
+
+- float_equality (JS/TS e Python, em lib/analyzer-logic-errors.js): sinaliza == / != / === / !== adjacente a um literal com parte fracionaria; sugere comparar com tolerancia (math.isclose / Math.abs(a - b) < eps). Conservador: ignora atribuicao, inteiros, operadores relacionais (<= / >=) e strings.
+- resource_leak (Python, em lib/analyzer-developer-errors.js): sinaliza a atribuicao direta f = open(...) fora de with; sugere o context manager. Ambos suggest-only, com explicacao via pingu explain.
+
+### Motivo
+
+- Igualdade de float e uma armadilha classica de nivel jr; recurso sem with e um vazamento real de nivel pleno. Sao bugs que o compilador aceita em silencio.
+
+### Impacto
+
+- Aditivos e suggest-only, zero falso positivo no proprio lib/. Cobertos por test/analyzer-float-resource.test.js, pelo invariante de taxonomia (familias comparison_logic e nova resource_safety) e pelas explicacoes.
+
+## Unreleased - Ruido: higiene redundante com formatter fica off por default
+
+### Antes
+
+- trailing_whitespace, tabs, long_line e large_file rodavam por default. Sao exatamente o que prettier/black/gofmt/rustfmt ja resolvem em todo projeto, entao competiam com o formatter e adicionavam ruido (sobretudo para quem ja usa um).
+
+### Depois
+
+- Esses quatro kinds ficam off por default. PINGU_ENABLE_FORMATTING_HYGIENE=1 reativa todos; PINGU_DISABLED_ISSUE_KINDS continua podendo subtrair um individualmente depois de reativar. Os detectores e a aplicacao de fix seguem existindo — apenas nao aparecem sem o opt-in.
+
+### Motivo
+
+- Formatter e a ferramenta certa para layout; duplicar isso no Pingu so gera ruido e contraria o foco em sinal de alto valor (bugs, seguranca, contrato).
+
+### Impacto
+
+- Comportamento mudado de forma reversivel e documentada. O teste de resiliencia que usava trailing_whitespace como check estavel passou a usar debug_output (default-on); novo test/formatting-hygiene-optin.test.js cobre o default-off e o opt-in.
+
+## Unreleased - Deteccao: segredo hardcoded
+
+### Antes
+
+- O Pingu nao detectava credenciais hardcoded no codigo (API keys, tokens, senhas, chaves privadas) — um dos erros mais caros e comuns em todos os niveis, e a primeira classe de seguranca coberta.
+
+### Depois
+
+- Novo modulo `lib/analyzer-secrets.js` e kind `hardcoded_secret` (suggest-only), com nova familia `security` na taxonomia. Sinaliza padroes de provedor conhecidos (AWS `AKIA`, GitHub `ghp_`/`github_pat_`, Stripe `sk_live_`, Google `AIza`, Slack `xox`, blocos de chave privada) e atribuicoes a nomes sensiveis (`password`/`secret`/`token`/`api_key`/...) com literal de string. Conservador: ignora placeholders (`changeme`, `your-api-key`, `<...>`, `${...}`), leitura de ambiente (`process.env`/`os.environ`) e valores de baixa entropia (palavra minuscula como `postgres`, ou so digitos). Explicacao via `pingu explain hardcoded_secret`.
+
+### Motivo
+
+- Vazamento de credenciais versionadas e um erro caro (rotacao, exposicao em historico/forks/logs) e ate entao nao coberto; e a deteccao de maior impacto entre os niveis jr/pleno/senior.
+
+### Impacto
+
+- Aditivo e suggest-only, sem auto-fix (a correcao depende de mover o valor para ambiente/cofre). Zero falso positivo no proprio `lib/`. Coberto por `test/analyzer-secrets.test.js` (provedores, atribuicao, placeholders, env, baixa entropia, focusRange), pelo invariante de taxonomia e por um caso novo no corpus anti-falso-positivo.
+
 ## Unreleased - LSP: code actions para todas as operacoes de correcao
 
 ### Antes

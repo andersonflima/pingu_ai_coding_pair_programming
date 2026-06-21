@@ -90,10 +90,15 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Shadowing de builtin | `list = [...]`, `dict = {...}` | Python |
 | Typo em metodo dunder | `def __inti__` | Python |
 | await em loop sequencial | `for (...) { await f() }` | JS/TS |
+| Segredo hardcoded | `password = "S3nh@..."`, `AKIA...` | todas |
+| Igualdade de ponto flutuante | `x == 0.1`, `total === 0.3` | JS/TS, Python |
+| Recurso aberto sem `with` | `f = open(...)` | Python |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
+
+A higiene que os formatters ja cobrem melhor e universalmente — `trailing_whitespace`, `tabs`, `long_line` e `large_file` — fica **off por default** (para nao competir com prettier/black/gofmt/rustfmt nem gerar ruido). Reative com `PINGU_ENABLE_FORMATTING_HYGIENE=1` se quiser esses avisos; `PINGU_DISABLED_ISSUE_KINDS` ainda permite tirar um deles individualmente depois de reativar.
 
 Para entender uma classe antes de silenciar, use `pingu explain <kind>` (p.ex. `pingu explain chained_comparison`): o comando descreve o que o detector encontra, por que importa, como corrigir, se e suggest-only e como silenciar. `pingu explain` sem argumento lista os kinds com explicacao disponivel, e `--json` devolve a forma estruturada.
 
@@ -163,6 +168,15 @@ Ambos sao suggest-only.
 ### await em loop sequencial, em JavaScript/TypeScript (sugestao)
 
 `for (...) { await f(item); }` espera cada iteracao terminar antes da proxima; quando as iteracoes sao independentes, isso costuma ser oportunidade de paralelizar com `await Promise.all(...)`. O Pingu sinaliza o `await` no corpo do loop e sugere a alternativa. Conservador: ignora `for await...of` (forma sequencial intencional), `await Promise.all/allSettled/race` (ja paralelo) e `await` que pertenca a uma funcao aninhada dentro do loop (usa uma pilha de blocos para distinguir loop de fronteira de funcao). E suggest-only: paralelizar muda a semantica e fica a cargo do desenvolvedor.
+
+### Segredo hardcoded (sugestao, todas as linguagens)
+
+O Pingu sinaliza credenciais hardcoded no codigo — um dos erros mais caros em qualquer nivel, porque credenciais versionadas vazam em historico de git, forks e logs de build. Duas frentes:
+
+- **Padroes de provedor conhecidos**: AWS (`AKIA...`), GitHub (`ghp_...`, `github_pat_...`), Stripe (`sk_live_...`), Google (`AIza...`), Slack (`xox...`) e blocos de chave privada (`-----BEGIN ... PRIVATE KEY-----`). Altissima confianca, independente do nome da variavel.
+- **Atribuicao a nome sensivel**: `password`/`secret`/`token`/`api_key`/`client_secret`/`private_key` recebendo um literal de string. Conservador: ignora placeholders (`changeme`, `your-api-key`, `<...>`, `${...}`), leitura de ambiente (`process.env`, `os.environ`) e valores de baixa entropia (uma palavra minuscula como `postgres`, ou so digitos).
+
+E suggest-only e nunca reescreve (a correcao depende de mover o valor para variavel de ambiente ou cofre de segredos). Use `pingu explain hardcoded_secret` para o detalhe.
 
 ### Erros de digitacao (sugestao, sem reescrita automatica)
 
@@ -1249,6 +1263,7 @@ Importante:
 - `PINGU_DOCUMENTATION_AUTO_FIX_MIN_CONFIDENCE=0.60` controla o limiar minimo de confianca para comentario automatico documental; valores menores deixam o lote mais agressivo
 - `PINGU_DOCUMENTATION_MAX_LINES=420` evita `function_doc`, `class_doc`, `variable_doc` e `flow_comment` automaticos em arquivos grandes; use `0` para remover o corte
 - `PINGU_FLOW_COMMENT_MAX_LINES=260` evita `flow_comment` automatico em arquivos grandes; use `0` para remover o corte
+- `PINGU_ENABLE_FORMATTING_HYGIENE=1` reativa a higiene que os formatters (prettier/black/gofmt/rustfmt) ja cobrem — `trailing_whitespace`, `tabs`, `long_line` e `large_file` —, que fica **off por default** para nao gerar ruido
 - `PINGU_LIGHT_ANALYSIS_DEEP_PASS_MAX_LINES=260` limita checks mais profundos do modo `light` a arquivos menores; use `0` para manter o deep pass mesmo em arquivo grande
 - `PINGU_AUTOFIX_LARGE_FILE_LINE_THRESHOLD=260` define a partir de quantas linhas o runtime encolhe o lote automatico
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS=0` limita quantas issues documentais sobem por ciclo; `0` remove o corte

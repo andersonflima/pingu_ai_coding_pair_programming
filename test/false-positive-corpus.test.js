@@ -305,6 +305,18 @@ const CASES = [
     forbid: ['tabs'],
   },
   {
+    name: 'JS: credenciais lidas do ambiente nao sao segredo hardcoded',
+    file: '/tmp/fp/config.js',
+    code: [
+      'const password = process.env.DB_PASSWORD;',
+      'const apiKey = process.env.API_KEY || "";',
+      'const dbUser = "postgres";',
+      'module.exports = { password, apiKey, dbUser };',
+      '',
+    ].join('\n'),
+    forbid: ['hardcoded_secret'],
+  },
+  {
     name: 'Lua: variaveis locais e de loop nao sao indefinidas',
     file: '/tmp/fp/sample.lua',
     code: [
