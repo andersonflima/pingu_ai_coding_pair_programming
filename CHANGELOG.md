@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Seguranca: injecao de comando e desserializacao insegura
+
+### Antes
+
+- A familia de seguranca tinha so o hardcoded_secret. Execucao de comando/codigo com entrada dinamica e desserializacao de dados nao confiaveis — duas das classes de vulnerabilidade mais comuns — nao eram cobertas.
+
+### Depois
+
+- Novo modulo lib/analyzer-security.js com dois kinds suggest-only: command_injection (eval/exec com entrada dinamica, exec/execSync com concatenacao em JS, os.system com concatenacao e subprocess shell=True em Python) e unsafe_deserialization (pickle/marshal.loads e yaml.load sem loader seguro em Python). Registrados na familia security da taxonomia, com explicacao via pingu explain.
+
+### Motivo
+
+- Injecao de comando e desserializacao insegura sao vetores criticos e frequentes; sinaliza-los cedo, com a alternativa segura, tem impacto transversal a todos os niveis.
+
+### Impacto
+
+- Aditivos, suggest-only, conservadores: zero falso positivo no proprio lib/ e nas formas seguras (execFile/spawn com lista, subprocess.run([...]), yaml.safe_load, json.loads). Cobertos por test/analyzer-security.test.js e pelo invariante de taxonomia.
+
 ## Unreleased - LSP: hover com a explicacao da issue
 
 ### Antes
