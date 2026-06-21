@@ -9,6 +9,21 @@ const assert = require('node:assert/strict');
 const { createUnitTestCoverageChecker } = require('../lib/generation-unit-tests');
 const { createCopilotAiProvider } = require('../lib/ai-provider-copilot');
 
+// Este arquivo exercita o fluxo de IA da cobertura de testes. A analise passiva
+// nao invoca IA por default; aqui ligamos o opt-in para testar o caminho com IA.
+let previousAnalyzeAi;
+test.before(() => {
+  previousAnalyzeAi = process.env.PINGU_ANALYZE_AI;
+  process.env.PINGU_ANALYZE_AI = '1';
+});
+test.after(() => {
+  if (previousAnalyzeAi === undefined) {
+    delete process.env.PINGU_ANALYZE_AI;
+  } else {
+    process.env.PINGU_ANALYZE_AI = previousAnalyzeAi;
+  }
+});
+
 function sanitizeIdentifier(value) {
   return String(value || '').replace(/[^A-Za-z0-9_]/g, '').trim();
 }
