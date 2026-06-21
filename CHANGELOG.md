@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Performance: analise passiva nao invoca a IA por default
+
+### Antes
+
+- analyzeText chamava resolveAutomaticIssuesWithAi com allowAiCalls: true. Numa maquina com o Copilot instalado, a analise passiva invocava a IA (spawnSync) por issue gerável — no profile, 5929ms para 180 linhas (97% do tempo em spawnSync), o que travaria o editor a cada tecla (e o servidor LSP a cada change).
+
+### Depois
+
+- A analise passa a rodar a resolucao por IA so quando PINGU_ANALYZE_AI esta ligado (off por default); por padrao usa a geracao offline. O enriquecimento por IA continua disponivel sob demanda no fluxo de fix/pingu prompts. No profile: 5929ms -> ~529ms para 180 linhas (cerca de 11x), e a primeira analise de 60 linhas caiu de ~6000ms para ~700ms.
+
+### Motivo
+
+- Analise (e diagnostico em tempo real no LSP) tem de ser local e barata; chamadas de IA bloqueantes por issue sao incompativeis com cada tecla. A geracao offline ja cobre o caso comum, e a IA fica para acoes explicitas.
+
+### Impacto
+
+- Comportamento por default mais rapido e deterministico; quem quiser a resolucao por IA durante a analise liga PINGU_ANALYZE_AI=1. Os testes (que ja rodam com Copilot desligado) seguem verdes.
+
 ## Unreleased - Deteccao: callback async em array e complexidade alta
 
 ### Antes

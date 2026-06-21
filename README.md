@@ -1268,6 +1268,7 @@ Importante:
 - `PINGU_DOCUMENTATION_MAX_LINES=420` evita `function_doc`, `class_doc`, `variable_doc` e `flow_comment` automaticos em arquivos grandes; use `0` para remover o corte
 - `PINGU_FLOW_COMMENT_MAX_LINES=260` evita `flow_comment` automatico em arquivos grandes; use `0` para remover o corte
 - `PINGU_ENABLE_FORMATTING_HYGIENE=1` reativa a higiene que os formatters (prettier/black/gofmt/rustfmt) ja cobrem — `trailing_whitespace`, `tabs`, `long_line` e `large_file` —, que fica **off por default** para nao gerar ruido
+- `PINGU_ANALYZE_AI=1` permite que a analise passiva ja resolva issues geraveis com a IA (Copilot). Fica **off por default**: a analise e local e rapida e nao spawna um processo por issue; o enriquecimento por IA acontece sob demanda no `pingu prompts`/fix. Ligar isso pode deixar a analise lenta no editor
 - `PINGU_LIGHT_ANALYSIS_DEEP_PASS_MAX_LINES=260` limita checks mais profundos do modo `light` a arquivos menores; use `0` para manter o deep pass mesmo em arquivo grande
 - `PINGU_AUTOFIX_LARGE_FILE_LINE_THRESHOLD=260` define a partir de quantas linhas o runtime encolhe o lote automatico
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS=0` limita quantas issues documentais sobem por ciclo; `0` remove o corte
