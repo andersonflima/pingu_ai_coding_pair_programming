@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Modularizacao: cluster de analise de variaveis indefinidas
+
+### Antes
+
+- Mesmo apos o desacoplamento dos helpers compartilhados, o `analyzer.js` ainda concentrava o cluster de analise de variaveis indefinidas (escopo): 40 funcoes (~1090 linhas) cobrindo Python, Elixir e linguagens brace-scoped (JS/TS/Go/Rust), mais o cache bounded de resultados e de exports de modulo local. Era o maior nucleo acoplado restante.
+
+### Depois
+
+- As 40 funcoes e os dois caches (`globalUndefinedVariableCache`, `globalLocalModuleExportCache`, com seus limites) foram extraidos para `lib/analyzer-undefined-variables.js`, cluster fechado sob os modulos ja isolados (support, language-profiles, analyzer-options, analyzer-import-bindings, identifier-similarity, analyzer-undefined-correction, function-signature, syntax-issues, python-scope-utils, python-signature, analyzer-module-resolution). `analyzer.js` importa apenas a entrada `checkUndefinedVariables`, remove dezenove imports orfaos que so serviam ao cluster e cai de 3870 para 2762 linhas — abaixo de tres mil pela primeira vez (6657 no inicio da serie, ~58% menor).
+
+### Motivo
+
+- Concluir o untangle do nucleo de escopo: a maior teia de acoplamento interna agora vive em modulo proprio, deixando o `analyzer.js` como orquestrador enxuto que delega para os modulos de check.
+
+### Impacto
+
+- Comportamento preservado: os golden-fixtures de undefined-variable (Python/Elixir/brace-scoped, correcao por similaridade e cache) continuam validando o resultado, mais um smoke test direto do novo modulo (`test/analyzer-undefined-variables.test.js`).
+
 ## Unreleased - Modularizacao: desacopla helpers compartilhados do nucleo de escopo
 
 ### Antes
