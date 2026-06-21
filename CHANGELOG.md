@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Falso positivo em Rust: parametros de closure
+
+### Antes
+
+- A analise de escopo de Rust nao coletava os parametros de closure (`|item|`, `|x, y|`, `move |x: T|`), entao um uso como `items.iter().map(|item| item * 2)` acusava `item` como variavel indefinida. C e Elixir foram auditados no mesmo lote e estavam limpos (sem FP de undefined/sintaxe; em Elixir o gate de contrato publico ja distingue `def`/`defp` corretamente).
+
+### Depois
+
+- O coletor de variaveis de escopo de Rust passa a extrair os parametros de closure delimitados por `|...|` (respeitando `mut`/`ref` e listas). `item` e os demais entram no escopo e nao sao mais acusados.
+
+### Motivo
+
+- Closures com `iter().map(|x| ...)`/`filter(|x| ...)` sao onipresentes em Rust idiomatico; nao reconhecer seus parametros gerava falso positivo de alto volume em codigo correto.
+
+### Impacto
+
+- Um caso novo no corpus anti-falso-positivo cobre o parametro de closure Rust. O over-flag de `function_doc`/`function_comment` em funcoes privadas de Rust (sem `pub`) permanece — e opiniao, nao falso positivo, e consistente com C/Ruby/Lua/Vim.
+
 ## Unreleased - Falsos positivos em Go: tabs idiomaticos e contrato publico
 
 ### Antes
