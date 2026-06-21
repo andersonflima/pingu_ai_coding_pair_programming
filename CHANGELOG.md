@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Micro-otimizacao de hotspots da analise
+
+### Antes
+
+- `checkAsyncArrayMethods` recompilava um `new RegExp(...)` com grupo de captura por linha analisada e ainda fazia um teste redundante com um segundo padrao equivalente. `suggestSimilarIdentifier` recalculava `collapseRepeatedChars(unknown)` (invariante) dentro do `.map` por candidato e deduplicava candidatos com `arr.indexOf` O(n^2). `applyTypoCorrections` construia o mesmo regex global duas vezes por correcao (um para `test`, outro para `replace`).
+
+### Depois
+
+- O padrao de array async vira um literal compilado uma unica vez no modulo, com um unico `match`. `suggestSimilarIdentifier` calcula `collapsedUnknown` uma vez e deduplica candidatos com um `Set` (O(n)). `applyTypoCorrections` reusa o mesmo regex global para teste e replace.
+
+### Motivo
+
+- Reduzir alocacao e CPU no caminho quente da analise, que roda a cada mudanca de buffer no LSP. O custo cresce com o tamanho do arquivo (regex por linha) e com a quantidade de candidatos (dedup O(n^2)).
+
+### Impacto
+
+- Comportamento identico (586 testes verdes, mesma saida de diagnosticos); ganho de performance proporcional ao tamanho do arquivo e ao numero de candidatos de identificador.
+
 ## Unreleased - Configuracao por repositorio via `.pingurc.json`
 
 ### Antes
