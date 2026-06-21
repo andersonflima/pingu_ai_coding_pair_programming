@@ -250,7 +250,7 @@ Quando o runtime inicia com sucesso no editor, o plugin emite notificacao operac
 
 ### Outras IDEs via LSP
 
-Alem do plugin de Vim/Neovim, o Pingu expoe um servidor [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (`pingu lsp`), entao roda em qualquer editor compativel com LSP — VS Code, Helix, Zed, Emacs, Sublime e o LSP nativo do Neovim. O servidor publica os mesmos diagnosticos da analise e oferece code actions (quickfix) a partir das correcoes sugeridas, reusando exatamente o mesmo motor (`analyzeText`). E `stdio`/JSON-RPC puro, sem dependencias.
+Alem do plugin de Vim/Neovim, o Pingu expoe um servidor [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (`pingu lsp`), entao roda em qualquer editor compativel com LSP — VS Code, Helix, Zed, Emacs, Sublime e o LSP nativo do Neovim. O servidor publica os mesmos diagnosticos da analise, oferece code actions (quickfix) a partir das correcoes sugeridas e responde **hover** com a explicacao da issue (o que e, por que importa, como corrigir) ao passar o mouse sobre o diagnostico — reusando exatamente o mesmo motor (`analyzeText`) e as explicacoes do `pingu explain`. E `stdio`/JSON-RPC puro, sem dependencias.
 
 Comando do servidor:
 

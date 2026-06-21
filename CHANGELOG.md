@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - LSP: hover com a explicacao da issue
+
+### Antes
+
+- O servidor LSP publicava diagnosticos e code actions, mas para entender uma issue o dev precisava sair do editor (rodar `pingu explain`) ou ler a doc.
+
+### Depois
+
+- O servidor passa a anunciar `hoverProvider` e a responder `textDocument/hover`: ao passar o mouse sobre um diagnostico, retorna markdown com o que e, por que importa e como corrigir, reusando as explicacoes do `issue-explainer` (as mesmas do `pingu explain`). Sem explicacao curada para o kind, cai para a sugestao da propria issue. As helpers `issueHoverMarkdown`/`hoverResponse` ficam no modulo de protocolo (puras) e o servidor faz o lookup do kind na linha do cursor.
+
+### Motivo
+
+- Levar o contexto do erro para dentro do editor, em qualquer IDE com LSP — entender o porque inline ajuda especialmente quem esta aprendendo, sem trocar de janela.
+
+### Impacto
+
+- Aditivo, sem mudar diagnosticos nem code actions. Coberto por tres casos novos em `test/lsp-server.test.js` (capability, hover com explicacao na linha do diagnostico, e null fora de diagnostico).
+
 ## Unreleased - Deteccao: igualdade de float e recurso aberto sem with
 
 ### Antes
