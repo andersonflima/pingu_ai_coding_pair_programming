@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Falsos positivos em Go: tabs idiomaticos e contrato publico
+
+### Antes
+
+- Auditando codigo realista fora do `lib/`, dois falsos positivos apareciam em Go: (1) o detector `tabs` sinalizava cada linha indentada com tab, mas Go usa tabs por padrao do gofmt; (2) o gate de contrato publico de `function_doc`/`function_comment` so conhecia JS/TS/Python/Elixir — em Go, todas as funcoes (publicas e privadas) eram tratadas igual, e o gate de `function_doc` por nomes exportados de JS zerava qualquer funcao Go.
+
+### Depois
+
+- `checkTabs` ignora Go (e Makefiles), onde tab e idiomatico/exigido. `isPublicFunctionContract` passou a reconhecer Go (identificador exportado comeca com maiuscula) e e usado tambem pelo `checkCrossLanguageFunctionDocs`, unificando a regra de contrato publico entre `function_doc` e `function_comment`. Num arquivo Go de exemplo: `tabs` 7 -> 0, e `function_doc`/`function_comment` passam a marcar apenas a funcao exportada (`Total`), restaurando a deteccao em funcoes publicas de Go.
+
+### Motivo
+
+- A auditoria de falso positivo so havia coberto o `lib/` (todo JS); estender a checagem a Python/Go/Ruby revelou que os ajustes de contrato publico nao alcancavam Go e que `tabs` era cego a convencao da linguagem.
+
+### Impacto
+
+- Quatro casos novos no corpus anti-falso-positivo cobrem tabs idiomaticos em Go e o gating publico/privado de Go. Python e Ruby ja estavam limpos na auditoria (sem FP de undefined/sintaxe; contrato publico correto).
+
 ## Unreleased - Ruido: `function_comment` so cobra o contrato publico
 
 ### Antes
