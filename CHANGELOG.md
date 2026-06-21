@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Publicacao: preparo para npm e VS Code marketplace
+
+### Antes
+
+- A descricao e as keywords do package.json so citavam Vim/Neovim, apesar do servidor LSP e da extensao VS Code; e nao havia um guia de publicacao para os dois artefatos.
+
+### Depois
+
+- package.json com descricao e keywords atualizadas (lsp, language-server, linter, static-analysis, security, vscode) para refletir o suporte multi-IDE. Extensao do VS Code recebeu sua propria LICENSE. Novo docs/publishing.md com o passo a passo de pre-voo e publicacao do pacote npm (npm run check/pack:check/release:check, npm publish) e da extensao (vsce package/publish), incluindo pre-requisitos de credenciais.
+
+### Motivo
+
+- Deixar os dois artefatos prontos para publicar; a publicacao final depende de tokens/contas e fica a cargo do mantenedor.
+
+### Impacto
+
+- So metadados e documentacao; nenhuma mudanca de runtime. O tarball do npm segue limpo (sem test/).
+
 ## Unreleased - Qualidade: guard de regressao de ruido
 
 ### Antes
