@@ -2,6 +2,42 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Performance: analise passiva nao invoca a IA por default
+
+### Antes
+
+- analyzeText chamava resolveAutomaticIssuesWithAi com allowAiCalls: true. Numa maquina com o Copilot instalado, a analise passiva invocava a IA (spawnSync) por issue gerável — no profile, 5929ms para 180 linhas (97% do tempo em spawnSync), o que travaria o editor a cada tecla (e o servidor LSP a cada change).
+
+### Depois
+
+- A analise passa a rodar a resolucao por IA so quando PINGU_ANALYZE_AI esta ligado (off por default); por padrao usa a geracao offline. O enriquecimento por IA continua disponivel sob demanda no fluxo de fix/pingu prompts. No profile: 5929ms -> ~529ms para 180 linhas (cerca de 11x), e a primeira analise de 60 linhas caiu de ~6000ms para ~700ms.
+
+### Motivo
+
+- Analise (e diagnostico em tempo real no LSP) tem de ser local e barata; chamadas de IA bloqueantes por issue sao incompativeis com cada tecla. A geracao offline ja cobre o caso comum, e a IA fica para acoes explicitas.
+
+### Impacto
+
+- Comportamento por default mais rapido e deterministico; quem quiser a resolucao por IA durante a analise liga PINGU_ANALYZE_AI=1. Os testes (que ja rodam com Copilot desligado) seguem verdes.
+
+## Unreleased - Deteccao: callback async em array e complexidade alta
+
+### Antes
+
+- Faltavam dois sinais por nivel: callback async em metodo de array que depende do retorno sincrono (.forEach/.filter/...), um bug de pleno; e funcao com complexidade ciclomatica alta, uma observacao de senior.
+
+### Depois
+
+- async_array_method (JS/TS, em lib/analyzer-async.js): sinaliza callback async em .forEach/.filter/.some/.every/.find/.findIndex/.sort (a promise e ignorada / sempre truthy); .map fica de fora por ser correto com await Promise.all. high_complexity (linguagens com chaves, em lib/analyzer-complexity.js): conta pontos de decisao por funcao e sinaliza acima de 30 — threshold alto e deliberado para flagar so as funcoes realmente densas e nao reintroduzir ruido. Ambos suggest-only, com explicacao via pingu explain.
+
+### Motivo
+
+- O callback async em array e um bug silencioso comum; a complexidade alta orienta refatoracao onde mais importa. Sao sinais de alto valor por nivel sem competir com o foco em baixo ruido.
+
+### Impacto
+
+- Aditivos e suggest-only. async_array_method: zero no proprio lib/. high_complexity: 12 funcoes no proprio lib/ (as mais densas), abaixo do teto do guard de regressao. Cobertos por test/analyzer-async-array.test.js e test/analyzer-cyclomatic.test.js e pelo invariante de taxonomia.
+
 ## Unreleased - Publicacao: preparo para npm e VS Code marketplace
 
 ### Antes
