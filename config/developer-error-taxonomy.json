@@ -279,7 +279,9 @@
       "id": "security",
       "description": "Exposicao de segredos e material sensivel no codigo versionado.",
       "mappedIssueKinds": [
-        "hardcoded_secret"
+        "hardcoded_secret",
+        "command_injection",
+        "unsafe_deserialization"
       ],
       "safeAutoFix": false,
       "languages": [

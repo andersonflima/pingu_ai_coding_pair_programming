@@ -103,5 +103,15 @@
     "summary": "Arquivo aberto com open() sem o context manager with.",
     "why": "Sem o with, o arquivo nao e fechado se ocorrer uma excecao antes do close(), vazando o descritor.",
     "fix": "Use 'with open(...) as f:' para garantir o fechamento mesmo em caso de erro."
+  },
+  "command_injection": {
+    "summary": "Execucao de comando/codigo com entrada dinamica.",
+    "why": "Concatenar entrada num comando de shell ou em eval permite a um atacante executar codigo arbitrario.",
+    "fix": "Use APIs com lista de argumentos (execFile/spawn, subprocess.run([...])) sem shell, ou valide/sanitize a entrada."
+  },
+  "unsafe_deserialization": {
+    "summary": "Desserializacao de dados nao confiaveis.",
+    "why": "pickle/marshal e yaml.load sem loader seguro executam codigo durante a carga.",
+    "fix": "Use um formato seguro (JSON) para dados externos ou yaml.safe_load."
   }
 }
