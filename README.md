@@ -95,6 +95,8 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Recurso aberto sem `with` | `f = open(...)` | Python |
 | Injecao de comando | `execSync("ls " + dir)`, `shell=True` | JS/TS, Python |
 | Desserializacao insegura | `pickle.loads(...)`, `yaml.load(...)` | Python |
+| Callback async em array | `arr.forEach(async ...)`, `.filter(async ...)` | JS/TS |
+| Complexidade alta | funcao com muitos caminhos de decisao | JS/TS, Go, Rust, C, Java, C# |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 

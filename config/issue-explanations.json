@@ -113,5 +113,15 @@
     "summary": "Desserializacao de dados nao confiaveis.",
     "why": "pickle/marshal e yaml.load sem loader seguro executam codigo durante a carga.",
     "fix": "Use um formato seguro (JSON) para dados externos ou yaml.safe_load."
+  },
+  "async_array_method": {
+    "summary": "Callback async em metodo de array que depende do retorno sincrono (.forEach/.filter/...).",
+    "why": ".forEach nao aguarda as promises; .filter/.some/.every recebem uma promise, sempre truthy. O await dentro nao sequencia e o predicado nao funciona.",
+    "fix": "Use for...of com await, ou await Promise.all(arr.map(async ...)) e itere/filtre sobre o resultado resolvido."
+  },
+  "high_complexity": {
+    "summary": "Funcao com complexidade alta (muitos caminhos de decisao).",
+    "why": "Muitos if/for/while/&&/|| numa funcao tornam o codigo dificil de ler, testar e manter, com mais chance de bug.",
+    "fix": "Extraia partes em funcoes auxiliares com nomes de dominio para reduzir os caminhos."
   }
 }
