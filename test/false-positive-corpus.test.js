@@ -210,6 +210,50 @@ const CASES = [
     ].join('\n'),
     forbid: ['undefined_variable'],
   },
+  {
+    name: 'JS: delimitadores dentro de regex nao corrompem a analise de sintaxe',
+    file: '/tmp/fp/regex-syntax.js',
+    code: [
+      'function parse(line) {',
+      '  const a = /^\\s*(?:public|private)\\s+([A-Za-z_$][\\w$]*)/.exec(line);',
+      '  const b = /\\)\\s*\\.(?:then|catch)\\b/.test(line);',
+      '  return /^\\}/.test(line) && a && b;',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['syntax_missing_comma', 'syntax_extra_delimiter', 'syntax_missing_quote'],
+  },
+  {
+    name: 'JS: chaves de template literal com interpolacao nao sao delimitador extra',
+    file: '/tmp/fp/template.js',
+    code: [
+      'function render(user, items) {',
+      '  const head = `<div class="${user.role}">${user.name}</div>`;',
+      '  const body = `total: ${items.reduce((sum, it) => sum + it.value, 0)}`;',
+      '  return head + body;',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['syntax_extra_delimiter', 'syntax_missing_comma', 'syntax_missing_quote'],
+  },
+  {
+    name: 'JS: statements no corpo de funcao dentro de objeto nao pedem virgula',
+    file: '/tmp/fp/object-methods.js',
+    code: [
+      'const handlers = {',
+      '  load(path) {',
+      '    const result = read(path)',
+      '    return result',
+      '  },',
+      '  save(path, data) {',
+      '    const ok = write(path, data)',
+      '    return ok',
+      '  },',
+      '};',
+      '',
+    ].join('\n'),
+    forbid: ['syntax_missing_comma'],
+  },
 ];
 
 for (const testCase of CASES) {

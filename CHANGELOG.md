@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Robustez: corrige falsos positivos de sintaxe (regex e template literals)
+
+### Antes
+
+- O scanner de sintaxe (`scanSyntaxStructure`) nao reconhecia literais de regex nem template literals em JavaScript/TypeScript. Os delimitadores no corpo deles — `[A-Za-z]`, `(?:...)`, `\)` em regex e `${...}` em template — eram contados na pilha de delimitadores e a corrompiam. Alem disso, `collectionContexts` procurava o contexto de colecao mais proximo ignorando blocos no meio, tratando statements no corpo de uma funcao definida dentro de um objeto como itens do objeto. Resultado: sobre o proprio `lib/`, 1544 `syntax_missing_comma` e 660 `syntax_extra_delimiter` falsos, em codigo que compila.
+
+### Depois
+
+- O scanner passa a pular literais de regex (heuristica de posicao para nao confundir com divisao, cobrindo tambem `/` apos palavras-chave como `return`/`typeof`) e a tratar template literals com estado entre linhas, reentrando em codigo apenas nas interpolacoes `${...}` (empilhadas e restauradas no `}` correspondente). O contexto de colecao passa a considerar apenas o delimitador imediato (topo da pilha), entao um bloco sombreia um objeto/array externo. No `lib/`: `syntax_missing_comma` 1544 -> 40, `syntax_extra_delimiter` 660 -> 51, `syntax_missing_quote` 103 -> 36, e o total de issues 9292 -> 2407 (o restante e majoritariamente sugestao de doc/comentario/linha longa, nao falso positivo).
+
+### Motivo
+
+- Erros de sintaxe so fazem sentido em codigo que nao compila; emiti-los a milhares sobre codigo correto destruia a confianca na ferramenta. As duas causas eram estruturais no scanner.
+
+### Impacto
+
+- Deteccao legitima preservada: os golden-fixtures de sintaxe (aspas, delimitadores e virgulas realmente ausentes) continuam validando. Quatro casos novos no corpus anti-falso-positivo (`test/false-positive-corpus.test.js`) travam os padroes corrigidos: delimitadores em regex, interpolacao de template, e metodos com corpo dentro de objeto.
+
 ## Unreleased - Robustez: corrige falsos positivos de `undefined_variable`
 
 ### Antes
