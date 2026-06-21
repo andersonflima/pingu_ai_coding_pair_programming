@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Ruido: `function_comment` so cobra o contrato publico
+
+### Antes
+
+- O `function_comment` (sugestao de comentario de manutencao acima de uma funcao) sinalizava toda funcao sem comentario, inclusive helpers internos. Sobre o proprio `lib/` eram 451 sugestoes.
+
+### Depois
+
+- Espelhando o `function_doc`, a sugestao agora vale so para o contrato publico: funcoes exportadas em JS/TS (via `collectJavaScriptExportNames`), nao-privadas em Python (sem prefixo `_`, exceto dunder) e publicas em Elixir (`def`, nao `defp`). Outras linguagens mantem o comportamento anterior. No `lib/`, os `function_comment` cairam de 451 para 211; o total de issues caiu para 1467.
+
+### Motivo
+
+- Consistencia com o `function_doc` e com a diretriz do projeto de documentar o contrato publico; cobrar comentario de cada helper interno era ruido.
+
+### Impacto
+
+- Coberto por `isPublicFunctionContract` e tres casos novos no corpus anti-falso-positivo (helper interno JS, `defp` em Elixir, `_privado` em Python). Comportamento para funcoes publicas preservado.
+
 ## Unreleased - Ruido: `function_doc` so cobra documentacao do contrato publico
 
 ### Antes
