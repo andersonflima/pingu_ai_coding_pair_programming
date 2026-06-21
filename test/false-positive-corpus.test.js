@@ -305,6 +305,37 @@ const CASES = [
     forbid: ['tabs'],
   },
   {
+    name: 'Lua: variaveis locais e de loop nao sao indefinidas',
+    file: '/tmp/fp/sample.lua',
+    code: [
+      'local function total(items)',
+      '  local subtotal = 0',
+      '  for _, item in ipairs(items) do',
+      '    subtotal = subtotal + item.price',
+      '  end',
+      '  return subtotal',
+      'end',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable', 'syntax_missing_comma', 'syntax_extra_delimiter'],
+  },
+  {
+    name: 'Shell: variaveis locais e de loop nao sao indefinidas',
+    file: '/tmp/fp/sample.sh',
+    code: [
+      '#!/usr/bin/env bash',
+      'total() {',
+      '  local sum=0',
+      '  for value in "$@"; do',
+      '    sum=$((sum + value))',
+      '  done',
+      '  echo "$sum"',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable', 'syntax_missing_comma', 'syntax_extra_delimiter'],
+  },
+  {
     name: 'Rust: parametro de closure (|item|) nao e variavel indefinida',
     file: '/tmp/fp/closure.rs',
     code: [
