@@ -20,6 +20,24 @@ Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo
 
 - Comportamento por default mais rapido e deterministico; quem quiser a resolucao por IA durante a analise liga PINGU_ANALYZE_AI=1. Os testes (que ja rodam com Copilot desligado) seguem verdes.
 
+## Unreleased - Seguranca: injecao de SQL e hash fraco
+
+### Antes
+
+- A familia de seguranca cobria segredo hardcoded, injecao de comando e desserializacao insegura, mas faltavam duas classes muito comuns: injecao de SQL e uso de hash fraco (MD5/SHA-1) para senha.
+
+### Depois
+
+- sql_injection: sinaliza query montada por concatenacao/template — exige uma forma de query inequivoca (SELECT...FROM, INSERT INTO, UPDATE...SET, DELETE FROM) com composicao dinamica, ignorando placeholders parametrizados (%s, ?, :nome) e o "from" de imports. weak_crypto: sinaliza createHash('md5'/'sha1') (JS) e hashlib.md5/sha1 (Python) apenas quando ha termo de seguranca na linha (password/secret/token...), para nao acusar cache key/etag/checksum. Ambos suggest-only, com explicacao via pingu explain.
+
+### Motivo
+
+- Injecao de SQL e hash fraco de senha sao dois dos erros de seguranca mais frequentes e caros; sinaliza-los cedo, com a alternativa segura (consulta parametrizada, bcrypt/argon2), fecha as lacunas obvias da familia de seguranca.
+
+### Impacto
+
+- Aditivos, suggest-only e conservadores: zero falso positivo no proprio lib/ (apos endurecer as guardas que inicialmente pegavam "from" de import e sha1 de cache). Cobertos por test/analyzer-security.test.js e pelo invariante de taxonomia.
+
 ## Unreleased - Deteccao: callback async em array e complexidade alta
 
 ### Antes

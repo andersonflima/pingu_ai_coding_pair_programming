@@ -42,6 +42,8 @@ test('os detectores de erro humano sao todos suggest-only (autoFixDefault false)
     'unsafe_deserialization',
     'async_array_method',
     'high_complexity',
+    'sql_injection',
+    'weak_crypto',
   ];
   for (const kind of detectors) {
     assert.ok(issueKinds[kind], `issue kind ausente: ${kind}`);
