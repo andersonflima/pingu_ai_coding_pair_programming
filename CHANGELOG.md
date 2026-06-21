@@ -21,6 +21,24 @@ Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo
 
 - Aditivos e suggest-only, zero falso positivo no proprio lib/. Cobertos por test/analyzer-float-resource.test.js, pelo invariante de taxonomia (familias comparison_logic e nova resource_safety) e pelas explicacoes.
 
+## Unreleased - Ruido: higiene redundante com formatter fica off por default
+
+### Antes
+
+- trailing_whitespace, tabs, long_line e large_file rodavam por default. Sao exatamente o que prettier/black/gofmt/rustfmt ja resolvem em todo projeto, entao competiam com o formatter e adicionavam ruido (sobretudo para quem ja usa um).
+
+### Depois
+
+- Esses quatro kinds ficam off por default. PINGU_ENABLE_FORMATTING_HYGIENE=1 reativa todos; PINGU_DISABLED_ISSUE_KINDS continua podendo subtrair um individualmente depois de reativar. Os detectores e a aplicacao de fix seguem existindo — apenas nao aparecem sem o opt-in.
+
+### Motivo
+
+- Formatter e a ferramenta certa para layout; duplicar isso no Pingu so gera ruido e contraria o foco em sinal de alto valor (bugs, seguranca, contrato).
+
+### Impacto
+
+- Comportamento mudado de forma reversivel e documentada. O teste de resiliencia que usava trailing_whitespace como check estavel passou a usar debug_output (default-on); novo test/formatting-hygiene-optin.test.js cobre o default-off e o opt-in.
+
 ## Unreleased - Deteccao: segredo hardcoded
 
 ### Antes

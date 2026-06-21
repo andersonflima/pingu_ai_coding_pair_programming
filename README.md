@@ -98,6 +98,8 @@ Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conserv
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
 
+A higiene que os formatters ja cobrem melhor e universalmente — `trailing_whitespace`, `tabs`, `long_line` e `large_file` — fica **off por default** (para nao competir com prettier/black/gofmt/rustfmt nem gerar ruido). Reative com `PINGU_ENABLE_FORMATTING_HYGIENE=1` se quiser esses avisos; `PINGU_DISABLED_ISSUE_KINDS` ainda permite tirar um deles individualmente depois de reativar.
+
 Para entender uma classe antes de silenciar, use `pingu explain <kind>` (p.ex. `pingu explain chained_comparison`): o comando descreve o que o detector encontra, por que importa, como corrigir, se e suggest-only e como silenciar. `pingu explain` sem argumento lista os kinds com explicacao disponivel, e `--json` devolve a forma estruturada.
 
 Correcoes deterministicas ja mapeadas:
@@ -1261,6 +1263,7 @@ Importante:
 - `PINGU_DOCUMENTATION_AUTO_FIX_MIN_CONFIDENCE=0.60` controla o limiar minimo de confianca para comentario automatico documental; valores menores deixam o lote mais agressivo
 - `PINGU_DOCUMENTATION_MAX_LINES=420` evita `function_doc`, `class_doc`, `variable_doc` e `flow_comment` automaticos em arquivos grandes; use `0` para remover o corte
 - `PINGU_FLOW_COMMENT_MAX_LINES=260` evita `flow_comment` automatico em arquivos grandes; use `0` para remover o corte
+- `PINGU_ENABLE_FORMATTING_HYGIENE=1` reativa a higiene que os formatters (prettier/black/gofmt/rustfmt) ja cobrem — `trailing_whitespace`, `tabs`, `long_line` e `large_file` —, que fica **off por default** para nao gerar ruido
 - `PINGU_LIGHT_ANALYSIS_DEEP_PASS_MAX_LINES=260` limita checks mais profundos do modo `light` a arquivos menores; use `0` para manter o deep pass mesmo em arquivo grande
 - `PINGU_AUTOFIX_LARGE_FILE_LINE_THRESHOLD=260` define a partir de quantas linhas o runtime encolhe o lote automatico
 - `PINGU_AUTOFIX_DOC_MAX_PER_PASS=0` limita quantas issues documentais sobem por ciclo; `0` remove o corte
