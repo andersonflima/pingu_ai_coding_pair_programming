@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Ruido: `flow_comment` so dispara em passos genuinamente complexos
+
+### Antes
+
+- O `flow_comment` (sugestao de comentario de manutencao antes de um passo) considerava "digna de comentario" praticamente qualquer atribuicao com uma chamada, um acesso a propriedade, um operador ou um literal de colecao. Sobre o proprio `lib/` isso gerava 567 sugestoes — a maioria em codigo auto-explicativo (`const x = foo(a)`, `const y = obj.prop`, guardas curtos), poluindo o resultado.
+
+### Depois
+
+- `looksCommentWorthyAssignment` passou a exigir complexidade real: ternario, chamada aninhada, duas ou mais chamadas, duas ou mais operacoes logicas, ou expressao longa — e um piso de comprimento (45 caracteres) que dispensa guardas/coercoes curtos como `Array.isArray(x) ? x : []` ou `String(x).trim()`. No `lib/`, os `flow_comment` cairam de 567 para 107 (~81%). A mudanca vale tambem para os fallbacks de `variable_doc` e para os comentarios de manutencao gerados, que ficam menos ruidosos.
+
+### Motivo
+
+- O detector e uma opiniao util, mas exigir um comentario antes de cada linha trivial mais atrapalhava do que ajudava. Restringir a passos nao-obvios preserva o valor e remove o ruido.
+
+### Impacto
+
+- Comportamento ajustado e coberto: o teste de comentario automatico de fluxo passou a exigir um passo complexo (ternario/composicao) e ganhou um caso afirmando que uma atribuicao simples nao gera comentario. Demais golden-fixtures de manutencao inalterados.
+
 ## Unreleased - Robustez: corrige falsos positivos de sintaxe (regex e template literals)
 
 ### Antes

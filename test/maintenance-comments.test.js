@@ -58,10 +58,17 @@ test('nao gera comentario automatico para declaracoes de dependencia nas linguag
   });
 });
 
-test('mantem comentario automatico para atribuicao JavaScript de fluxo', () => {
-  const comment = buildMaintenanceComment('const payload = normalizePayload(input);', '.js');
+test('mantem comentario automatico para passo de fluxo genuinamente complexo', () => {
+  // Ternario / composicao merecem um comentario de intencao.
+  const comment = buildMaintenanceComment('const payload = input ? normalizePayload(input) : defaultPayload();', '.js');
 
   assert.match(comment, /^\/\/\s+\S/);
+});
+
+test('nao gera comentario automatico para atribuicao simples e auto-explicativa', () => {
+  // Uma unica chamada cujo nome ja revela a intencao nao precisa de comentario.
+  assert.equal(buildMaintenanceComment('const payload = normalizePayload(input);', '.js'), '');
+  assert.equal(buildMaintenanceComment('const name = user.name;', '.js'), '');
 });
 
 test('nao reporta comentario de manutencao para import CommonJS', () => {

@@ -538,6 +538,8 @@ O que melhora aqui:
 
 Mesmo sem comentario acionavel, o Pingu pode propor manutencao.
 
+O `flow_comment` e conservador: so sugere um comentario de intencao para atribuicoes de passo **genuinamente nao-obvias** — composicao real (ternario, encadeamento/chamada aninhada, multiplas operacoes logicas) ou expressoes substanciais. Atribuicoes simples e auto-explicativas (uma unica chamada cujo nome ja revela a intencao, um acesso a propriedade, um guarda curto como `Array.isArray(x) ? x : []`) nao sao sinalizadas, para nao gerar ruido.
+
 Exemplo em Python:
 
 Entrada:
