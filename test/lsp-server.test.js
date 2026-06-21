@@ -65,6 +65,29 @@ test('codeAction devolve quickfix para a issue no range', () => {
   assert.match(actions[0].edit.changes['file:///x.js'][0].newText, /a < b && b < c/);
 });
 
+test('initialize anuncia hoverProvider', () => {
+  const server = createLspServer();
+  const caps = server.handle({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} })[0].result.capabilities;
+  assert.equal(caps.hoverProvider, true);
+});
+
+test('hover devolve a explicacao do kind na linha do diagnostico', () => {
+  const server = createLspServer();
+  server.handle({ jsonrpc: '2.0', method: 'textDocument/didOpen', params: { textDocument: { uri: 'file:///x.js', text: 'function f(a,b,c){\n  return a < b < c;\n}\n' } } });
+  const out = server.handle({ jsonrpc: '2.0', id: 7, method: 'textDocument/hover', params: { textDocument: { uri: 'file:///x.js' }, position: { line: 1, character: 10 } } });
+  assert.equal(out[0].result.contents.kind, 'markdown');
+  assert.match(out[0].result.contents.value, /chained_comparison/);
+  assert.match(out[0].result.contents.value, /Por que|Como corrigir/);
+});
+
+test('hover devolve null fora de qualquer diagnostico', () => {
+  const server = createLspServer();
+  server.handle({ jsonrpc: '2.0', method: 'textDocument/didOpen', params: { textDocument: { uri: 'file:///x.js', text: 'const x = 1;\n' } } });
+  // Linha bem alem do documento: nenhum diagnostico corresponde.
+  const out = server.handle({ jsonrpc: '2.0', id: 8, method: 'textDocument/hover', params: { textDocument: { uri: 'file:///x.js' }, position: { line: 99, character: 0 } } });
+  assert.equal(out[0].result, null);
+});
+
 test('shutdown e exit encerram o ciclo', () => {
   const server = createLspServer();
   assert.equal(server.handle({ jsonrpc: '2.0', id: 9, method: 'shutdown' })[0].result, null);

@@ -2,6 +2,78 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Publicacao: preparo para npm e VS Code marketplace
+
+### Antes
+
+- A descricao e as keywords do package.json so citavam Vim/Neovim, apesar do servidor LSP e da extensao VS Code; e nao havia um guia de publicacao para os dois artefatos.
+
+### Depois
+
+- package.json com descricao e keywords atualizadas (lsp, language-server, linter, static-analysis, security, vscode) para refletir o suporte multi-IDE. Extensao do VS Code recebeu sua propria LICENSE. Novo docs/publishing.md com o passo a passo de pre-voo e publicacao do pacote npm (npm run check/pack:check/release:check, npm publish) e da extensao (vsce package/publish), incluindo pre-requisitos de credenciais.
+
+### Motivo
+
+- Deixar os dois artefatos prontos para publicar; a publicacao final depende de tokens/contas e fica a cargo do mantenedor.
+
+### Impacto
+
+- So metadados e documentacao; nenhuma mudanca de runtime. O tarball do npm segue limpo (sem test/).
+
+## Unreleased - Qualidade: guard de regressao de ruido
+
+### Antes
+
+- A auditoria de falso-positivo reduziu o ruido sobre o proprio lib/ de ~9300 para ~1030 issues, mas nada impedia uma mudanca futura (p.ex. no scanner) de reintroduzir milhares de avisos sem ser notado.
+
+### Depois
+
+- Novo test/noise-regression.test.js roda o Pingu sobre o proprio lib/ e falha se o falso positivo estrutural (undefined_variable, sintaxe, seguranca, auto-comparacao...) ou o total de issues subir alem de um teto com folga sobre o baseline. Nao exige zero — resta um tail conhecido de casos de borda — mas trava o nivel apurado contra regressao. O relatorio e memoizado para rodar a analise uma unica vez.
+
+### Motivo
+
+- Transformar o resultado da auditoria num invariante de CI: qualquer regressao que volte a gerar ruido em codigo correto quebra o build.
+
+### Impacto
+
+- So teste. Os tetos (estrutural 150, total 1100) podem ser baixados de proposito apos uma melhora, documentando o ganho.
+
+## Unreleased - Seguranca: injecao de comando e desserializacao insegura
+
+### Antes
+
+- A familia de seguranca tinha so o hardcoded_secret. Execucao de comando/codigo com entrada dinamica e desserializacao de dados nao confiaveis — duas das classes de vulnerabilidade mais comuns — nao eram cobertas.
+
+### Depois
+
+- Novo modulo lib/analyzer-security.js com dois kinds suggest-only: command_injection (eval/exec com entrada dinamica, exec/execSync com concatenacao em JS, os.system com concatenacao e subprocess shell=True em Python) e unsafe_deserialization (pickle/marshal.loads e yaml.load sem loader seguro em Python). Registrados na familia security da taxonomia, com explicacao via pingu explain.
+
+### Motivo
+
+- Injecao de comando e desserializacao insegura sao vetores criticos e frequentes; sinaliza-los cedo, com a alternativa segura, tem impacto transversal a todos os niveis.
+
+### Impacto
+
+- Aditivos, suggest-only, conservadores: zero falso positivo no proprio lib/ e nas formas seguras (execFile/spawn com lista, subprocess.run([...]), yaml.safe_load, json.loads). Cobertos por test/analyzer-security.test.js e pelo invariante de taxonomia.
+
+## Unreleased - LSP: hover com a explicacao da issue
+
+### Antes
+
+- O servidor LSP publicava diagnosticos e code actions, mas para entender uma issue o dev precisava sair do editor (rodar `pingu explain`) ou ler a doc.
+
+### Depois
+
+- O servidor passa a anunciar `hoverProvider` e a responder `textDocument/hover`: ao passar o mouse sobre um diagnostico, retorna markdown com o que e, por que importa e como corrigir, reusando as explicacoes do `issue-explainer` (as mesmas do `pingu explain`). Sem explicacao curada para o kind, cai para a sugestao da propria issue. As helpers `issueHoverMarkdown`/`hoverResponse` ficam no modulo de protocolo (puras) e o servidor faz o lookup do kind na linha do cursor.
+
+### Motivo
+
+- Levar o contexto do erro para dentro do editor, em qualquer IDE com LSP — entender o porque inline ajuda especialmente quem esta aprendendo, sem trocar de janela.
+
+### Impacto
+
+- Aditivo, sem mudar diagnosticos nem code actions. Coberto por tres casos novos em `test/lsp-server.test.js` (capability, hover com explicacao na linha do diagnostico, e null fora de diagnostico).
+
 ## Unreleased - Deteccao: igualdade de float e recurso aberto sem with
 
 ### Antes

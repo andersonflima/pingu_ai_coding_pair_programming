@@ -1,6 +1,6 @@
 {
   "name": "@andersonflima/pingu-dev-agent",
-  "description": "Pingu - Dev Agent: agente de pair programming em tempo real para Vim, Neovim e LazyVim.",
+  "description": "Pingu - Dev Agent: agente de pair programming em tempo real (diagnosticos, quick fixes e geracao) para Vim/Neovim, e para qualquer editor via servidor LSP (VS Code, Helix, Zed, Emacs, Sublime).",
   "version": "0.1.44",
   "license": "MIT",
   "keywords": [
@@ -8,6 +8,12 @@
     "dev-agent",
     "pair-programming",
     "agent",
+    "lsp",
+    "language-server",
+    "linter",
+    "static-analysis",
+    "security",
+    "vscode",
     "vim",
     "neovim",
     "lazyvim"

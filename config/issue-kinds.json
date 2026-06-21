@@ -575,5 +575,23 @@
     "autoFixPriority": 47,
     "supportsQuickFix": false,
     "supportsFollowUp": true
+  },
+  "command_injection": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 48,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
+  "unsafe_deserialization": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 48,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
   }
 }

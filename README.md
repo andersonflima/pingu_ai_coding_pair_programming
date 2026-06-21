@@ -93,6 +93,8 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Segredo hardcoded | `password = "S3nh@..."`, `AKIA...` | todas |
 | Igualdade de ponto flutuante | `x == 0.1`, `total === 0.3` | JS/TS, Python |
 | Recurso aberto sem `with` | `f = open(...)` | Python |
+| Injecao de comando | `execSync("ls " + dir)`, `shell=True` | JS/TS, Python |
+| Desserializacao insegura | `pickle.loads(...)`, `yaml.load(...)` | Python |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
@@ -250,7 +252,7 @@ Quando o runtime inicia com sucesso no editor, o plugin emite notificacao operac
 
 ### Outras IDEs via LSP
 
-Alem do plugin de Vim/Neovim, o Pingu expoe um servidor [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (`pingu lsp`), entao roda em qualquer editor compativel com LSP — VS Code, Helix, Zed, Emacs, Sublime e o LSP nativo do Neovim. O servidor publica os mesmos diagnosticos da analise e oferece code actions (quickfix) a partir das correcoes sugeridas, reusando exatamente o mesmo motor (`analyzeText`). E `stdio`/JSON-RPC puro, sem dependencias.
+Alem do plugin de Vim/Neovim, o Pingu expoe um servidor [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (`pingu lsp`), entao roda em qualquer editor compativel com LSP — VS Code, Helix, Zed, Emacs, Sublime e o LSP nativo do Neovim. O servidor publica os mesmos diagnosticos da analise, oferece code actions (quickfix) a partir das correcoes sugeridas e responde **hover** com a explicacao da issue (o que e, por que importa, como corrigir) ao passar o mouse sobre o diagnostico — reusando exatamente o mesmo motor (`analyzeText`) e as explicacoes do `pingu explain`. E `stdio`/JSON-RPC puro, sem dependencias.
 
 Comando do servidor:
 
