@@ -2,6 +2,25 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao: igualdade de float e recurso aberto sem with
+
+### Antes
+
+- Duas armadilhas comuns nao eram cobertas: igualdade exata com literal de ponto flutuante (== / === com 0.1, 0.3...) e abrir um arquivo com open() sem o context manager with em Python.
+
+### Depois
+
+- float_equality (JS/TS e Python, em lib/analyzer-logic-errors.js): sinaliza == / != / === / !== adjacente a um literal com parte fracionaria; sugere comparar com tolerancia (math.isclose / Math.abs(a - b) < eps). Conservador: ignora atribuicao, inteiros, operadores relacionais (<= / >=) e strings.
+- resource_leak (Python, em lib/analyzer-developer-errors.js): sinaliza a atribuicao direta f = open(...) fora de with; sugere o context manager. Ambos suggest-only, com explicacao via pingu explain.
+
+### Motivo
+
+- Igualdade de float e uma armadilha classica de nivel jr; recurso sem with e um vazamento real de nivel pleno. Sao bugs que o compilador aceita em silencio.
+
+### Impacto
+
+- Aditivos e suggest-only, zero falso positivo no proprio lib/. Cobertos por test/analyzer-float-resource.test.js, pelo invariante de taxonomia (familias comparison_logic e nova resource_safety) e pelas explicacoes.
+
 ## Unreleased - Deteccao: segredo hardcoded
 
 ### Antes

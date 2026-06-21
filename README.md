@@ -91,6 +91,8 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Typo em metodo dunder | `def __inti__` | Python |
 | await em loop sequencial | `for (...) { await f() }` | JS/TS |
 | Segredo hardcoded | `password = "S3nh@..."`, `AKIA...` | todas |
+| Igualdade de ponto flutuante | `x == 0.1`, `total === 0.3` | JS/TS, Python |
+| Recurso aberto sem `with` | `f = open(...)` | Python |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 

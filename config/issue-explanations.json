@@ -93,5 +93,15 @@
     "summary": "Segredo (chave/token/senha) hardcoded no codigo.",
     "why": "Credenciais versionadas vazam em historico de git, forks e build logs; rotaciona-las depois e custoso e arriscado.",
     "fix": "Mova para variavel de ambiente ou cofre de segredos e referencie por configuracao."
+  },
+  "float_equality": {
+    "summary": "Igualdade exata (== / ===) com literal de ponto flutuante.",
+    "why": "Floats nao tem representacao binaria exata; 0.1 + 0.2 !== 0.3, entao a comparacao falha de forma surpreendente.",
+    "fix": "Compare com tolerancia: math.isclose(a, b) em Python ou Math.abs(a - b) < eps em JS."
+  },
+  "resource_leak": {
+    "summary": "Arquivo aberto com open() sem o context manager with.",
+    "why": "Sem o with, o arquivo nao e fechado se ocorrer uma excecao antes do close(), vazando o descritor.",
+    "fix": "Use 'with open(...) as f:' para garantir o fechamento mesmo em caso de erro."
   }
 }
