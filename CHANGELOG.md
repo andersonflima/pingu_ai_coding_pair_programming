@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - VS Code: extensao dedicada sobre o servidor LSP
+
+### Antes
+
+- Com o servidor LSP, o Pingu ja rodava em editores com cliente LSP generico (Neovim nativo, Helix, Emacs), mas o VS Code nao tem cliente LSP embutido: exigia configuracao manual e nao era instalavel como extensao.
+
+### Depois
+
+- Nova extensao em `editors/vscode/`: um wrapper fino que inicia o `pingu lsp` via `vscode-languageclient` e delega tudo ao servidor (diagnosticos e quick fixes). Inclui o manifesto (`package.json` com `activationEvents` e settings `pingu.serverCommand`/`pingu.serverArgs`), o `extension.js` de fiacao do cliente e um README com os passos de dev (`F5`) e de empacotamento (`vsce package` -> `.vsix`).
+
+### Motivo
+
+- Fechar a cobertura de IDEs: o VS Code e o editor mais usado e o unico dos alvos sem cliente LSP nativo. Uma extensao fina sobre o servidor ja existente entrega a integracao com a menor superficie de codigo possivel.
+
+### Impacto
+
+- Isolado em `editors/vscode/` (fora do `npm run check`, do lint custom e do sync do runtime de Vim): o core do Pingu segue zero-dependencia; a unica dependencia (`vscode-languageclient`) e o cliente LSP padrao do VS Code e vive so nesse subpacote. Validado o manifesto (JSON bem-formado, `activationEvents` consistentes com o `documentSelector`) e a sintaxe do `extension.js`; o comportamento dentro do VS Code precisa ser exercitado num Extension Development Host (nao executavel neste ambiente).
+
 ## Unreleased - Outras IDEs: servidor LSP
 
 ### Antes
