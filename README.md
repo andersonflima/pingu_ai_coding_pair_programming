@@ -98,7 +98,7 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Desserializacao insegura | `pickle.loads(...)`, `yaml.load(...)` | Python |
 | Hash fraco (senha) | `createHash("md5")`, `hashlib.sha1` | JS/TS, Python |
 | Callback async em array | `arr.forEach(async ...)`, `.filter(async ...)` | JS/TS |
-| Complexidade alta | funcao com muitos caminhos de decisao | JS/TS, Go, Rust, C, Java, C# |
+| Complexidade alta | funcao com muitos caminhos de decisao | JS/TS, Python, Go, Rust, C, Java, C# |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
