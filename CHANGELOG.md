@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Robustez: corrige falsos positivos de `undefined_variable`
+
+### Antes
+
+- Apontando o Pingu para o proprio `lib/` (codigo correto, testado), o detector `undefined_variable` emitia 4693 avisos — quase todos falsos positivos, varios com correcao confiante e absurda (p.ex. acusar `error` de um `catch (error)` e sugerir trocar por uma funcao longa nao relacionada). As causas: (1) a sugestao por similaridade aceitava casamento por subsequencia, tratando qualquer palavra curta contida num identificador longo como typo; (2) o escopo nao reconhecia bindings de `catch`, consts/`require` de nivel de modulo, parametros de funcao aninhada nem desestruturacao em arrow; (3) conteudo de literais de regex (`/\bprisma\b/`) vazava como identificador; (4) nomes de 1-2 caracteres geravam ruido.
+
+### Depois
+
+- A sugestao de undefined-variable so e aceita quando e um typo plausivel: distancia de edicao pequena e proporcional ao tamanho e comprimento parecido (`isGenuineTypoSuggestion`), eliminando os casamentos por subsequencia. O escopo brace passou a coletar bindings de `catch`, o escopo de modulo (const/let/var/require, funcao e classe via `collectBraceModuleScopeVariables`), parametros de funcao aninhada e desestruturacao em arrow; `sanitizeScopedAnalysisLine` remove literais de regex que contenham escape; e nomes com menos de 3 caracteres nao sao sinalizados. No `lib/`, os `undefined_variable` cairam de 4693 para 2 (~99,96%), e o total de issues de 9292 para 4616.
+
+### Motivo
+
+- Para uma ferramenta suggest-only que roda ao vivo no editor, um falso positivo custa mais confianca do que um bug nao detectado. A auditoria sobre o proprio codigo expos que o detector estava estruturalmente barulhento; o ajuste preserva a deteccao de typos reais e remove o ruido.
+
+### Impacto
+
+- Deteccao legitima preservada: os golden-fixtures de undefined-variable continuam validando (typo real como `amont` -> `amount` ainda e sinalizado). Cinco casos novos no corpus anti-falso-positivo (`test/false-positive-corpus.test.js`) travam os padroes corrigidos (catch, const de modulo, funcao aninhada, desestruturacao, regex), mais um caso de ruido de nome curto no smoke test do modulo.
+
 ## Unreleased - Modularizacao: cluster de analise de variaveis indefinidas
 
 ### Antes

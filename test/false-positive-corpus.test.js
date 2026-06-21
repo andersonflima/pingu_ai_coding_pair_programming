@@ -145,6 +145,71 @@ const CASES = [
     ].join('\n'),
     forbid: ['unused_import'],
   },
+  {
+    name: 'JS: binding de catch nao e variavel indefinida',
+    file: '/tmp/fp/catch.js',
+    code: [
+      'function run(task) {',
+      '  try {',
+      '    return task();',
+      '  } catch (error) {',
+      '    return String(error && error.message);',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable'],
+  },
+  {
+    name: 'JS: const de modulo (require) usada em funcao nao e indefinida',
+    file: '/tmp/fp/module-const.js',
+    code: [
+      'const config = require("./config");',
+      '',
+      'function read(key) {',
+      '  return config[key];',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable'],
+  },
+  {
+    name: 'JS: parametro de funcao aninhada nao e indefinido',
+    file: '/tmp/fp/nested.js',
+    code: [
+      'function outer() {',
+      '  function inner(rawResult) {',
+      '    return rawResult.value;',
+      '  }',
+      '  return inner;',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable'],
+  },
+  {
+    name: 'JS: parametros desestruturados em arrow nao sao indefinidos',
+    file: '/tmp/fp/destructure.js',
+    code: [
+      'function build(entries) {',
+      '  return entries.filter(([key, value]) => key && value);',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable'],
+  },
+  {
+    name: 'JS: conteudo de literal de regex nao vira identificador',
+    file: '/tmp/fp/regex.js',
+    code: [
+      'function detect(text) {',
+      '  const isPrisma = /\\bprisma\\b/.test(text);',
+      '  return isPrisma;',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable'],
+  },
 ];
 
 for (const testCase of CASES) {
