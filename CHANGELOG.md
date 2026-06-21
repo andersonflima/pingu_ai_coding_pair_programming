@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Performance: analise sem spawn de processo (0 chamadas externas)
+
+### Antes
+
+- Mesmo apos a primeira correcao (que parou o resolveAutomaticIssuesWithAi), a analise passiva ainda invocava o Copilot: o detector unit_test (checkUnitTestCoverage) gerava o teste via IA durante a analise, e o passo de IA ainda sondava a disponibilidade do provider (copilot --version). No profile, o caso JS levava ~878ms para 180 linhas, e a probe de versao sozinha custava ~500ms nesta maquina.
+
+### Depois
+
+- checkUnitTestCoverage so usa IA quando PINGU_ANALYZE_AI esta ligado (caindo para a geracao offline por default) e nem sonda a disponibilidade do provider quando nao vai usa-lo. resolveAutomaticIssuesWithAi tambem deixa de sondar quando allowAiCalls e false. Resultado: zero spawnSync durante a analise por default. O profile do caso JS caiu de ~5929ms (original) para ~37ms (cerca de 160x no total), e a analise de um arquivo de 2831 linhas roda em ~118ms.
+
+### Motivo
+
+- Analise (e diagnostico em tempo real no LSP, que roda a cada mudanca do buffer) tem de ser puramente local; qualquer spawn de processo por analise trava o editor.
+
+### Impacto
+
+- Comportamento por default mais rapido e deterministico, sem chamada externa. Os testes do fluxo de IA de testes unitarios (test/unit-test-copilot-flow.test.js) passaram a ligar PINGU_ANALYZE_AI explicitamente, ja que exercitam o caminho com IA.
+
 ## Unreleased - Performance: analise passiva nao invoca a IA por default
 
 ### Antes
