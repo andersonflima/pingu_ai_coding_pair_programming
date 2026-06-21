@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Detectores de seguranca: path traversal, XSS e SSRF
+
+### Antes
+
+- A analise cobria injecao de comando, injecao de SQL, desserializacao insegura e hash fraco, mas nao sinalizava caminhos de arquivo, escrita de HTML no DOM nem requisicoes HTTP construidas a partir de entrada do usuario.
+
+### Depois
+
+- Tres detectores suggest-only, conservadores (exigem o sink e o marcador de entrada do usuario na mesma linha para manter o falso-positivo baixo): `path_traversal` (`fs.*`/`open` com caminho derivado de request), `xss` (`innerHTML`/`outerHTML`/`document.write` com valor dinamico e `dangerouslySetInnerHTML` nao literal) e `ssrf` (`fetch`/`axios`/`requests`/`urlopen` com URL de entrada do usuario). Cada um entra na tabela de deteccoes, em `pingu explain` e em `config/issue-kinds.json`.
+
+### Motivo
+
+- Cobrir tres das vulnerabilidades web mais comuns (OWASP) sem gerar ruido: o sink sozinho e ambiguo, entao exige-se tambem o marcador de input. O sink e detectado na linha mascarada (so codigo real); composicao dinamica e marcador de input sao testados na linha crua para sobreviver a interpolacao em template literal.
+
+### Impacto
+
+- Sinaliza vulnerabilidades de path traversal, XSS e SSRF com orientacao de correcao; nenhuma reescrita automatica. 593 testes verdes, guard de ruido preservado.
+
 ## Unreleased - Micro-otimizacao de hotspots da analise
 
 ### Antes
