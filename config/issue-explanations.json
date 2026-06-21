@@ -148,5 +148,10 @@
     "summary": "Requisicao HTTP com URL derivada de entrada do usuario.",
     "why": "Permitir que o usuario controle a URL de destino deixa o servidor requisitar hosts internos ou metadados de nuvem (SSRF).",
     "fix": "Valide a URL contra uma allowlist de hosts/esquemas antes de requisitar; nao permita destino arbitrario."
+  },
+  "circular_import": {
+    "summary": "Ciclo de importacao entre modulos do projeto.",
+    "why": "Modulos que se importam em ciclo tem ordem de inicializacao fragil (exports parcialmente indefinidos no momento da carga) e ficam dificeis de testar isoladamente.",
+    "fix": "Extraia o que e compartilhado para um modulo neutro, inverta a dependencia, ou adie o import (require tardio/import dinamico)."
   }
 }

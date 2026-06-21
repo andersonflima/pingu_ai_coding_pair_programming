@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de importacao circular (analise multi-arquivo)
+
+### Antes
+
+- Todas as deteccoes operavam por arquivo isolado. Nao havia visao do grafo de modulos do projeto, entao ciclos de importacao (`a` importa `b` que importa `a`) passavam despercebidos.
+
+### Depois
+
+- `pingu analyze <diretorio>` (ou multiplos arquivos) constroi um grafo dirigido de imports/requires relativos entre os arquivos analisados e reporta cada ciclo uma unica vez via componentes fortemente conexos (Tarjan, iterativo). Suporta `import/export ... from`, `import './x'`, `require('./x')` e `import('./x')` dinamico, resolvendo extensoes e `index.<ext>`. So arestas dentro do conjunto analisado viram ciclo (nao toca `node_modules`). A mensagem mostra o caminho do ciclo relativo ao diretorio base comum.
+
+### Motivo
+
+- Importacao circular indica acoplamento que torna a ordem de inicializacao fragil (exports parcialmente indefinidos na carga) e dificulta testes. E uma analise inerentemente multi-arquivo, entao fica no modo diretorio do CLI e nao no caminho por buffer do editor (que tem so um arquivo).
+
+### Impacto
+
+- Novo kind `circular_import` (suggest-only) no `pingu analyze` de diretorio, em `pingu explain` e em `issue-kinds.json`. A analise por arquivo (editor/LSP) nao muda. 601 testes verdes; `lib/` do proprio projeto nao tem ciclos.
+
 ## Unreleased - Detectores de seguranca: path traversal, XSS e SSRF
 
 ### Antes
