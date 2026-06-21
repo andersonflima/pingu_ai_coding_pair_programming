@@ -97,6 +97,9 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Injecao de SQL | `execute("SELECT ... " + id)` | JS/TS, Python |
 | Desserializacao insegura | `pickle.loads(...)`, `yaml.load(...)` | Python |
 | Hash fraco (senha) | `createHash("md5")`, `hashlib.sha1` | JS/TS, Python |
+| Path traversal | `fs.readFile("./" + req.params.f)`, `open(request.args[...])` | JS/TS, Python |
+| XSS no DOM | `el.innerHTML = ... + x`, `dangerouslySetInnerHTML={{ __html: v }}` | JS/TS |
+| SSRF | `fetch(req.query.url)`, `requests.get(request.args[...])` | JS/TS, Python |
 | Callback async em array | `arr.forEach(async ...)`, `.filter(async ...)` | JS/TS |
 | Complexidade alta | funcao com muitos caminhos de decisao | JS/TS, Python, Go, Rust, C, Java, C# |
 

@@ -629,5 +629,32 @@
     "autoFixPriority": 48,
     "supportsQuickFix": false,
     "supportsFollowUp": true
+  },
+  "path_traversal": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 48,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
+  "xss": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 48,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
+  "ssrf": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 48,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
   }
 }
