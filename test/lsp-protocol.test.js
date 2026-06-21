@@ -81,3 +81,49 @@ test('issueToCodeAction retorna null sem snippet aplicavel', () => {
     null,
   );
 });
+
+test('issueToTextEdit cobre delete_line removendo a linha inteira', () => {
+  const edit = lsp.issueToTextEdit({ line: 3, action: { op: 'delete_line' } }, ['a', 'b', 'c', 'd']);
+  assert.deepEqual(edit.range, { start: { line: 2, character: 0 }, end: { line: 3, character: 0 } });
+  assert.equal(edit.newText, '');
+});
+
+test('issueToTextEdit cobre insert_after no fim da linha', () => {
+  const edit = lsp.issueToTextEdit({ line: 1, snippet: '// nota', action: { op: 'insert_after' } }, ['const x = 1;']);
+  assert.deepEqual(edit.range.start, { line: 0, character: 12 });
+  assert.equal(edit.newText, '\n// nota');
+});
+
+test('issueToTextEdit cobre replace_range por intervalo de linhas', () => {
+  const edit = lsp.issueToTextEdit(
+    { line: 2, snippet: 'novo', action: { op: 'replace_range', range: { start: { line: 1 }, end: { line: 3 } } } },
+    ['a', 'b', 'c', 'd'],
+  );
+  assert.deepEqual(edit.range, { start: { line: 1, character: 0 }, end: { line: 3, character: 0 } });
+  assert.equal(edit.newText, 'novo\n');
+});
+
+test('issueToCodeAction cobre write_file criando o arquivo alvo relativo', () => {
+  const action = lsp.issueToCodeAction(
+    { line: 1, message: 'Gerar teste', snippet: 'test("x", () => {})\n', action: { op: 'write_file', target_file: '__tests__/x.test.js' } },
+    'file:///proj/src/x.js',
+    ['export const x = 1;'],
+  );
+  const changes = action.edit.documentChanges;
+  assert.equal(changes[0].kind, 'create');
+  assert.equal(changes[0].uri, 'file:///proj/src/__tests__/x.test.js');
+  assert.equal(changes[1].edits[0].newText, 'test("x", () => {})\n');
+});
+
+test('issueToCodeAction ignora run_command (sem WorkspaceEdit possivel)', () => {
+  assert.equal(
+    lsp.issueToCodeAction({ line: 1, snippet: 'npm test', action: { op: 'run_command' } }, 'file:///x.js', ['x']),
+    null,
+  );
+});
+
+test('writeFileWorkspaceEdit resolve target absoluto e file:// direto', () => {
+  const abs = lsp.writeFileWorkspaceEdit({ snippet: 'a', action: { op: 'write_file', target_file: '/tmp/t.txt' } }, 'file:///proj/x.js');
+  assert.equal(abs.documentChanges[0].uri, 'file:///tmp/t.txt');
+  assert.equal(lsp.writeFileWorkspaceEdit({ snippet: 'a', action: { op: 'write_file' } }, 'file:///proj/x.js'), null);
+});

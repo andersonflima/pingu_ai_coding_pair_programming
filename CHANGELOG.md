@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - LSP: code actions para todas as operacoes de correcao
+
+### Antes
+
+- As code actions do servidor LSP cobriam apenas `replace_line` e `insert_before`. As demais operacoes que os detectores produzem — `insert_after`, `delete_line`, `replace_range` e `write_file` — nao viravam quickfix, entao varias correcoes ficavam disponiveis no CLI/Neovim mas nao nos editores LSP.
+
+### Depois
+
+- `issueToTextEdit` passou a cobrir, espelhando a semantica baseada em linha do aplicador do CLI: `delete_line` (remove a linha inteira), `insert_after` (insere apos a linha), `replace_range` (substitui um intervalo de linhas) alem de `replace_line`/`insert_before`. `write_file` (gerar teste/documento de contexto) vira um WorkspaceEdit com `documentChanges` (CreateFile do alvo resolvido relativo ao arquivo + insercao do conteudo). `run_command` continua sem edit (nao e WorkspaceEdit). As helpers de URI (`uriToPath`/`pathToUri`) foram centralizadas no modulo de protocolo.
+
+### Motivo
+
+- Levar todas as correcoes do Pingu para qualquer editor LSP, com a mesma cobertura ja disponivel no CLI e no Neovim — inclusive a geracao de arquivos de teste a partir do editor.
+
+### Impacto
+
+- Aditivo: mais operacoes mapeadas, sem mudar diagnosticos nem o restante do servidor. Coberto por seis casos novos em `test/lsp-protocol.test.js` (delete_line, insert_after, replace_range, write_file relativo/absoluto e run_command ignorado).
+
 ## Unreleased - VS Code: extensao dedicada sobre o servidor LSP
 
 ### Antes
