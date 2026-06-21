@@ -234,6 +234,53 @@ Para Vim, Neovim e LazyVim, instale o plugin pelo GitHub conforme a secao [Insta
 
 Quando o runtime inicia com sucesso no editor, o plugin emite notificacao operacional com a mensagem `Noot noot!`.
 
+### Outras IDEs via LSP
+
+Alem do plugin de Vim/Neovim, o Pingu expoe um servidor [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (`pingu lsp`), entao roda em qualquer editor compativel com LSP — VS Code, Helix, Zed, Emacs, Sublime e o LSP nativo do Neovim. O servidor publica os mesmos diagnosticos da analise e oferece code actions (quickfix) a partir das correcoes sugeridas, reusando exatamente o mesmo motor (`analyzeText`). E `stdio`/JSON-RPC puro, sem dependencias.
+
+Comando do servidor:
+
+```bash
+pingu lsp
+# equivalente: node pingu_dev_agent.js --lsp
+```
+
+Neovim (LSP nativo, sem o plugin) — registre por filetype:
+
+```lua
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'javascript', 'typescript', 'python', 'go', 'rust', 'ruby', 'elixir', 'lua' },
+  callback = function(args)
+    vim.lsp.start({
+      name = 'pingu',
+      cmd = { 'pingu', 'lsp' },
+      root_dir = vim.fs.root(args.buf, { '.git', 'package.json' }),
+    })
+  end,
+})
+```
+
+Helix (`~/.config/helix/languages.toml`):
+
+```toml
+[language-server.pingu]
+command = "pingu"
+args = ["lsp"]
+
+[[language]]
+name = "javascript"
+language-servers = ["typescript-language-server", "pingu"]
+```
+
+Emacs (eglot):
+
+```elisp
+(add-to-list 'eglot-server-programs
+             '((js-mode typescript-mode python-mode go-mode rust-mode) . ("pingu" "lsp")))
+```
+
+VS Code: hoje requer um cliente LSP generico ou uma extensao fina que apenas inicie `pingu lsp` (uma extensao dedicada publicada no marketplace e o proximo passo planejado). Os demais editores acima funcionam apenas com a configuracao mostrada, sem extra.
+
 ## Como o loop funciona
 
 1. Voce abre um arquivo suportado em `Vim/Neovim`.
