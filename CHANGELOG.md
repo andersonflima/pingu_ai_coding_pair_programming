@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao: segredo hardcoded
+
+### Antes
+
+- O Pingu nao detectava credenciais hardcoded no codigo (API keys, tokens, senhas, chaves privadas) — um dos erros mais caros e comuns em todos os niveis, e a primeira classe de seguranca coberta.
+
+### Depois
+
+- Novo modulo `lib/analyzer-secrets.js` e kind `hardcoded_secret` (suggest-only), com nova familia `security` na taxonomia. Sinaliza padroes de provedor conhecidos (AWS `AKIA`, GitHub `ghp_`/`github_pat_`, Stripe `sk_live_`, Google `AIza`, Slack `xox`, blocos de chave privada) e atribuicoes a nomes sensiveis (`password`/`secret`/`token`/`api_key`/...) com literal de string. Conservador: ignora placeholders (`changeme`, `your-api-key`, `<...>`, `${...}`), leitura de ambiente (`process.env`/`os.environ`) e valores de baixa entropia (palavra minuscula como `postgres`, ou so digitos). Explicacao via `pingu explain hardcoded_secret`.
+
+### Motivo
+
+- Vazamento de credenciais versionadas e um erro caro (rotacao, exposicao em historico/forks/logs) e ate entao nao coberto; e a deteccao de maior impacto entre os niveis jr/pleno/senior.
+
+### Impacto
+
+- Aditivo e suggest-only, sem auto-fix (a correcao depende de mover o valor para ambiente/cofre). Zero falso positivo no proprio `lib/`. Coberto por `test/analyzer-secrets.test.js` (provedores, atribuicao, placeholders, env, baixa entropia, focusRange), pelo invariante de taxonomia e por um caso novo no corpus anti-falso-positivo.
+
 ## Unreleased - LSP: code actions para todas as operacoes de correcao
 
 ### Antes
