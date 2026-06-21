@@ -283,7 +283,9 @@
       "mappedIssueKinds": [
         "hardcoded_secret",
         "command_injection",
-        "unsafe_deserialization"
+        "unsafe_deserialization",
+        "sql_injection",
+        "weak_crypto"
       ],
       "safeAutoFix": false,
       "languages": [
