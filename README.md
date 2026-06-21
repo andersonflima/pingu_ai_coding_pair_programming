@@ -279,7 +279,7 @@ Emacs (eglot):
              '((js-mode typescript-mode python-mode go-mode rust-mode) . ("pingu" "lsp")))
 ```
 
-VS Code: hoje requer um cliente LSP generico ou uma extensao fina que apenas inicie `pingu lsp` (uma extensao dedicada publicada no marketplace e o proximo passo planejado). Os demais editores acima funcionam apenas com a configuracao mostrada, sem extra.
+VS Code: ha uma extensao dedicada em [`editors/vscode`](./editors/vscode) — um wrapper fino que inicia o `pingu lsp`. Veja o [README da extensao](./editors/vscode/README.md) para rodar em desenvolvimento (`F5`) ou empacotar um `.vsix`. O core do Pingu segue zero-dependencia; a unica dependencia (`vscode-languageclient`) fica isolada nesse subpacote, como em qualquer extensao LSP do VS Code. Os demais editores acima funcionam apenas com a configuracao mostrada, sem extra.
 
 ## Como o loop funciona
 
