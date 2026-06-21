@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Qualidade: guard de regressao de ruido
+
+### Antes
+
+- A auditoria de falso-positivo reduziu o ruido sobre o proprio lib/ de ~9300 para ~1030 issues, mas nada impedia uma mudanca futura (p.ex. no scanner) de reintroduzir milhares de avisos sem ser notado.
+
+### Depois
+
+- Novo test/noise-regression.test.js roda o Pingu sobre o proprio lib/ e falha se o falso positivo estrutural (undefined_variable, sintaxe, seguranca, auto-comparacao...) ou o total de issues subir alem de um teto com folga sobre o baseline. Nao exige zero — resta um tail conhecido de casos de borda — mas trava o nivel apurado contra regressao. O relatorio e memoizado para rodar a analise uma unica vez.
+
+### Motivo
+
+- Transformar o resultado da auditoria num invariante de CI: qualquer regressao que volte a gerar ruido em codigo correto quebra o build.
+
+### Impacto
+
+- So teste. Os tetos (estrutural 150, total 1100) podem ser baixados de proposito apos uma melhora, documentando o ganho.
+
 ## Unreleased - Seguranca: injecao de comando e desserializacao insegura
 
 ### Antes
