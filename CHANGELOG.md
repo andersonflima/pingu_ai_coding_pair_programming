@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Ruido: `function_doc` so cobra documentacao do contrato publico
+
+### Antes
+
+- O `function_doc` sugeria documentacao para toda funcao sem doc, incluindo helpers internos. Sobre o proprio `lib/` isso gerava 451 sugestoes, a maioria em funcoes que nunca aparecem no contrato exportado do modulo.
+
+### Depois
+
+- A sugestao de doc faltante so vale para o contrato publico: em JavaScript/TypeScript, funcoes exportadas (via `export` ou `module.exports`, detectadas por `collectJavaScriptExportNames`); em Python, funcoes que nao sao privadas por convencao (prefixo `_` que nao seja um dunder do protocolo). Documentacao desatualizada continua sinalizada para qualquer funcao. No `lib/`, os `function_doc` cairam de 451 para 211.
+
+### Motivo
+
+- Documentar o contrato publico e a pratica recomendada do proprio projeto; cobrar doc de cada helper interno so gerava ruido e contrariava essa diretriz.
+
+### Impacto
+
+- Deteccao do contrato publico preservada (funcao exportada sem doc ainda e sinalizada, e o ciclo gerar/aplicar doc continua estavel). Dois casos novos no corpus anti-falso-positivo garantem que helpers internos (JS nao exportado, Python `_privado`) nao geram sugestao. Corrige tambem um bug introduzido na primeira versao: `collectJavaScriptExportNames` devolve array, e usar `.has` direto fazia o check estourar e zerar todos os `function_doc`.
+
 ## Unreleased - Ruido: `flow_comment` so dispara em passos genuinamente complexos
 
 ### Antes

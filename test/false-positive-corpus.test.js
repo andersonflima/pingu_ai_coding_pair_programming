@@ -237,6 +237,33 @@ const CASES = [
     forbid: ['syntax_extra_delimiter', 'syntax_missing_comma', 'syntax_missing_quote'],
   },
   {
+    name: 'JS: helpers internos (nao exportados) nao exigem documentacao',
+    file: '/tmp/fp/internal-helper.js',
+    code: [
+      'function internalHelper(value) {',
+      '  return value * 2;',
+      '}',
+      '',
+      'function anotherHelper(value) {',
+      '  return value + 1;',
+      '}',
+      '',
+      'module.exports = { run: () => internalHelper(anotherHelper(1)) };',
+      '',
+    ].join('\n'),
+    forbid: ['function_doc'],
+  },
+  {
+    name: 'Python: funcao privada (_helper) nao exige documentacao',
+    file: '/tmp/fp/private.py',
+    code: [
+      'def _helper(value):',
+      '    return value * 2',
+      '',
+    ].join('\n'),
+    forbid: ['function_doc'],
+  },
+  {
     name: 'JS: statements no corpo de funcao dentro de objeto nao pedem virgula',
     file: '/tmp/fp/object-methods.js',
     code: [
