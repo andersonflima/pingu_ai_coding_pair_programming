@@ -123,5 +123,15 @@
     "summary": "Funcao com complexidade alta (muitos caminhos de decisao).",
     "why": "Muitos if/for/while/&&/|| numa funcao tornam o codigo dificil de ler, testar e manter, com mais chance de bug.",
     "fix": "Extraia partes em funcoes auxiliares com nomes de dominio para reduzir os caminhos."
+  },
+  "sql_injection": {
+    "summary": "Query SQL montada por concatenacao de entrada dinamica.",
+    "why": "Concatenar valores na string SQL permite a um atacante alterar a query (injecao de SQL).",
+    "fix": "Use consultas parametrizadas / prepared statements com placeholders."
+  },
+  "weak_crypto": {
+    "summary": "Hash fraco (MD5/SHA-1) em contexto de seguranca.",
+    "why": "MD5 e SHA-1 sao vulneraveis a colisao e rapidos demais para senhas.",
+    "fix": "Senhas: bcrypt/argon2/scrypt. Integridade: SHA-256 ou superior."
   }
 }
