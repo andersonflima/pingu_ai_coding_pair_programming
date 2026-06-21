@@ -540,7 +540,7 @@ Mesmo sem comentario acionavel, o Pingu pode propor manutencao.
 
 O `flow_comment` e conservador: so sugere um comentario de intencao para atribuicoes de passo **genuinamente nao-obvias** — composicao real (ternario, encadeamento/chamada aninhada, multiplas operacoes logicas) ou expressoes substanciais. Atribuicoes simples e auto-explicativas (uma unica chamada cujo nome ja revela a intencao, um acesso a propriedade, um guarda curto como `Array.isArray(x) ? x : []`) nao sao sinalizadas, para nao gerar ruido.
 
-O `function_doc` cobra documentacao apenas do **contrato publico**: funcoes exportadas em JavaScript/TypeScript (`export` ou `module.exports`) e funcoes nao-privadas em Python (sem o prefixo `_`, exceto dunders). Helpers internos sem doc nao geram sugestao; documentacao desatualizada, porem, continua sinalizada em qualquer funcao.
+O `function_doc` e o `function_comment` cobram documentacao/comentario apenas do **contrato publico**: funcoes exportadas em JavaScript/TypeScript (`export` ou `module.exports`), funcoes nao-privadas em Python (sem o prefixo `_`, exceto dunders) e funcoes publicas em Elixir (`def`, nao `defp`). Helpers internos nao geram sugestao; documentacao desatualizada, porem, continua sinalizada em qualquer funcao.
 
 Exemplo em Python:
 

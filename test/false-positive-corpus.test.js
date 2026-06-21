@@ -261,7 +261,31 @@ const CASES = [
       '    return value * 2',
       '',
     ].join('\n'),
-    forbid: ['function_doc'],
+    forbid: ['function_doc', 'function_comment'],
+  },
+  {
+    name: 'JS: helper interno nao exige comentario de manutencao',
+    file: '/tmp/fp/internal-comment.js',
+    code: [
+      'function internalHelper(value) {',
+      '  return value * 2;',
+      '}',
+      '',
+      'module.exports = { run: () => internalHelper(1) };',
+      '',
+    ].join('\n'),
+    forbid: ['function_comment'],
+  },
+  {
+    name: 'Elixir: funcao privada (defp) nao exige comentario de manutencao',
+    file: '/tmp/fp/private.ex',
+    code: [
+      'defp helper(value) do',
+      '  value * 2',
+      'end',
+      '',
+    ].join('\n'),
+    forbid: ['function_comment'],
   },
   {
     name: 'JS: statements no corpo de funcao dentro de objeto nao pedem virgula',
