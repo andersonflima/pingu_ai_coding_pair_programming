@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Outras IDEs: servidor LSP
+
+### Antes
+
+- O Pingu so era usavel no editor pelo plugin de Vim/Neovim (e pelo CLI). Outros editores nao tinham como consumir a analise sem uma integracao dedicada.
+
+### Depois
+
+- Novo servidor Language Server Protocol (`pingu lsp` / `pingu_dev_agent.js --lsp`), implementado em `lib/lsp-server.js` (I/O stdio + document store) sobre o protocolo puro `lib/lsp-protocol.js` (framing JSON-RPC com Content-Length, parsing incremental byte-accurate, mapeamento issue -> Diagnostic e issue -> CodeAction). Anuncia `textDocumentSync` completo e `codeActionProvider`; em `didOpen`/`didChange`/`didSave` roda `analyzeText` e publica diagnosticos, e responde quickfixes (`replace_line`/`insert_before`) a partir dos snippets das issues. Reusa o mesmo motor de analise, sem dependencias externas. Uma unica implementacao atende VS Code, Helix, Zed, Emacs, Sublime e o LSP nativo do Neovim.
+
+### Motivo
+
+- Estender o Pingu para alem do Neovim com a menor superficie possivel: o LSP e o protocolo padrao de editores, entao um servidor cobre praticamente todos de uma vez, mantendo a filosofia zero-dependencia.
+
+### Impacto
+
+- Aditivo: novos subcomando/flag e modulos, sem alterar a analise nem o plugin existente. Coberto por `test/lsp-protocol.test.js` e `test/lsp-server.test.js` (framing, mapeamento de diagnostics/code actions, ciclo open/change/close, shutdown/exit e resiliencia a excecao na analise). README documenta a configuracao em Neovim nativo, Helix e Emacs.
+
 ## Unreleased - Falso positivo em Rust: parametros de closure
 
 ### Antes
