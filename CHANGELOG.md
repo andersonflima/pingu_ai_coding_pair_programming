@@ -2,6 +2,42 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Robustez: corrige falsos positivos de sintaxe (regex e template literals)
+
+### Antes
+
+- O scanner de sintaxe (`scanSyntaxStructure`) nao reconhecia literais de regex nem template literals em JavaScript/TypeScript. Os delimitadores no corpo deles — `[A-Za-z]`, `(?:...)`, `\)` em regex e `${...}` em template — eram contados na pilha de delimitadores e a corrompiam. Alem disso, `collectionContexts` procurava o contexto de colecao mais proximo ignorando blocos no meio, tratando statements no corpo de uma funcao definida dentro de um objeto como itens do objeto. Resultado: sobre o proprio `lib/`, 1544 `syntax_missing_comma` e 660 `syntax_extra_delimiter` falsos, em codigo que compila.
+
+### Depois
+
+- O scanner passa a pular literais de regex (heuristica de posicao para nao confundir com divisao, cobrindo tambem `/` apos palavras-chave como `return`/`typeof`) e a tratar template literals com estado entre linhas, reentrando em codigo apenas nas interpolacoes `${...}` (empilhadas e restauradas no `}` correspondente). O contexto de colecao passa a considerar apenas o delimitador imediato (topo da pilha), entao um bloco sombreia um objeto/array externo. No `lib/`: `syntax_missing_comma` 1544 -> 40, `syntax_extra_delimiter` 660 -> 51, `syntax_missing_quote` 103 -> 36, e o total de issues 9292 -> 2407 (o restante e majoritariamente sugestao de doc/comentario/linha longa, nao falso positivo).
+
+### Motivo
+
+- Erros de sintaxe so fazem sentido em codigo que nao compila; emiti-los a milhares sobre codigo correto destruia a confianca na ferramenta. As duas causas eram estruturais no scanner.
+
+### Impacto
+
+- Deteccao legitima preservada: os golden-fixtures de sintaxe (aspas, delimitadores e virgulas realmente ausentes) continuam validando. Quatro casos novos no corpus anti-falso-positivo (`test/false-positive-corpus.test.js`) travam os padroes corrigidos: delimitadores em regex, interpolacao de template, e metodos com corpo dentro de objeto.
+
+## Unreleased - Robustez: corrige falsos positivos de `undefined_variable`
+
+### Antes
+
+- Apontando o Pingu para o proprio `lib/` (codigo correto, testado), o detector `undefined_variable` emitia 4693 avisos — quase todos falsos positivos, varios com correcao confiante e absurda (p.ex. acusar `error` de um `catch (error)` e sugerir trocar por uma funcao longa nao relacionada). As causas: (1) a sugestao por similaridade aceitava casamento por subsequencia, tratando qualquer palavra curta contida num identificador longo como typo; (2) o escopo nao reconhecia bindings de `catch`, consts/`require` de nivel de modulo, parametros de funcao aninhada nem desestruturacao em arrow; (3) conteudo de literais de regex (`/\bprisma\b/`) vazava como identificador; (4) nomes de 1-2 caracteres geravam ruido.
+
+### Depois
+
+- A sugestao de undefined-variable so e aceita quando e um typo plausivel: distancia de edicao pequena e proporcional ao tamanho e comprimento parecido (`isGenuineTypoSuggestion`), eliminando os casamentos por subsequencia. O escopo brace passou a coletar bindings de `catch`, o escopo de modulo (const/let/var/require, funcao e classe via `collectBraceModuleScopeVariables`), parametros de funcao aninhada e desestruturacao em arrow; `sanitizeScopedAnalysisLine` remove literais de regex que contenham escape; e nomes com menos de 3 caracteres nao sao sinalizados. No `lib/`, os `undefined_variable` cairam de 4693 para 2 (~99,96%), e o total de issues de 9292 para 4616.
+
+### Motivo
+
+- Para uma ferramenta suggest-only que roda ao vivo no editor, um falso positivo custa mais confianca do que um bug nao detectado. A auditoria sobre o proprio codigo expos que o detector estava estruturalmente barulhento; o ajuste preserva a deteccao de typos reais e remove o ruido.
+
+### Impacto
+
+- Deteccao legitima preservada: os golden-fixtures de undefined-variable continuam validando (typo real como `amont` -> `amount` ainda e sinalizado). Cinco casos novos no corpus anti-falso-positivo (`test/false-positive-corpus.test.js`) travam os padroes corrigidos (catch, const de modulo, funcao aninhada, desestruturacao, regex), mais um caso de ruido de nome curto no smoke test do modulo.
+
 ## Unreleased - Modularizacao: cluster de analise de variaveis indefinidas
 
 ### Antes
