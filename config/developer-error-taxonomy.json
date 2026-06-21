@@ -82,7 +82,8 @@
       "description": "Erros de logica em comparacoes que o compilador aceita silenciosamente: encadeamento indevido e identidade contra literal.",
       "mappedIssueKinds": [
         "chained_comparison",
-        "literal_identity_comparison"
+        "literal_identity_comparison",
+        "float_equality"
       ],
       "safeAutoFix": false,
       "languages": [
@@ -293,6 +294,17 @@
         "java",
         "csharp",
         "shell"
+      ]
+    },
+    {
+      "id": "resource_safety",
+      "description": "Recursos (arquivos, conexoes) abertos sem garantia de fechamento.",
+      "mappedIssueKinds": [
+        "resource_leak"
+      ],
+      "safeAutoFix": false,
+      "languages": [
+        "python"
       ]
     }
   ]

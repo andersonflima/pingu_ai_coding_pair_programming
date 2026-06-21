@@ -557,5 +557,23 @@
     "autoFixPriority": 48,
     "supportsQuickFix": false,
     "supportsFollowUp": true
+  },
+  "float_equality": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 47,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
+  "resource_leak": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 47,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
   }
 }
