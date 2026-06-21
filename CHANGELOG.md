@@ -20,6 +20,24 @@ Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo
 
 - Comportamento por default mais rapido e deterministico; quem quiser a resolucao por IA durante a analise liga PINGU_ANALYZE_AI=1. Os testes (que ja rodam com Copilot desligado) seguem verdes.
 
+## Unreleased - Complexidade: cobertura de Python (indentacao)
+
+### Antes
+
+- O high_complexity so cobria linguagens com chaves (JS/TS, Go, Rust, C, Java, C#); funcoes Python densas nao eram avaliadas.
+
+### Depois
+
+- checkCyclomaticComplexity passou a ter um scanner por indentacao para Python: detecta def/async def, conta pontos de decisao do corpo (if/elif/for/while/except/and/or) e atribui a complexidade a funcao correta, inclusive funcoes aninhadas. Mesmo threshold conservador (30). A construcao do issue foi unificada entre os dois caminhos.
+
+### Motivo
+
+- Python e uma linguagem central do Pingu; a metrica de complexidade que orienta refatoracao para seniors deve valer ali tambem.
+
+### Impacto
+
+- Aditivo, suggest-only, mesmo threshold conservador. Coberto por novos casos em test/analyzer-cyclomatic.test.js (funcao densa, aninhada atribuida a funcao interna, funcao simples ignorada).
+
 ## Unreleased - Seguranca: injecao de SQL e hash fraco
 
 ### Antes
