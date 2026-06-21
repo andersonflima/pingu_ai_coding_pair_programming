@@ -40,6 +40,8 @@ test('os detectores de erro humano sao todos suggest-only (autoFixDefault false)
     'resource_leak',
     'command_injection',
     'unsafe_deserialization',
+    'async_array_method',
+    'high_complexity',
   ];
   for (const kind of detectors) {
     assert.ok(issueKinds[kind], `issue kind ausente: ${kind}`);

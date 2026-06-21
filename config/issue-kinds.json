@@ -593,5 +593,23 @@
     "autoFixPriority": 48,
     "supportsQuickFix": false,
     "supportsFollowUp": true
+  },
+  "async_array_method": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 47,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
+  },
+  "high_complexity": {
+    "defaultAction": {
+      "op": "insert_before"
+    },
+    "autoFixDefault": false,
+    "autoFixPriority": 40,
+    "supportsQuickFix": false,
+    "supportsFollowUp": true
   }
 }

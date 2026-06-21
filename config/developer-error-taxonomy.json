@@ -156,7 +156,8 @@
       "id": "async_and_concurrency",
       "description": "Bugs de assincronia que o compilador aceita: promise fire-and-forget e await sequencial em loop.",
       "mappedIssueKinds": [
-        "await_in_loop"
+        "await_in_loop",
+        "async_array_method"
       ],
       "safeAutoFix": false,
       "languages": [
@@ -234,7 +235,8 @@
         "duplicate_key",
         "invalid_typeof",
         "nan_comparison",
-        "parseint_no_radix"
+        "parseint_no_radix",
+        "high_complexity"
       ],
       "safeAutoFix": false,
       "languages": [
