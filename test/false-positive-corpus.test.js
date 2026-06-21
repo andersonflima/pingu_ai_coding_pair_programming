@@ -305,6 +305,18 @@ const CASES = [
     forbid: ['tabs'],
   },
   {
+    name: 'Rust: parametro de closure (|item|) nao e variavel indefinida',
+    file: '/tmp/fp/closure.rs',
+    code: [
+      'pub fn total(items: &[i64]) -> i64 {',
+      '    let sum: i64 = items.iter().map(|item| item * 2).sum();',
+      '    sum',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['undefined_variable'],
+  },
+  {
     name: 'Go: funcao privada (inicial minuscula) nao exige doc/comentario',
     file: '/tmp/fp/private-go.go',
     code: [
