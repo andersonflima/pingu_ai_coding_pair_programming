@@ -288,6 +288,36 @@ const CASES = [
     forbid: ['function_comment'],
   },
   {
+    name: 'Go: indentacao com tab e idiomatica (gofmt), nao e problema de higiene',
+    file: '/tmp/fp/sample.go',
+    code: [
+      'package main',
+      '',
+      'func Total(items []int) int {',
+      '\tsum := 0',
+      '\tfor _, value := range items {',
+      '\t\tsum += value',
+      '\t}',
+      '\treturn sum',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['tabs'],
+  },
+  {
+    name: 'Go: funcao privada (inicial minuscula) nao exige doc/comentario',
+    file: '/tmp/fp/private-go.go',
+    code: [
+      'package main',
+      '',
+      'func describe(value int) int {',
+      '\treturn value * 2',
+      '}',
+      '',
+    ].join('\n'),
+    forbid: ['function_doc', 'function_comment'],
+  },
+  {
     name: 'JS: statements no corpo de funcao dentro de objeto nao pedem virgula',
     file: '/tmp/fp/object-methods.js',
     code: [
