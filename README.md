@@ -102,13 +102,36 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | SSRF | `fetch(req.query.url)`, `requests.get(request.args[...])` | JS/TS, Python |
 | Callback async em array | `arr.forEach(async ...)`, `.filter(async ...)` | JS/TS |
 | Complexidade alta | funcao com muitos caminhos de decisao | JS/TS, Python, Go, Rust, C, Java, C# |
-| Importacao circular | `a` importa `b` que importa `a` (analise multi-arquivo) | JS/TS |
+| Importacao circular | `a` importa `b` que importa `a` (analise multi-arquivo) | JS/TS, Python |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
-A importacao circular e a unica deteccao multi-arquivo: ela so e calculada quando o `pingu analyze` recebe um diretorio (ou varios arquivos), porque depende do grafo de modulos do projeto. Na analise por buffer do editor (um arquivo por vez) ela nao se aplica. O Pingu constroi o grafo apenas com imports/requires relativos entre os arquivos analisados (sem tocar em `node_modules`) e reporta cada ciclo uma unica vez.
+A importacao circular e a unica deteccao multi-arquivo: ela so e calculada quando o `pingu analyze` recebe um diretorio (ou varios arquivos), porque depende do grafo de modulos do projeto. Na analise por buffer do editor (um arquivo por vez) ela nao se aplica. O Pingu constroi o grafo apenas com imports/requires relativos entre os arquivos analisados — em JS/TS (`import ... from './x'`, `require('./x')`, `import('./x')`) e em Python (`from .mod import x`, `from . import mod`, `from ..pkg import y`), sem tocar em `node_modules` nem em pacotes externos — e reporta cada ciclo uma unica vez.
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
+
+### Supressao inline por comentario
+
+Para silenciar um diagnostico pontual sem desligar o kind no projeto inteiro, use uma diretiva em comentario (no estilo dos linters maduros). As diretivas vivem em comentario e funcionam em qualquer linguagem:
+
+```js
+x = x; // pingu-disable-line self_assignment
+```
+
+```js
+// pingu-disable-next-line self_assignment
+x = x;
+```
+
+- `pingu-disable-line [kind ...]` — silencia na propria linha.
+- `pingu-disable-next-line [kind ...]` — silencia na linha seguinte.
+- `pingu-disable-file [kind ...]` — silencia no arquivo inteiro.
+
+Sem `kind` listado, silencia todos os diagnosticos no alvo; com um ou mais `kind`s (separados por virgula ou espaco), silencia so esses. Para explicar a supressao sem que o texto vire `kind`, encerre com ` -- explicacao`:
+
+```js
+x = x; // pingu-disable-line self_assignment -- reset intencional do acumulador
+```
 
 A higiene que os formatters ja cobrem melhor e universalmente — `trailing_whitespace`, `tabs`, `long_line` e `large_file` — fica **off por default** (para nao competir com prettier/black/gofmt/rustfmt nem gerar ruido). Reative com `PINGU_ENABLE_FORMATTING_HYGIENE=1` se quiser esses avisos; `PINGU_DISABLED_ISSUE_KINDS` ainda permite tirar um deles individualmente depois de reativar.
 
@@ -121,7 +144,8 @@ Em vez de exportar variaveis de ambiente em cada shell, declare as preferencias 
   "disabledKinds": ["tabs", "long_line"],
   "formattingHygiene": false,
   "analyzeAi": false,
-  "maxLineLength": 100
+  "maxLineLength": 100,
+  "provider": { "command": "codex", "model": "gpt-5-codex", "kind": "codex" }
 }
 ```
 
@@ -129,6 +153,7 @@ Em vez de exportar variaveis de ambiente em cada shell, declare as preferencias 
 - `formattingHygiene`: liga a higiene redundante com formatters (equivalente a `PINGU_ENABLE_FORMATTING_HYGIENE`).
 - `analyzeAi`: permite resolucao por IA ja durante a analise (equivalente a `PINGU_ANALYZE_AI`; off por default, pois spawna um processo por issue).
 - `maxLineLength`: limite de comprimento de linha para o aviso `long_line`.
+- `provider`: escolha do provider assistido por repositorio — `command` (executavel; equivalente a `PINGU_COPILOT_COMMAND`), `model` (equivalente a `PINGU_COPILOT_MODEL`) e `kind` (`copilot`/`codex`/`claude`; equivalente a `PINGU_CLI_PROVIDER_KIND`). Resolvido a partir do diretorio de trabalho.
 
 Precedencia: **variavel de ambiente** (override de sessao) **>** arquivo de config (intencao do projeto) **>** default. Assim o config versionado define o padrao do time e qualquer dev ainda pode sobrepor pontualmente via env. Config malformado e tratado como ausente, sem quebrar a analise.
 

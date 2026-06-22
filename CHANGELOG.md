@@ -2,6 +2,60 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Importacao circular tambem em Python
+
+### Antes
+
+- A deteccao de importacao circular (analise multi-arquivo) cobria so JS/TS; ciclos entre modulos Python passavam despercebidos.
+
+### Depois
+
+- O grafo de imports passa a incluir imports relativos de Python: `from .mod import x`, `from . import mod` (irmaos do pacote) e `from ..pkg import y` (niveis com pontos), resolvendo para `<mod>.py` ou `<mod>/__init__.py`. Imports absolutos (`import os`) continuam ignorados, como no JS so contam arestas relativas dentro do conjunto analisado. O grafo, o Tarjan e o reporte sao compartilhados entre as linguagens.
+
+### Motivo
+
+- Ciclos de import em Python tem o mesmo custo de inicializacao fragil e acoplamento; estender a deteccao multi-arquivo amplia o alcance sem novo mecanismo.
+
+### Impacto
+
+- `circular_import` agora vale para `.py`/`.pyi` no `pingu analyze` de diretorio. 616 testes verdes.
+
+## Unreleased - Provider assistido configuravel no `.pingurc.json`
+
+### Antes
+
+- A escolha do provider assistido (executavel, modelo, tipo de CLI) so podia ser feita por variavel de ambiente (`PINGU_COPILOT_COMMAND`, `PINGU_COPILOT_MODEL`, `PINGU_CLI_PROVIDER_KIND`), entao nao dava para versionar a escolha do time junto do repositorio.
+
+### Depois
+
+- Um bloco `provider` no `.pingurc.json` define `command`, `model` e `kind`, resolvido a partir do diretorio de trabalho. Precedencia env > config > default (ou inferencia pelo nome do binario, no caso do `kind`). `lib/pingu-config.js` ganha `resolveProviderCommand/Model/Kind`; `lib/ai-provider-copilot.js` passa a consultar esses resolvers.
+
+### Motivo
+
+- Permitir que a escolha de provider/modelo seja versionada por repositorio (consistente com `disabledKinds`/`analyzeAi`/`maxLineLength`), preservando o override por env.
+
+### Impacto
+
+- Sem o bloco `provider` (ou variaveis), comportamento inalterado: continua usando o `copilot` por default. 614 testes verdes.
+
+## Unreleased - Supressao inline por comentario
+
+### Antes
+
+- So era possivel silenciar um diagnostico globalmente (via `PINGU_DISABLED_ISSUE_KINDS` ou `.pingurc.json`). Nao havia escape hatch por linha: para um caso pontual intencional, era preciso desligar o kind no projeto inteiro.
+
+### Depois
+
+- Diretivas em comentario, no estilo de linters maduros, aplicadas no fim do pipeline de `analyzeText` (valem para CLI e editor/LSP): `pingu-disable-line`, `pingu-disable-next-line` e `pingu-disable-file`, cada uma com lista opcional de `kind`s (sem lista = todos). Sao casadas como substring (vivem em comentario), entao funcionam em qualquer linguagem. Prosa explicativa pode ser separada com ` -- texto`.
+
+### Motivo
+
+- Dar ao dev um escape hatch local e versionado no proprio codigo para casos intencionais, sem abrir mao do diagnostico no resto do projeto — padrao consolidado de adocao de linters.
+
+### Impacto
+
+- Novo modulo `lib/inline-suppressions.js`; `analyzeText` filtra os diagnosticos suprimidos por ultimo. Sem diretivas, comportamento inalterado. 611 testes verdes.
+
 ## Unreleased - Deteccao de importacao circular (analise multi-arquivo)
 
 ### Antes

@@ -12,6 +12,9 @@ const {
   isFormattingHygieneEnabled,
   isAnalyzeAiEnabled,
   resolveMaxLineLength,
+  resolveProviderCommand,
+  resolveProviderModel,
+  resolveProviderKind,
   clearPinguConfigCache,
 } = require('../lib/pingu-config');
 
@@ -102,6 +105,31 @@ test('resolveMaxLineLength falls back to config when no explicit option', () => 
 test('resolveMaxLineLength uses the fallback when neither explicit nor config provide a value', () => {
   const { srcFile } = setupProject(null, null);
   assert.equal(resolveMaxLineLength(srcFile, undefined, 100, {}), 100);
+});
+
+test('resolveProviderCommand/Model/Kind leem o bloco provider do config', () => {
+  const { srcFile } = setupProject('.pingurc.json', JSON.stringify({
+    provider: { command: 'codex', model: 'gpt-5-codex', kind: 'codex' },
+  }));
+  assert.equal(resolveProviderCommand(srcFile, {}), 'codex');
+  assert.equal(resolveProviderModel(srcFile, {}), 'gpt-5-codex');
+  assert.equal(resolveProviderKind(srcFile, {}), 'codex');
+});
+
+test('env vence o bloco provider do config', () => {
+  const { srcFile } = setupProject('.pingurc.json', JSON.stringify({
+    provider: { command: 'codex', model: 'gpt-5-codex' },
+  }));
+  assert.equal(resolveProviderCommand(srcFile, { PINGU_COPILOT_COMMAND: 'claude' }), 'claude');
+  assert.equal(resolveProviderModel(srcFile, { PINGU_COPILOT_MODEL: 'opus' }), 'opus');
+  assert.equal(resolveProviderKind(srcFile, { PINGU_CLI_PROVIDER_KIND: 'claude' }), 'claude');
+});
+
+test('sem env e sem provider no config, resolvers retornam vazio', () => {
+  const { srcFile } = setupProject('.pingurc.json', JSON.stringify({ maxLineLength: 100 }));
+  assert.equal(resolveProviderCommand(srcFile, {}), '');
+  assert.equal(resolveProviderModel(srcFile, {}), '');
+  assert.equal(resolveProviderKind(srcFile, {}), '');
 });
 
 const { analyzeText } = require('../lib/analyzer');
