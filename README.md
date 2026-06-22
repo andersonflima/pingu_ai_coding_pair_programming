@@ -144,7 +144,8 @@ Em vez de exportar variaveis de ambiente em cada shell, declare as preferencias 
   "disabledKinds": ["tabs", "long_line"],
   "formattingHygiene": false,
   "analyzeAi": false,
-  "maxLineLength": 100
+  "maxLineLength": 100,
+  "provider": { "command": "codex", "model": "gpt-5-codex", "kind": "codex" }
 }
 ```
 
@@ -152,6 +153,7 @@ Em vez de exportar variaveis de ambiente em cada shell, declare as preferencias 
 - `formattingHygiene`: liga a higiene redundante com formatters (equivalente a `PINGU_ENABLE_FORMATTING_HYGIENE`).
 - `analyzeAi`: permite resolucao por IA ja durante a analise (equivalente a `PINGU_ANALYZE_AI`; off por default, pois spawna um processo por issue).
 - `maxLineLength`: limite de comprimento de linha para o aviso `long_line`.
+- `provider`: escolha do provider assistido por repositorio — `command` (executavel; equivalente a `PINGU_COPILOT_COMMAND`), `model` (equivalente a `PINGU_COPILOT_MODEL`) e `kind` (`copilot`/`codex`/`claude`; equivalente a `PINGU_CLI_PROVIDER_KIND`). Resolvido a partir do diretorio de trabalho.
 
 Precedencia: **variavel de ambiente** (override de sessao) **>** arquivo de config (intencao do projeto) **>** default. Assim o config versionado define o padrao do time e qualquer dev ainda pode sobrepor pontualmente via env. Config malformado e tratado como ausente, sem quebrar a analise.
 
