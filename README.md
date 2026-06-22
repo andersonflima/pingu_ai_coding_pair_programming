@@ -110,6 +110,29 @@ A importacao circular e a unica deteccao multi-arquivo: ela so e calculada quand
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
 
+### Supressao inline por comentario
+
+Para silenciar um diagnostico pontual sem desligar o kind no projeto inteiro, use uma diretiva em comentario (no estilo dos linters maduros). As diretivas vivem em comentario e funcionam em qualquer linguagem:
+
+```js
+x = x; // pingu-disable-line self_assignment
+```
+
+```js
+// pingu-disable-next-line self_assignment
+x = x;
+```
+
+- `pingu-disable-line [kind ...]` — silencia na propria linha.
+- `pingu-disable-next-line [kind ...]` — silencia na linha seguinte.
+- `pingu-disable-file [kind ...]` — silencia no arquivo inteiro.
+
+Sem `kind` listado, silencia todos os diagnosticos no alvo; com um ou mais `kind`s (separados por virgula ou espaco), silencia so esses. Para explicar a supressao sem que o texto vire `kind`, encerre com ` -- explicacao`:
+
+```js
+x = x; // pingu-disable-line self_assignment -- reset intencional do acumulador
+```
+
 A higiene que os formatters ja cobrem melhor e universalmente — `trailing_whitespace`, `tabs`, `long_line` e `large_file` — fica **off por default** (para nao competir com prettier/black/gofmt/rustfmt nem gerar ruido). Reative com `PINGU_ENABLE_FORMATTING_HYGIENE=1` se quiser esses avisos; `PINGU_DISABLED_ISSUE_KINDS` ainda permite tirar um deles individualmente depois de reativar.
 
 ### Configuracao por repositorio (`.pingurc.json`)
