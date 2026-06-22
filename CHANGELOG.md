@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Provider assistido configuravel no `.pingurc.json`
+
+### Antes
+
+- A escolha do provider assistido (executavel, modelo, tipo de CLI) so podia ser feita por variavel de ambiente (`PINGU_COPILOT_COMMAND`, `PINGU_COPILOT_MODEL`, `PINGU_CLI_PROVIDER_KIND`), entao nao dava para versionar a escolha do time junto do repositorio.
+
+### Depois
+
+- Um bloco `provider` no `.pingurc.json` define `command`, `model` e `kind`, resolvido a partir do diretorio de trabalho. Precedencia env > config > default (ou inferencia pelo nome do binario, no caso do `kind`). `lib/pingu-config.js` ganha `resolveProviderCommand/Model/Kind`; `lib/ai-provider-copilot.js` passa a consultar esses resolvers.
+
+### Motivo
+
+- Permitir que a escolha de provider/modelo seja versionada por repositorio (consistente com `disabledKinds`/`analyzeAi`/`maxLineLength`), preservando o override por env.
+
+### Impacto
+
+- Sem o bloco `provider` (ou variaveis), comportamento inalterado: continua usando o `copilot` por default. 614 testes verdes.
+
 ## Unreleased - Supressao inline por comentario
 
 ### Antes
