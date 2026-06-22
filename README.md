@@ -102,11 +102,18 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | SSRF | `fetch(req.query.url)`, `requests.get(request.args[...])` | JS/TS, Python |
 | Callback async em array | `arr.forEach(async ...)`, `.filter(async ...)` | JS/TS |
 | Complexidade alta | funcao com muitos caminhos de decisao | JS/TS, Python, Go, Rust, C, Java, C# |
-| Importacao circular | `a` importa `b` que importa `a` (analise multi-arquivo) | JS/TS, Python |
+| Importacao circular | `a` importa `b` que importa `a` (analise multi-arquivo) | JS/TS, Python, Ruby, Go |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
 
-A importacao circular e a unica deteccao multi-arquivo: ela so e calculada quando o `pingu analyze` recebe um diretorio (ou varios arquivos), porque depende do grafo de modulos do projeto. Na analise por buffer do editor (um arquivo por vez) ela nao se aplica. O Pingu constroi o grafo apenas com imports/requires relativos entre os arquivos analisados — em JS/TS (`import ... from './x'`, `require('./x')`, `import('./x')`) e em Python (`from .mod import x`, `from . import mod`, `from ..pkg import y`), sem tocar em `node_modules` nem em pacotes externos — e reporta cada ciclo uma unica vez.
+A importacao circular e a unica deteccao multi-arquivo: ela so e calculada quando o `pingu analyze` recebe um diretorio (ou varios arquivos), porque depende do grafo de modulos do projeto. Na analise por buffer do editor (um arquivo por vez) ela nao se aplica. O Pingu constroi o grafo apenas com imports relativos/locais entre os arquivos analisados, sem tocar em pacotes externos, e reporta cada ciclo uma unica vez:
+
+- **JS/TS**: `import ... from './x'`, `require('./x')`, `import('./x')`.
+- **Python**: `from .mod import x`, `from . import mod`, `from ..pkg import y`.
+- **Ruby**: `require_relative './x'`.
+- **Go**: grafo entre pacotes (diretorios), resolvido pelo prefixo do modulo no `go.mod` (Go proibe ciclo de import, entao isso antecipa um erro de compilacao). Sem `go.mod` o pacote e ignorado.
+
+Rust e Elixir ficam de fora de proposito: referencias mutuas entre modulos sao legais nessas linguagens, entao um ciclo nao indica defeito.
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
 
