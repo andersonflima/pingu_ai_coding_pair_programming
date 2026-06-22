@@ -99,3 +99,52 @@ test('reporta cada ciclo uma unica vez e em arquivo/linha do ciclo', () => {
   assert.equal(issues[0].line, 2, 'aponta a linha do require que fecha o ciclo');
   assert.match(issues[0].file, /a\.js$/);
 });
+
+test('Python: ciclo direto com from .mod import', () => {
+  const { root, files } = makeProject({
+    'a.py': 'from .b import beta\n',
+    'b.py': 'from .a import alpha\n',
+  });
+  const issues = detectCircularImports(files, { cwd: root });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].kind, 'circular_import');
+  assert.match(issues[0].message, /a\.py -> b\.py -> a\.py/);
+});
+
+test('Python: from . import irmao e resolvido', () => {
+  const { root, files } = makeProject({
+    'pkg/a.py': 'from . import b\n',
+    'pkg/b.py': 'from . import a\n',
+  });
+  const issues = detectCircularImports(files, { cwd: root });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].kind, 'circular_import');
+});
+
+test('Python: import via __init__.py e import de parente (..)', () => {
+  const { root, files } = makeProject({
+    'pkg/__init__.py': 'from .sub.mod import thing\n',
+    'pkg/sub/mod.py': 'from ... import pkg\n',
+    'pkg2.py': '',
+  });
+  // pkg/__init__ -> pkg/sub/mod -> (..) resolve para o pacote pkg (__init__) = ciclo
+  const issues = detectCircularImports(files, { cwd: root });
+  assert.equal(issues.length, 1);
+  assert.match(issues[0].message, /__init__\.py/);
+});
+
+test('Python: grafo aciclico nao acusa, e import absoluto e ignorado', () => {
+  const { root, files } = makeProject({
+    'a.py': 'import os\nfrom .b import beta\n',
+    'b.py': 'import sys\n',
+  });
+  assert.deepEqual(detectCircularImports(files, { cwd: root }), []);
+});
+
+test('Python: import comentado nao gera ciclo', () => {
+  const { root, files } = makeProject({
+    'a.py': '# from .b import beta\n',
+    'b.py': 'from .a import alpha\n',
+  });
+  assert.deepEqual(detectCircularImports(files, { cwd: root }), []);
+});
