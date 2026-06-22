@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Supressao inline por comentario
+
+### Antes
+
+- So era possivel silenciar um diagnostico globalmente (via `PINGU_DISABLED_ISSUE_KINDS` ou `.pingurc.json`). Nao havia escape hatch por linha: para um caso pontual intencional, era preciso desligar o kind no projeto inteiro.
+
+### Depois
+
+- Diretivas em comentario, no estilo de linters maduros, aplicadas no fim do pipeline de `analyzeText` (valem para CLI e editor/LSP): `pingu-disable-line`, `pingu-disable-next-line` e `pingu-disable-file`, cada uma com lista opcional de `kind`s (sem lista = todos). Sao casadas como substring (vivem em comentario), entao funcionam em qualquer linguagem. Prosa explicativa pode ser separada com ` -- texto`.
+
+### Motivo
+
+- Dar ao dev um escape hatch local e versionado no proprio codigo para casos intencionais, sem abrir mao do diagnostico no resto do projeto — padrao consolidado de adocao de linters.
+
+### Impacto
+
+- Novo modulo `lib/inline-suppressions.js`; `analyzeText` filtra os diagnosticos suprimidos por ultimo. Sem diretivas, comportamento inalterado. 611 testes verdes.
+
 ## Unreleased - Deteccao de importacao circular (analise multi-arquivo)
 
 ### Antes
