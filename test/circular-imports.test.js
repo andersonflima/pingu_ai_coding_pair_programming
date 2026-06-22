@@ -148,3 +148,79 @@ test('Python: import comentado nao gera ciclo', () => {
   });
   assert.deepEqual(detectCircularImports(files, { cwd: root }), []);
 });
+
+test('Ruby: ciclo direto com require_relative', () => {
+  const { root, files } = makeProject({
+    'a.rb': "require_relative 'b'\n",
+    'b.rb': "require_relative 'a'\n",
+  });
+  const issues = detectCircularImports(files, { cwd: root });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].kind, 'circular_import');
+  assert.match(issues[0].message, /a\.rb -> b\.rb -> a\.rb/);
+});
+
+test('Ruby: require_relative com caminho relativo de subdir', () => {
+  const { root, files } = makeProject({
+    'lib/a.rb': "require_relative '../core/b'\n",
+    'core/b.rb': "require_relative '../lib/a'\n",
+  });
+  const issues = detectCircularImports(files, { cwd: root });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].kind, 'circular_import');
+});
+
+test('Ruby: grafo aciclico e require comentado nao acusam', () => {
+  const acyclic = makeProject({
+    'a.rb': "require_relative 'b'\n",
+    'b.rb': "puts 'ok'\n",
+  });
+  assert.deepEqual(detectCircularImports(acyclic.files, { cwd: acyclic.root }), []);
+
+  const commented = makeProject({
+    'a.rb': "# require_relative 'b'\n",
+    'b.rb': "require_relative 'a'\n",
+  });
+  assert.deepEqual(detectCircularImports(commented.files, { cwd: commented.root }), []);
+});
+
+test('Go: ciclo entre pacotes resolvido pelo prefixo do go.mod', () => {
+  const { root, files } = makeProject({
+    'go.mod': 'module example.com/app\n\ngo 1.21\n',
+    'a/a.go': 'package a\n\nimport "example.com/app/b"\n\nvar _ = b.X\n',
+    'b/b.go': 'package b\n\nimport "example.com/app/a"\n\nvar _ = a.Y\n',
+  });
+  const issues = detectCircularImports(files, { cwd: root });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].kind, 'circular_import');
+  assert.match(issues[0].message, /a -> b -> a/);
+  assert.match(issues[0].file, /a\.go$/);
+});
+
+test('Go: bloco import (...) e import de stdlib ignorado', () => {
+  const { root, files } = makeProject({
+    'go.mod': 'module example.com/app\n',
+    'a/a.go': 'package a\n\nimport (\n\t"fmt"\n\t"example.com/app/b"\n)\n\nvar _ = fmt.Sprint(b.X)\n',
+    'b/b.go': 'package b\n\nimport "example.com/app/a"\n',
+  });
+  const issues = detectCircularImports(files, { cwd: root });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].kind, 'circular_import');
+});
+
+test('Go: sem go.mod nao resolve e nao acusa ciclo', () => {
+  const { root, files } = makeProject({
+    'a/a.go': 'package a\n\nimport "example.com/app/b"\n',
+    'b/b.go': 'package b\n\nimport "example.com/app/a"\n',
+  });
+  assert.deepEqual(detectCircularImports(files, { cwd: root }), []);
+});
+
+test('Go: grafo aciclico nao acusa', () => {
+  const { root, files } = makeProject({
+    'go.mod': 'module example.com/app\n',
+    'a/a.go': 'package a\n\nimport "example.com/app/b"\n',
+    'b/b.go': 'package b\n\nimport "fmt"\n',
+  });
+  assert.deepEqual(detectCircularImports(files, { cwd: root }), []);
+});

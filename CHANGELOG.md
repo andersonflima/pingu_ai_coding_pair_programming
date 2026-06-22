@@ -2,6 +2,27 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Importacao circular em Ruby e Go
+
+### Antes
+
+- A deteccao de importacao circular cobria JS/TS e Python. Ciclos entre arquivos Ruby (`require_relative`) e entre pacotes Go passavam despercebidos.
+
+### Depois
+
+- **Ruby**: arestas por `require_relative`, resolvidas para `<x>.rb` relativo ao arquivo — encaixa no mesmo modelo arquivo-a-arquivo.
+- **Go**: grafo entre pacotes (diretorios). O prefixo do modulo e lido do `go.mod` (subindo a arvore) para mapear import paths locais em diretorios; arestas entre diretorios do conjunto analisado viram ciclo via o mesmo Tarjan. Cobre `import "x"` e o bloco `import (...)`; sem `go.mod` o pacote e ignorado. Go proibe ciclo de import (erro de compilacao), entao a deteccao antecipa o problema.
+- O reporte foi generalizado (`cycleIssuesFromGraph`) para servir tanto a nos-arquivo quanto a nos-diretorio, com exibicao de caminho relativa a base comum.
+- Rust e Elixir ficam de fora de proposito: referencias mutuas entre modulos sao legais, entao um ciclo nao indica defeito (evita falso-positivo).
+
+### Motivo
+
+- Completar a cobertura de importacao circular nas linguagens em que o ciclo e de fato um defeito, sem introduzir falso-positivo nas em que e legal.
+
+### Impacto
+
+- `circular_import` agora vale para `.rb` e `.go` (este via `go.mod`) no `pingu analyze` de diretorio. 626 testes verdes.
+
 ## Unreleased - Importacao circular tambem em Python
 
 ### Antes
