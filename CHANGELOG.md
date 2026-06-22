@@ -2,6 +2,78 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Deteccao de importacao circular (analise multi-arquivo)
+
+### Antes
+
+- Todas as deteccoes operavam por arquivo isolado. Nao havia visao do grafo de modulos do projeto, entao ciclos de importacao (`a` importa `b` que importa `a`) passavam despercebidos.
+
+### Depois
+
+- `pingu analyze <diretorio>` (ou multiplos arquivos) constroi um grafo dirigido de imports/requires relativos entre os arquivos analisados e reporta cada ciclo uma unica vez via componentes fortemente conexos (Tarjan, iterativo). Suporta `import/export ... from`, `import './x'`, `require('./x')` e `import('./x')` dinamico, resolvendo extensoes e `index.<ext>`. So arestas dentro do conjunto analisado viram ciclo (nao toca `node_modules`). A mensagem mostra o caminho do ciclo relativo ao diretorio base comum.
+
+### Motivo
+
+- Importacao circular indica acoplamento que torna a ordem de inicializacao fragil (exports parcialmente indefinidos na carga) e dificulta testes. E uma analise inerentemente multi-arquivo, entao fica no modo diretorio do CLI e nao no caminho por buffer do editor (que tem so um arquivo).
+
+### Impacto
+
+- Novo kind `circular_import` (suggest-only) no `pingu analyze` de diretorio, em `pingu explain` e em `issue-kinds.json`. A analise por arquivo (editor/LSP) nao muda. 601 testes verdes; `lib/` do proprio projeto nao tem ciclos.
+
+## Unreleased - Detectores de seguranca: path traversal, XSS e SSRF
+
+### Antes
+
+- A analise cobria injecao de comando, injecao de SQL, desserializacao insegura e hash fraco, mas nao sinalizava caminhos de arquivo, escrita de HTML no DOM nem requisicoes HTTP construidas a partir de entrada do usuario.
+
+### Depois
+
+- Tres detectores suggest-only, conservadores (exigem o sink e o marcador de entrada do usuario na mesma linha para manter o falso-positivo baixo): `path_traversal` (`fs.*`/`open` com caminho derivado de request), `xss` (`innerHTML`/`outerHTML`/`document.write` com valor dinamico e `dangerouslySetInnerHTML` nao literal) e `ssrf` (`fetch`/`axios`/`requests`/`urlopen` com URL de entrada do usuario). Cada um entra na tabela de deteccoes, em `pingu explain` e em `config/issue-kinds.json`.
+
+### Motivo
+
+- Cobrir tres das vulnerabilidades web mais comuns (OWASP) sem gerar ruido: o sink sozinho e ambiguo, entao exige-se tambem o marcador de input. O sink e detectado na linha mascarada (so codigo real); composicao dinamica e marcador de input sao testados na linha crua para sobreviver a interpolacao em template literal.
+
+### Impacto
+
+- Sinaliza vulnerabilidades de path traversal, XSS e SSRF com orientacao de correcao; nenhuma reescrita automatica. 593 testes verdes, guard de ruido preservado.
+
+## Unreleased - Micro-otimizacao de hotspots da analise
+
+### Antes
+
+- `checkAsyncArrayMethods` recompilava um `new RegExp(...)` com grupo de captura por linha analisada e ainda fazia um teste redundante com um segundo padrao equivalente. `suggestSimilarIdentifier` recalculava `collapseRepeatedChars(unknown)` (invariante) dentro do `.map` por candidato e deduplicava candidatos com `arr.indexOf` O(n^2). `applyTypoCorrections` construia o mesmo regex global duas vezes por correcao (um para `test`, outro para `replace`).
+
+### Depois
+
+- O padrao de array async vira um literal compilado uma unica vez no modulo, com um unico `match`. `suggestSimilarIdentifier` calcula `collapsedUnknown` uma vez e deduplica candidatos com um `Set` (O(n)). `applyTypoCorrections` reusa o mesmo regex global para teste e replace.
+
+### Motivo
+
+- Reduzir alocacao e CPU no caminho quente da analise, que roda a cada mudanca de buffer no LSP. O custo cresce com o tamanho do arquivo (regex por linha) e com a quantidade de candidatos (dedup O(n^2)).
+
+### Impacto
+
+- Comportamento identico (586 testes verdes, mesma saida de diagnosticos); ganho de performance proporcional ao tamanho do arquivo e ao numero de candidatos de identificador.
+
+## Unreleased - Configuracao por repositorio via `.pingurc.json`
+
+### Antes
+
+- As preferencias de analise (kinds desabilitados, higiene de formatter, resolucao por IA durante a analise, limite de linha) so podiam ser ajustadas por variavel de ambiente (`PINGU_DISABLED_ISSUE_KINDS`, `PINGU_ENABLE_FORMATTING_HYGIENE`, `PINGU_ANALYZE_AI`). Isso exigia exportar envs em cada shell/editor e nao versionava o padrao do time junto do repositorio.
+
+### Depois
+
+- Um arquivo `.pingurc.json` (ou `pingu.config.json`) na raiz do projeto declara `disabledKinds`, `formattingHygiene`, `analyzeAi` e `maxLineLength`. O Pingu procura o arquivo subindo a arvore a partir do arquivo analisado (funciona em monorepos), com cache por diretorio. A resolucao segue a precedencia env > config > default; `disabledKinds` da env e do config sao unidos. Config malformado e tratado como ausente, sem quebrar a analise.
+
+### Motivo
+
+- Permitir que o padrao de analise do time seja versionado junto do codigo, sem depender do ambiente de cada dev, preservando o override pontual por variavel de ambiente.
+
+### Impacto
+
+- Nenhuma mudanca de comportamento por default (sem arquivo de config, tudo continua como antes). `lib/pingu-config.js` centraliza a resolucao; `analyzeText` e o detector de cobertura de testes passam a consultar o config alem da env.
+
 ## Unreleased - Performance: analise sem spawn de processo (0 chamadas externas)
 
 ### Antes

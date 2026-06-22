@@ -57,3 +57,41 @@ test('weak_crypto: ignora md5/sha1 de cache/checksum (sem contexto de seguranca)
   assert.deepEqual(run('const cacheHash = crypto.createHash("sha1").update(payload)', '.js'), []);
   assert.deepEqual(run('etag = hashlib.md5(body).hexdigest()', '.py'), []);
 });
+
+test('path_traversal: leitura de arquivo com caminho de request', () => {
+  assert.equal(run('fs.readFile("./files/" + req.params.name, cb)', '.js')[0].kind, 'path_traversal');
+  assert.equal(run('with open("data/" + request.args["f"]) as fh:', '.py')[0].kind, 'path_traversal');
+});
+
+test('path_traversal: ignora caminho estatico ou sem entrada do usuario', () => {
+  assert.deepEqual(run('fs.readFile("./config.json", cb)', '.js'), []);
+  assert.deepEqual(run('const p = path.join(base, child); fs.readFile(p, cb)', '.js'), []);
+  assert.deepEqual(run('with open("data/fixed.txt") as fh:', '.py'), []);
+});
+
+test('xss: innerHTML, document.write e dangerouslySetInnerHTML dinamicos', () => {
+  assert.equal(run('el.innerHTML = "<b>" + userName + "</b>";', '.js')[0].kind, 'xss');
+  assert.equal(run('document.write(`<p>${comment}</p>`);', '.js')[0].kind, 'xss');
+  assert.equal(run('<div dangerouslySetInnerHTML={{ __html: rawHtml }} />', '.jsx')[0].kind, 'xss');
+});
+
+test('xss: ignora atribuicao estatica e textContent', () => {
+  assert.deepEqual(run('el.innerHTML = "<b>ok</b>";', '.js'), []);
+  assert.deepEqual(run('el.textContent = userName;', '.js'), []);
+  assert.deepEqual(run('<div dangerouslySetInnerHTML={{ __html: "<b>ok</b>" }} />', '.jsx'), []);
+});
+
+test('ssrf: requisicao HTTP com URL de entrada do usuario', () => {
+  assert.equal(run('const r = await fetch(req.query.url);', '.js')[0].kind, 'ssrf');
+  assert.equal(run('resp = requests.get(request.args["target"])', '.py')[0].kind, 'ssrf');
+});
+
+test('ssrf: ignora URL constante ou sem marcador de input', () => {
+  assert.deepEqual(run('const r = await fetch("https://api.example.com/v1");', '.js'), []);
+  assert.deepEqual(run('resp = requests.get(BASE_URL + "/health")', '.py'), []);
+});
+
+test('path_traversal/xss/ssrf: nao disparam dentro de string ou comentario', () => {
+  assert.deepEqual(run('const note = "fs.readFile(req.params.x + y)";', '.js'), []);
+  assert.deepEqual(run('// el.innerHTML = a + b', '.js'), []);
+});

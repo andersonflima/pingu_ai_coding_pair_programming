@@ -97,14 +97,40 @@ Alem das correcoes deterministicas, o Pingu sinaliza (suggest-only, sem reescrit
 | Injecao de SQL | `execute("SELECT ... " + id)` | JS/TS, Python |
 | Desserializacao insegura | `pickle.loads(...)`, `yaml.load(...)` | Python |
 | Hash fraco (senha) | `createHash("md5")`, `hashlib.sha1` | JS/TS, Python |
+| Path traversal | `fs.readFile("./" + req.params.f)`, `open(request.args[...])` | JS/TS, Python |
+| XSS no DOM | `el.innerHTML = ... + x`, `dangerouslySetInnerHTML={{ __html: v }}` | JS/TS |
+| SSRF | `fetch(req.query.url)`, `requests.get(request.args[...])` | JS/TS, Python |
 | Callback async em array | `arr.forEach(async ...)`, `.filter(async ...)` | JS/TS |
 | Complexidade alta | funcao com muitos caminhos de decisao | JS/TS, Python, Go, Rust, C, Java, C# |
+| Importacao circular | `a` importa `b` que importa `a` (analise multi-arquivo) | JS/TS |
 
 Cada um e descrito em detalhe nas subsecoes a seguir, sempre com guardas conservadoras para evitar falso positivo.
+
+A importacao circular e a unica deteccao multi-arquivo: ela so e calculada quando o `pingu analyze` recebe um diretorio (ou varios arquivos), porque depende do grafo de modulos do projeto. Na analise por buffer do editor (um arquivo por vez) ela nao se aplica. O Pingu constroi o grafo apenas com imports/requires relativos entre os arquivos analisados (sem tocar em `node_modules`) e reporta cada ciclo uma unica vez.
 
 Para silenciar uma ou mais classes que nao se encaixem no seu fluxo, defina a variavel de ambiente `PINGU_DISABLED_ISSUE_KINDS` com os `kind`s separados por virgula (p.ex. `PINGU_DISABLED_ISSUE_KINDS=parseint_no_radix,unused_variable`). No Vim/Neovim, basta `let $PINGU_DISABLED_ISSUE_KINDS = 'parseint_no_radix'` no seu init. Vale para qualquer issue kind, nao so os de erro humano.
 
 A higiene que os formatters ja cobrem melhor e universalmente — `trailing_whitespace`, `tabs`, `long_line` e `large_file` — fica **off por default** (para nao competir com prettier/black/gofmt/rustfmt nem gerar ruido). Reative com `PINGU_ENABLE_FORMATTING_HYGIENE=1` se quiser esses avisos; `PINGU_DISABLED_ISSUE_KINDS` ainda permite tirar um deles individualmente depois de reativar.
+
+### Configuracao por repositorio (`.pingurc.json`)
+
+Em vez de exportar variaveis de ambiente em cada shell, declare as preferencias do projeto em um arquivo `.pingurc.json` (ou `pingu.config.json`) na raiz do repositorio. O Pingu procura o arquivo subindo a arvore a partir do arquivo analisado, entao funciona tanto na raiz quanto em monorepos com config por pacote.
+
+```json
+{
+  "disabledKinds": ["tabs", "long_line"],
+  "formattingHygiene": false,
+  "analyzeAi": false,
+  "maxLineLength": 100
+}
+```
+
+- `disabledKinds`: lista de `kind`s a suprimir (unida com o que vier em `PINGU_DISABLED_ISSUE_KINDS`).
+- `formattingHygiene`: liga a higiene redundante com formatters (equivalente a `PINGU_ENABLE_FORMATTING_HYGIENE`).
+- `analyzeAi`: permite resolucao por IA ja durante a analise (equivalente a `PINGU_ANALYZE_AI`; off por default, pois spawna um processo por issue).
+- `maxLineLength`: limite de comprimento de linha para o aviso `long_line`.
+
+Precedencia: **variavel de ambiente** (override de sessao) **>** arquivo de config (intencao do projeto) **>** default. Assim o config versionado define o padrao do time e qualquer dev ainda pode sobrepor pontualmente via env. Config malformado e tratado como ausente, sem quebrar a analise.
 
 Para entender uma classe antes de silenciar, use `pingu explain <kind>` (p.ex. `pingu explain chained_comparison`): o comando descreve o que o detector encontra, por que importa, como corrigir, se e suggest-only e como silenciar. `pingu explain` sem argumento lista os kinds com explicacao disponivel, e `--json` devolve a forma estruturada.
 

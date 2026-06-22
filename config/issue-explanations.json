@@ -133,5 +133,25 @@
     "summary": "Hash fraco (MD5/SHA-1) em contexto de seguranca.",
     "why": "MD5 e SHA-1 sao vulneraveis a colisao e rapidos demais para senhas.",
     "fix": "Senhas: bcrypt/argon2/scrypt. Integridade: SHA-256 ou superior."
+  },
+  "path_traversal": {
+    "summary": "Caminho de arquivo montado com entrada do usuario.",
+    "why": "Concatenar entrada do usuario num caminho permite usar '..' para ler/escrever fora do diretorio pretendido.",
+    "fix": "Resolva o caminho (path.resolve/os.path.realpath) e confirme que ele permanece sob o diretorio base; rejeite componentes '..'."
+  },
+  "xss": {
+    "summary": "HTML dinamico inserido no DOM sem sanitizacao.",
+    "why": "Atribuir entrada nao sanitizada a innerHTML/outerHTML, document.write ou dangerouslySetInnerHTML permite injetar script (XSS).",
+    "fix": "Use textContent para texto, ou sanitize o HTML (DOMPurify) antes de injetar no DOM."
+  },
+  "ssrf": {
+    "summary": "Requisicao HTTP com URL derivada de entrada do usuario.",
+    "why": "Permitir que o usuario controle a URL de destino deixa o servidor requisitar hosts internos ou metadados de nuvem (SSRF).",
+    "fix": "Valide a URL contra uma allowlist de hosts/esquemas antes de requisitar; nao permita destino arbitrario."
+  },
+  "circular_import": {
+    "summary": "Ciclo de importacao entre modulos do projeto.",
+    "why": "Modulos que se importam em ciclo tem ordem de inicializacao fragil (exports parcialmente indefinidos no momento da carga) e ficam dificeis de testar isoladamente.",
+    "fix": "Extraia o que e compartilhado para um modulo neutro, inverta a dependencia, ou adie o import (require tardio/import dinamico)."
   }
 }
