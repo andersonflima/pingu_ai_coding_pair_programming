@@ -2,6 +2,24 @@
 
 Todas as mudancas relevantes deste projeto devem registrar antes, depois, motivo tecnico e impacto esperado.
 
+## Unreleased - Importacao circular tambem em Python
+
+### Antes
+
+- A deteccao de importacao circular (analise multi-arquivo) cobria so JS/TS; ciclos entre modulos Python passavam despercebidos.
+
+### Depois
+
+- O grafo de imports passa a incluir imports relativos de Python: `from .mod import x`, `from . import mod` (irmaos do pacote) e `from ..pkg import y` (niveis com pontos), resolvendo para `<mod>.py` ou `<mod>/__init__.py`. Imports absolutos (`import os`) continuam ignorados, como no JS so contam arestas relativas dentro do conjunto analisado. O grafo, o Tarjan e o reporte sao compartilhados entre as linguagens.
+
+### Motivo
+
+- Ciclos de import em Python tem o mesmo custo de inicializacao fragil e acoplamento; estender a deteccao multi-arquivo amplia o alcance sem novo mecanismo.
+
+### Impacto
+
+- `circular_import` agora vale para `.py`/`.pyi` no `pingu analyze` de diretorio. 616 testes verdes.
+
 ## Unreleased - Provider assistido configuravel no `.pingurc.json`
 
 ### Antes
