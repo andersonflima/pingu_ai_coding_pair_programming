@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - main
+      - develop
   push:
     branches:
       - main
+      - develop
 
 permissions:
   contents: read
@@ -64,7 +66,7 @@ jobs:
           fi
 
       - name: Validate release version is persisted
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
         run: |
           if [ -n "${DOPPLER_TOKEN:-}" ]; then
             doppler run -- npm run release:check
